@@ -1,0 +1,30 @@
+{
+  "editado": true,
+  "codigo": "DEMO.006",
+  "titulo": "Transferência não aparece na loja de destino",
+  "subtitulo": "A loja de origem enviou a transferência, mas ela não aparece para dar entrada no destino.",
+  "versao": "1.0",
+  "modulo": "pdv",
+  "menu": "pdv.estoque.transferencia-entre-lojas.entrada-de-transferencia",
+  "fontes": ["Manual de exemplo"],
+  "tabelas": ["transferencias", "transferencia_itens", "sync_fila"],
+  "secoes": [
+    {
+      "titulo": "Verificar a transferência na origem",
+      "blocos": [
+        { "tipo": "passo", "texto": "Na loja de origem, abra **Estoque > Transferência entre Lojas > Saída de Transferência** e confirme que a transferência foi **finalizada**." },
+        { "tipo": "passo", "texto": "Verifique se ela não ficou marcada como **em uso** por outro computador." },
+        { "tipo": "sql", "texto": "SELECT id_transf, loja_origem, loja_destino, situacao, em_uso\nFROM transferencias\nWHERE id_transf = :id_transf;" }
+      ]
+    },
+    {
+      "titulo": "Liberar e sincronizar",
+      "blocos": [
+        { "tipo": "passo", "texto": "Se estiver em uso, peça para fechar a tela no outro computador ou libere pela opção **Retirar uso**." },
+        { "tipo": "passo", "texto": "Em **Utilitários > Sincronização**, confirme se a fila de envio está vazia." },
+        { "tipo": "passo", "texto": "Na loja de destino, abra **Entrada de Transferência** e atualize a lista." },
+        { "tipo": "obs", "texto": "Se a fila não diminui, reinicie o serviço de sincronização do terminal." }
+      ]
+    }
+  ]
+}

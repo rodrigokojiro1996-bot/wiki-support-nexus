@@ -1,0 +1,112 @@
+"""Cria o banco da Wiki e carrega: módulos, catálogo do coletor, menus do sistema e manuais.
+
+Uso (dentro de backend/):
+    python -m app.seed
+
+Pode rodar de novo a qualquer momento: atualiza catálogo, menus e manuais sem apagar
+as validações de relação nem os vínculos menu ↔ tabela feitos pela equipe.
+"""
+import json
+import re
+import unicodedata
+from datetime import datetime
+from pathlib import Path
+
+from .db import RAIZ, conectar, criar_schema
+
+PROJETO = RAIZ.parent
+SEED = RAIZ / "seed"
+MODULOS = [("pdv", "PDV", "demo_pdv"), ("adm", "Retaguarda", None), ("fin", "Financeiro", None)]
+
+
+def slug(texto: str) -> str:
+    t = unicodedata.normalize("NFD", texto).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
+
+
+def importar_catalogo(con, banco: str) -> None:
+    arq = PROJETO / "coletor" / "saida" / banco / "catalogo.json"
+    if not arq.exists():  # sem coleta real, usa o banco de exemplo versionado
+        arq = PROJETO / "coletor" / "exemplo" / banco / "catalogo.json"
+    if not arq.exists():
+        print(f"  catálogo não encontrado ({arq}); rode o coletor antes")
+        return
+    cat = json.loads(arq.read_text(encoding="utf-8"))
+    for t in ("relacoes", "colunas", "tabelas"):
+        con.execute(f"DELETE FROM {t} WHERE banco = ?", (banco,))
+    for nome, t in cat["tables"].items():
+        linhas = int(t["rows"]) if str(t.get("rows", "")).isdigit() else None
+        con.execute("INSERT INTO tabelas (banco, nome, engine, linhas) VALUES (?, ?, ?, ?)", (banco, nome, t.get("engine"), linhas))
+        con.executemany("INSERT INTO colunas (banco, tabela, nome, tipo, pk, ordem) VALUES (?, ?, ?, ?, ?, ?)",
+                        [(banco, nome, c["name"], c["type"], int(c["pk"]), i) for i, c in enumerate(t["cols"])])
+    con.executemany("INSERT INTO relacoes (banco, id, origem, destino, colunas, tipo, regra, motivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    [(banco, e["id"], e["source"], e["target"], json.dumps(e["cols"]), e["kind"], e.get("regra"), e.get("reason")) for e in cat["edges"]])
+    resumo = f"{len(cat['tables'])} tabelas, {len(cat['edges'])} relações"
+    con.execute("INSERT OR REPLACE INTO importacoes (banco, em, resumo) VALUES (?, ?, ?)", (banco, cat.get("importadoEm") or datetime.now().strftime("%d/%m/%Y %H:%M"), resumo))
+    print(f"  catálogo {banco}: {resumo}")
+
+
+def importar_menus(con, arquivo: Path) -> None:
+    dados = json.loads(arquivo.read_text(encoding="utf-8"))
+    modulo = dados["modulo"]
+    existentes = {r["tabela"] for r in con.execute("SELECT nome AS tabela FROM tabelas WHERE banco = (SELECT banco FROM modulos WHERE id = ?)", (modulo,))}
+    vistos = []
+
+    def gravar(item, pai, ordem):
+        mid = f"{pai}.{slug(item['titulo'])}" if pai else f"{modulo}.{slug(item['titulo'])}"
+        con.execute("""INSERT INTO menus (id, modulo, pai, titulo, atalho, tela_codigo, desabilitado, submenu, ordem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(id) DO UPDATE SET pai = excluded.pai, titulo = excluded.titulo, atalho = excluded.atalho,
+                       tela_codigo = excluded.tela_codigo, desabilitado = excluded.desabilitado, submenu = excluded.submenu, ordem = excluded.ordem""",
+                    (mid, modulo, pai, item["titulo"], item.get("atalho"), item.get("tela_codigo"), int(item.get("desabilitado", False)),
+                     int(item.get("submenu", False)), ordem))
+        vistos.append(mid)
+        for t in item.get("tabelas", []):
+            if t in existentes:
+                con.execute("INSERT OR IGNORE INTO menu_tabelas (menu, tabela, origem) VALUES (?, ?, 'sugerido')", (mid, t))
+        for i, filho in enumerate(item.get("itens", [])):
+            gravar(filho, mid, i)
+
+    for i, m in enumerate(dados["menus"]):
+        gravar(m, None, i)
+    print(f"  menus {modulo}: {len(vistos)} itens")
+
+
+def importar_manuais(con) -> None:
+    try:  # bancos criados antes da coluna fontes
+        con.execute("ALTER TABLE manuais ADD COLUMN fontes TEXT NOT NULL DEFAULT '[]'")
+    except Exception:
+        pass
+    menus = {r["id"] for r in con.execute("SELECT id FROM menus")}
+    n = 0
+    for arq in sorted((SEED / "manuais").glob("*.json")):
+        m = json.loads(arq.read_text(encoding="utf-8"))
+        menu = m.get("menu") if m.get("menu") in menus else None
+        if m.get("menu") and not menu:
+            print(f"  aviso: {m['codigo']} aponta para o menu inexistente {m['menu']}")
+        con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(codigo) DO UPDATE SET titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
+                       modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
+                       fontes = excluded.fontes, atualizado_em = datetime('now', 'localtime')""",
+                    (m["codigo"], m["titulo"], m.get("subtitulo", ""), m.get("versao", "1.0"), m["modulo"], menu,
+                     json.dumps(m["secoes"], ensure_ascii=False), json.dumps(m.get("tabelas", [])), json.dumps(m.get("fontes", []), ensure_ascii=False)))
+        n += 1
+    print(f"  manuais: {n}")
+
+
+def main():
+    con = conectar()
+    criar_schema(con)
+    con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", MODULOS)
+    for _, _, banco in MODULOS:
+        if banco:
+            importar_catalogo(con, banco)
+    for arq in sorted(SEED.glob("menus_*.json")):
+        importar_menus(con, arq)
+    importar_manuais(con)
+    con.commit()
+    con.close()
+    print("Pronto.")
+
+
+if __name__ == "__main__":
+    main()

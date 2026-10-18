@@ -1,0 +1,31 @@
+{
+  "editado": true,
+  "codigo": "DEMO.001",
+  "titulo": "Fechamento de caixa com diferença de valor",
+  "subtitulo": "Como conferir sangrias, suprimentos e pagamentos quando o valor informado pelo operador não bate com o calculado.",
+  "versao": "1.0",
+  "modulo": "pdv",
+  "menu": "pdv.caixa.fechamento-de-caixa",
+  "fontes": ["Manual de exemplo"],
+  "tabelas": ["caixas", "caixa_mov", "venda_pagamentos", "formas_pgto"],
+  "secoes": [
+    {
+      "titulo": "Conferir o fechamento",
+      "blocos": [
+        { "tipo": "obs", "texto": "Faça a conferência antes de reabrir o caixa. Reabrir sem entender a diferença costuma duplicar lançamentos." },
+        { "tipo": "passo", "texto": "Acesse **Caixa > Fechamento de Caixa** (atalho **F10**) e anote o **valor informado** pelo operador e o **valor calculado** pelo sistema." },
+        { "tipo": "passo", "texto": "Abra **Caixa > Sangria e Suprimento** e confira se todas as retiradas do dia foram lançadas." },
+        { "tipo": "passo", "texto": "Compare os pagamentos das vendas com os lançamentos do caixa, separando por **forma de pagamento**." },
+        { "tipo": "nota", "texto": "Diferenças em cartão normalmente são venda lançada na forma errada. Diferenças em dinheiro normalmente são sangria não lançada." }
+      ]
+    },
+    {
+      "titulo": "Diagnóstico pelo banco",
+      "blocos": [
+        { "tipo": "texto", "texto": "Totais do caixa por forma de pagamento, para comparar com o relatório do operador:" },
+        { "tipo": "sql", "texto": "SELECT fp.descricao, cm.tipo, SUM(cm.valor) AS total\nFROM caixa_mov cm\nJOIN formas_pgto fp ON fp.id_forma_pgto = cm.id_forma_pgto\nWHERE cm.id_caixa = :id_caixa\nGROUP BY fp.descricao, cm.tipo;" },
+        { "tipo": "passo", "texto": "Se faltar o lançamento de alguma venda, reabra o caixa com a senha do supervisor e lance pela tela. Não ajuste valores direto no banco." }
+      ]
+    }
+  ]
+}

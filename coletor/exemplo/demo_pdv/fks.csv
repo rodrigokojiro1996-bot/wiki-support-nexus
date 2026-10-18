@@ -1,0 +1,6 @@
+CONSTRAINT_NAME,TABLE_NAME,COLUMN_NAME,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME
+fk_caixa_mov_id_caixa,caixa_mov,id_caixa,caixas,id_caixa
+fk_vendas_id_caixa,vendas,id_caixa,caixas,id_caixa
+fk_venda_itens_id_venda,venda_itens,id_venda,vendas,id_venda
+fk_venda_pagamentos_id_venda,venda_pagamentos,id_venda,vendas,id_venda
+fk_nf_entrada_itens_id_nf_entrada,nf_entrada_itens,id_nf_entrada,nf_entrada,id_nf_entrada

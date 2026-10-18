@@ -1,0 +1,29 @@
+{
+  "editado": true,
+  "codigo": "DEMO.005",
+  "titulo": "Devolução de venda com crédito ao cliente",
+  "subtitulo": "Devolver itens de uma venda gerando crédito para uso em compras futuras.",
+  "versao": "1.0",
+  "modulo": "pdv",
+  "menu": "pdv.vendas.devolucoes",
+  "fontes": ["Manual de exemplo"],
+  "tabelas": ["devolucoes", "devolucao_itens", "vendas", "clientes"],
+  "secoes": [
+    {
+      "titulo": "Registrar a devolução",
+      "blocos": [
+        { "tipo": "obs", "texto": "Só é possível devolver vendas finalizadas. Vendas em aberto devem ser canceladas pelo caixa." },
+        { "tipo": "passo", "texto": "Acesse **Vendas > Devoluções** e informe o número da venda." },
+        { "tipo": "passo", "texto": "Marque os itens e as quantidades que o cliente está devolvendo." },
+        { "tipo": "passo", "texto": "Escolha **Gerar crédito** e confirme. O crédito fica disponível no cadastro do cliente." }
+      ]
+    },
+    {
+      "titulo": "Consultar créditos pendentes",
+      "blocos": [
+        { "tipo": "sql", "texto": "SELECT d.id_devolucao, c.nome, d.data_dev, d.credito\nFROM devolucoes d\nJOIN clientes c ON c.id_cliente = d.id_cliente\nWHERE d.situacao = 'P'\nORDER BY d.data_dev DESC;" },
+        { "tipo": "nota", "texto": "O cancelamento de um crédito pendente exige a senha de gerente e não pode ser desfeito." }
+      ]
+    }
+  ]
+}

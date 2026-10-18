@@ -1,0 +1,26 @@
+# credenciais e segredos (nunca versionar)
+coletor/.env
+backend/ferramentas/segredos.txt
+
+# curadoria e autores reais de quem usa o importador (no git ficam só os modelos .exemplo.json)
+backend/ferramentas/curadoria.json
+backend/ferramentas/curadoria_*.json
+backend/ferramentas/autores.json
+
+# dados gerados a partir de um banco real (estrutura interna; regenerar com o coletor)
+coletor/saida/
+prototipo/
+backend/dados/
+
+# ambientes e dependências
+coletor/.venv/
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+
+# editor / sistema
+.vscode/
+Thumbs.db
+desktop.ini

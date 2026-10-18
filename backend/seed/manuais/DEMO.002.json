@@ -1,0 +1,29 @@
+{
+  "editado": true,
+  "codigo": "DEMO.002",
+  "titulo": "Venda finalizada não baixou o estoque",
+  "subtitulo": "A venda aparece como finalizada, mas o saldo do produto não mudou.",
+  "versao": "1.0",
+  "modulo": "pdv",
+  "menu": "pdv.vendas.frente-de-caixa",
+  "fontes": ["Manual de exemplo"],
+  "tabelas": ["vendas", "venda_itens", "mov_estoque", "estoque"],
+  "secoes": [
+    {
+      "titulo": "Localizar a venda",
+      "blocos": [
+        { "tipo": "passo", "texto": "Em **Vendas > Consultar Vendas** (atalho **Ctrl + V**), pesquise a venda pelo número e confirme que a situação está como **finalizada**." },
+        { "tipo": "passo", "texto": "Anote os produtos e as quantidades vendidas." }
+      ]
+    },
+    {
+      "titulo": "Conferir o movimento de estoque",
+      "blocos": [
+        { "tipo": "texto", "texto": "Itens da venda que não geraram movimento de estoque:" },
+        { "tipo": "sql", "texto": "SELECT vi.id_produto, vi.quantidade\nFROM venda_itens vi\nJOIN vendas v ON v.id_venda = vi.id_venda\nLEFT JOIN mov_estoque me ON me.documento = CAST(v.num_venda AS CHAR) AND me.id_produto = vi.id_produto\nWHERE v.id_venda = :id_venda AND me.id_mov IS NULL;" },
+        { "tipo": "passo", "texto": "Se houver itens sem movimento, use **Estoque > Ajuste de Estoque** com o motivo **Reprocessar venda** e informe o número da venda." },
+        { "tipo": "obs", "texto": "O ajuste gera o movimento com o documento da venda, então ele aparece no extrato do produto." }
+      ]
+    }
+  ]
+}

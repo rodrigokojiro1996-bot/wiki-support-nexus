@@ -1,0 +1,13 @@
+{
+  "_sobre": "Modelo. Copie para curadoria.json (fora do git) e aponte para a pasta com seus documentos. Cada manual liga-se a um item do mapa (menu); fontes com 'secao' viram seções de um manual de perguntas frequentes. Rodar: python -m ferramentas.importar_processos",
+  "origem": "C:\\caminho\\para\\documentos-de-suporte",
+  "banco": "demo_pdv",
+  "manuais": [
+    { "codigo": "EX.001", "titulo": "Fechamento de caixa com diferença", "subtitulo": "Conferência de sangrias e pagamentos.", "menu": "pdv.caixa.fechamento-de-caixa",
+      "fontes": [{ "arquivo": "Fechamento de caixa.pdf" }] },
+    { "codigo": "EX.002", "titulo": "Transferências: dúvidas frequentes", "subtitulo": "Casos rápidos do dia a dia.", "menu": "pdv.estoque.transferencia-entre-lojas",
+      "fontes": [{ "arquivo": "transferencia em uso.txt", "secao": "Transferência marcada como em uso" },
+                 { "arquivo": "transferencia nao aparece.txt", "secao": "Transferência não aparece no destino" }] }
+  ],
+  "fora": {}
+}

@@ -1,0 +1,29 @@
+{
+  "editado": true,
+  "codigo": "DEMO.004",
+  "titulo": "Entrada de nota fiscal por XML",
+  "subtitulo": "Dar entrada em uma nota de compra a partir do arquivo XML do fornecedor.",
+  "versao": "1.0",
+  "modulo": "pdv",
+  "menu": "pdv.estoque.entrada-de-nota-fiscal.entrada-por-xml",
+  "fontes": ["Manual de exemplo"],
+  "tabelas": ["nf_entrada", "nf_entrada_itens", "fornecedores", "produtos"],
+  "secoes": [
+    {
+      "titulo": "Carregar o XML",
+      "blocos": [
+        { "tipo": "passo", "texto": "Acesse **Estoque > Entrada de Nota Fiscal > Entrada por XML**." },
+        { "tipo": "passo", "texto": "Selecione o arquivo no campo **Arquivo XML** e clique em **Mostrar**. O sistema carrega fornecedor, número, série, chave, valores e itens." },
+        { "tipo": "passo", "texto": "Confira se todos os itens têm **código interno**. Itens sem código ainda não estão ligados a um produto do cadastro." }
+      ]
+    },
+    {
+      "titulo": "Ligar produtos e gravar",
+      "blocos": [
+        { "tipo": "passo", "texto": "Para cada item sem código interno, use **Ligação** para escolher o produto existente ou **Novo Produto** para cadastrar." },
+        { "tipo": "passo", "texto": "Revise o preço de venda sugerido e clique em **Gravar**." },
+        { "tipo": "obs", "texto": "Uma nota com a mesma chave não pode ser lançada duas vezes. Se o sistema avisar duplicidade, consulte a nota em nf_entrada pela chave." }
+      ]
+    }
+  ]
+}

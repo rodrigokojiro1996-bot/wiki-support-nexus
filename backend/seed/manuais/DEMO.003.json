@@ -1,0 +1,29 @@
+{
+  "editado": true,
+  "codigo": "DEMO.003",
+  "titulo": "NFC-e presa em contingência",
+  "subtitulo": "Cupons emitidos sem internet que não foram transmitidos para a SEFAZ.",
+  "versao": "1.0",
+  "modulo": "pdv",
+  "menu": "pdv.fiscal.monitor-nfc-e",
+  "fontes": ["Manual de exemplo"],
+  "tabelas": ["nfce", "vendas", "terminais"],
+  "secoes": [
+    {
+      "titulo": "Transmitir as notas pendentes",
+      "blocos": [
+        { "tipo": "passo", "texto": "Acesse **Fiscal > Monitor NFC-e** e filtre pela situação **Contingência**." },
+        { "tipo": "passo", "texto": "Confirme com a loja se a internet do terminal voltou." },
+        { "tipo": "passo", "texto": "Clique em **Transmitir pendentes** e acompanhe a situação de cada nota." },
+        { "tipo": "nota", "texto": "Se alguma nota voltar com rejeição, anote a mensagem: ela indica o campo que precisa ser corrigido." }
+      ]
+    },
+    {
+      "titulo": "Conferir pelo banco",
+      "blocos": [
+        { "tipo": "sql", "texto": "SELECT n.numero, n.serie, n.chave, v.data_venda\nFROM nfce n\nJOIN vendas v ON v.id_venda = n.id_venda\nWHERE n.contingencia = 'S' AND n.protocolo IS NULL\nORDER BY v.data_venda;" },
+        { "tipo": "obs", "texto": "Se o terminal estiver há muito tempo sem sincronizar, confira a coluna ultimo_sync em terminais." }
+      ]
+    }
+  ]
+}

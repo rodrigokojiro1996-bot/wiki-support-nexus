@@ -1,0 +1,229 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Background, BaseEdge, EdgeLabelRenderer, Handle, Panel, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, useReactFlow,
+  type Edge, type EdgeProps, type Node, type NodeProps
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import dagre from '@dagrejs/dagre';
+import type { Relacao } from '../tipos';
+
+type Coluna = { nome: string; tipo: string; pk: boolean };
+type TabelaDiag = { nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; colunas: Coluna[] };
+type RespostaDiagrama = { foco: string[]; tabelas: TabelaDiag[]; relacoes: Relacao[]; apoio_ocultas: string[] };
+
+type DadosTabela = {
+  nome: string; engine: string; foco: boolean; apoio: boolean; colunas: Coluna[]; ocultas: number;
+  chaves: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
+};
+type DadosRelacao = { estado: Relacao['estado']; destaque: boolean; apagada: boolean; juncao: string };
+
+const LARGURA = 290, CAB = 38, LINHA = 25, RODAPE = 24;
+
+function icone(tipo: string) {
+  const t = tipo.toLowerCase();
+  if (/int|decimal|numeric|float|double|bit/.test(t)) return '#';
+  if (/date|time|year/.test(t)) return '◷';
+  if (/blob|binary/.test(t)) return '▤';
+  return 'abc';
+}
+
+/* ---------- cartão da tabela ---------- */
+function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
+  const b = data.busca;
+  return (
+    <div className={`tb ${data.foco ? 'tb-foco' : ''} ${data.selecionada ? 'tb-sel' : ''} tb-${data.estado}`}>
+      <div className="tb-cab">
+        <span className={b && data.nome.toLowerCase().includes(b) ? 'achou' : undefined}>{data.nome}</span>
+        {data.apoio && <em title="Tabela de apoio: muitas outras tabelas apontam para ela">apoio</em>}
+        <small>{data.engine}</small>
+      </div>
+      {data.colunas.map(c => (
+        <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''}`}>
+          <Handle type="target" position={Position.Left} id={`${c.nome}-t`} className="tb-alca" isConnectable={false} />
+          <i className="tb-ic">{icone(c.tipo)}</i>
+          <b>{c.nome}</b>
+          <span>{c.tipo}</span>
+          <Handle type="source" position={Position.Right} id={`${c.nome}-s`} className="tb-alca" isConnectable={false} />
+        </div>
+      ))}
+      {data.ocultas > 0 && <div className="tb-mais">+ {data.ocultas} colunas</div>}
+    </div>
+  );
+}
+
+/* ---------- ligação com marcas N (lado da chave estrangeira) e 1 (lado referenciado) ---------- */
+function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: EdgeProps<Edge<DadosRelacao>>) {
+  const [caminho] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 8, offset: 22 });
+  const d = data!;
+  const classe = `rel-aresta ${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''} rel-${d.estado}`;
+  return (
+    <>
+      <BaseEdge id={id} path={caminho} className={classe} />
+      <EdgeLabelRenderer>
+        <div className={`rel-marca ${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${sourceX + 12}px, ${sourceY}px)` }} title={d.juncao}>N</div>
+        <div className={`rel-marca ${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${targetX - 12}px, ${targetY}px)` }} title={d.juncao}>1</div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+const tiposNo = { tabela: TabelaNo };
+const tiposAresta = { relacao: RelacaoAresta };
+
+type Props = { modulo: string; tabelas: string[]; onAbrirTabela: (nome: string) => void };
+
+function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
+  const [resp, setResp] = useState<RespostaDiagrama | null>(null);
+  const [erro, setErro] = useState('');
+  const [nivel, setNivel] = useState(1);
+  const [apoio, setApoio] = useState(false);
+  const [todas, setTodas] = useState(false);
+  const [busca, setBusca] = useState('');
+  const [sel, setSel] = useState<string | null>(null);
+  const { fitView, zoomIn, zoomOut } = useReactFlow();
+
+  const chave = tabelas.join(',');
+  useEffect(() => {
+    if (!chave) { setResp(null); return; }
+    setErro('');
+    fetch(`/api/modulos/${modulo}/diagrama?tabelas=${encodeURIComponent(chave)}&nivel=${nivel}&apoio=${apoio}`)
+      .then(r => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
+      .then((d: RespostaDiagrama) => { setResp(d); setSel(null); })
+      .catch(e => setErro(`Não foi possível carregar o diagrama (${e.message}).`));
+  }, [modulo, chave, nivel, apoio]);
+
+  // colunas que participam de ligações (lado de cada tabela)
+  const chavesPorTabela = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    resp?.relacoes.forEach(r => r.colunas.forEach(([a, b]) => {
+      (m.get(r.origem) ?? m.set(r.origem, new Set()).get(r.origem)!).add(a);
+      (m.get(r.destino) ?? m.set(r.destino, new Set()).get(r.destino)!).add(b);
+    }));
+    return m;
+  }, [resp]);
+
+  // posições: só recalcula quando muda o conjunto de tabelas ou o modo de colunas
+  const base = useMemo(() => {
+    if (!resp) return { nos: [] as Node<DadosTabela>[], arestas: [] as Edge<DadosRelacao>[] };
+    const g = new dagre.graphlib.Graph();
+    g.setGraph({ rankdir: 'LR', nodesep: 36, ranksep: 120, marginx: 20, marginy: 20 });
+    g.setDefaultEdgeLabel(() => ({}));
+    const nos = resp.tabelas.map(t => {
+      const chaves = chavesPorTabela.get(t.nome) ?? new Set<string>();
+      let visiveis = todas ? t.colunas : t.colunas.filter(c => c.pk || chaves.has(c.nome));
+      if (!visiveis.length) visiveis = t.colunas.slice(0, 3);
+      const altura = CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length ? RODAPE : 0) + 6;
+      g.setNode(t.nome, { width: LARGURA, height: altura });
+      return {
+        id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
+        data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
+                chaves, estado: 'normal', selecionada: false, busca: '' }
+      } as Node<DadosTabela>;
+    });
+    resp.relacoes.forEach(r => g.setEdge(r.origem, r.destino));
+    dagre.layout(g);
+    nos.forEach(n => { const p = g.node(n.id); n.position = { x: p.x - LARGURA / 2, y: p.y - (n.height ?? 0) / 2 }; });
+    const arestas = resp.relacoes.map(r => ({
+      id: r.id, source: r.origem, target: r.destino, type: 'relacao',
+      sourceHandle: `${r.colunas[0][0]}-s`, targetHandle: `${r.colunas[0][1]}-t`,
+      data: { estado: r.estado, destaque: false, apagada: false, juncao: r.colunas.map(([a, b]) => `${r.origem}.${a} = ${r.destino}.${b}`).join(' e ') }
+    } as Edge<DadosRelacao>));
+    return { nos, arestas };
+  }, [resp, todas, chavesPorTabela]);
+
+  // destaque: sem seleção, ilumina as tabelas da tela e as ligações delas; com seleção, só a tabela escolhida e vizinhas
+  const termo = busca.trim().toLowerCase();
+  const { nos, arestas } = useMemo(() => {
+    const foco = new Set(resp?.foco ?? []);
+    const centro = sel ? new Set([sel]) : foco;
+    const vizinhas = new Set<string>(centro);
+    base.arestas.forEach(e => { if (centro.has(e.source)) vizinhas.add(e.target); if (centro.has(e.target)) vizinhas.add(e.source); });
+    return {
+      nos: base.nos.map(n => ({
+        ...n,
+        data: { ...n.data, selecionada: n.id === sel, busca: termo,
+                estado: sel ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal' }
+      })) as Node<DadosTabela>[],
+      arestas: base.arestas.map(e => {
+        const toca = centro.has(e.source) || centro.has(e.target);
+        return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: !!sel && !toca } };
+      }) as Edge<DadosRelacao>[]
+    };
+  }, [base, sel, resp, termo]);
+
+  useEffect(() => { if (base.nos.length) requestAnimationFrame(() => fitView({ padding: 0.12, duration: 300 })); }, [base, fitView]);
+
+  // reenquadra quando o painel muda de tamanho (abrir a ficha da tabela, redimensionar a janela)
+  const [canvas, setCanvas] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!canvas) return;
+    let t = 0;
+    const ro = new ResizeObserver(() => { clearTimeout(t); t = window.setTimeout(() => fitView({ padding: 0.12, duration: 200 }), 120); });
+    ro.observe(canvas);
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, [canvas, fitView]);
+
+  const buscar = useCallback(() => {
+    if (!termo) return;
+    const achados = base.nos.filter(n => n.id.includes(termo) || n.data.colunas.some(c => c.nome.toLowerCase().includes(termo)));
+    if (achados.length) fitView({ nodes: achados.map(n => ({ id: n.id })), padding: 0.3, duration: 400 });
+  }, [termo, base, fitView]);
+
+  if (!tabelas.length) return <div className="diag-vazio">Nenhuma tabela vinculada a esta tela. Vincule tabelas na aba Visão geral.</div>;
+
+  return (
+    <div className="diag-wrap">
+      <div className="diag-barra">
+        <button type="button" onClick={() => zoomOut({ duration: 200 })} aria-label="Afastar">−</button>
+        <button type="button" onClick={() => zoomIn({ duration: 200 })} aria-label="Aproximar">+</button>
+        <button type="button" onClick={() => fitView({ padding: 0.12, duration: 300 })} aria-label="Enquadrar" title="Enquadrar tudo">⤢</button>
+        <span className="diag-sep" />
+        <select id="diag-colunas" value={todas ? 'todas' : 'chaves'} onChange={e => setTodas(e.target.value === 'todas')} aria-label="Colunas exibidas">
+          <option value="chaves">Chaves e ligações</option>
+          <option value="todas">Todas as colunas</option>
+        </select>
+        <select id="diag-nivel" value={nivel} onChange={e => setNivel(+e.target.value)} aria-label="Níveis de ligação">
+          <option value={0}>Só a tela</option>
+          <option value={1}>+ 1 nível</option>
+          <option value={2}>+ 2 níveis</option>
+        </select>
+        <label className="diag-check"><input id="diag-apoio" type="checkbox" checked={apoio} onChange={e => setApoio(e.target.checked)} /> Tabelas de apoio</label>
+        <input id="diag-busca" type="search" placeholder="Buscar tabela ou coluna (Enter)" value={busca}
+          onChange={e => setBusca(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') buscar(); }} />
+        <span className="diag-dica">Clique numa tabela para iluminar as ligações · duplo clique abre a ficha</span>
+      </div>
+      <div className="diag-canvas" ref={setCanvas}>
+      <ReactFlow
+        nodes={nos} edges={arestas} nodeTypes={tiposNo} edgeTypes={tiposAresta}
+        nodesConnectable={false} edgesFocusable={false} minZoom={0.15} maxZoom={1.6} colorMode="light"
+        fitView fitViewOptions={{ padding: 0.12 }}
+        onNodeClick={(_, n) => setSel(n.id === sel ? null : n.id)}
+        onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}
+        onPaneClick={() => setSel(null)}
+        proOptions={{ hideAttribution: true }}
+      >
+      <Background gap={22} size={1.2} />
+      <Panel position="bottom-left" className="diag-legenda">
+        <span><i className="lg-foco" />Tabela da tela</span>
+        <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha" /></svg>Confirmada / documentada</span>
+        <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha sug" /></svg>Sugerida</span>
+        <span><b className="rel-marca estatica">N</b>→<b className="rel-marca estatica">1</b> muitas para uma</span>
+        {resp && resp.apoio_ocultas.length > 0 && !apoio && <span className="lg-ocultas">Ocultas: {resp.apoio_ocultas.join(', ')}</span>}
+      </Panel>
+      {sel && (
+        <Panel position="top-left" className="diag-sel">
+          <b>{sel}</b> · {arestas.filter(e => e.data!.destaque).length} ligações
+          <button type="button" className="link" onClick={() => onAbrirTabela(sel)}>Abrir ficha</button>
+        </Panel>
+      )}
+      {erro && <Panel position="top-center" className="diag-erro">{erro}</Panel>}
+      </ReactFlow>
+      </div>
+    </div>
+  );
+}
+
+/** Diagrama ER das tabelas de uma tela, com as ligações iluminadas. */
+export default function Diagrama(props: Props) {
+  return <ReactFlowProvider><Interno {...props} /></ReactFlowProvider>;
+}

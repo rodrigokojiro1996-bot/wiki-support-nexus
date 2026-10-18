@@ -1,0 +1,7 @@
+{
+  "_sobre": "Sinônimos de colunas do sistema mapeado. Cada regra gera relações SUGERIDAS; a equipe valida na interface. 'alvo' omitido = PK da tabela. 'empresa': true = o JOIN também usa a coluna empresa. 'origem' (opcional) limita a regra a essas tabelas, para nomes genéricos.",
+  "regras": [
+    { "colunas": ["loja_origem", "loja_destino"], "tabela": "lojas" },
+    { "colunas": ["operador", "atendente", "vendedor"], "tabela": "usuarios" }
+  ]
+}

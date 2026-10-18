@@ -1,0 +1,9 @@
+# API
+fastapi>=0.115
+uvicorn[standard]>=0.32
+playwright>=1.55
+
+# ferramentas/importar_processos.py (conversão de PDF/Word em manuais)
+pypdf>=5.0
+python-docx>=1.1
+pillow>=11.0

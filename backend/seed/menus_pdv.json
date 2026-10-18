@@ -1,0 +1,62 @@
+{
+  "_sobre": "Menus e telas do PDV de EXEMPLO (varejo fictício). 'tabelas' são vínculos SUGERIDOS para a equipe revisar; 'tela_codigo' é o código da janela; 'submenu': true marca submenus ainda não detalhados.",
+  "modulo": "pdv",
+  "menus": [
+    { "titulo": "Cadastros", "itens": [
+      { "titulo": "Clientes", "atalho": "Ctrl+C", "tela_codigo": "cli01", "tabelas": ["clientes", "cidades"] },
+      { "titulo": "Produtos", "tela_codigo": "prd01", "tabelas": ["produtos", "grupos", "fabricantes", "estoque"] },
+      { "titulo": "Formas de Pagamento", "tabelas": ["formas_pgto"] },
+      { "titulo": "Trocar Usuário", "atalho": "F2", "tabelas": ["usuarios", "lojas"] }
+    ]},
+    { "titulo": "Vendas", "itens": [
+      { "titulo": "Frente de Caixa", "atalho": "F4", "tela_codigo": "vnd01", "tabelas": ["vendas", "venda_itens", "venda_pagamentos", "produtos", "clientes"] },
+      { "titulo": "Orçamentos", "submenu": true },
+      { "titulo": "Consultar Vendas", "atalho": "Ctrl+V", "tela_codigo": "vnd05", "tabelas": ["vendas", "venda_itens", "venda_pagamentos"] },
+      { "titulo": "Devoluções", "tela_codigo": "dev01", "tabelas": ["devolucoes", "devolucao_itens", "vendas", "clientes"] }
+    ]},
+    { "titulo": "Caixa", "itens": [
+      { "titulo": "Abertura de Caixa", "tabelas": ["caixas", "terminais", "usuarios"] },
+      { "titulo": "Sangria e Suprimento", "tabelas": ["caixa_mov", "caixas", "formas_pgto"] },
+      { "titulo": "Fechamento de Caixa", "atalho": "F10", "tela_codigo": "cx03", "tabelas": ["caixas", "caixa_mov", "venda_pagamentos", "formas_pgto"] }
+    ]},
+    { "titulo": "Estoque", "itens": [
+      { "titulo": "Entrada de Nota Fiscal", "itens": [
+        { "titulo": "Manual", "atalho": "Ctrl+N", "tabelas": ["nf_entrada", "nf_entrada_itens"] },
+        { "titulo": "Entrada por XML", "tela_codigo": "est10", "tabelas": ["nf_entrada", "nf_entrada_itens", "fornecedores", "produtos"] },
+        { "titulo": "Conferência de Itens", "tabelas": ["nf_entrada_itens", "produtos", "mov_estoque"] }
+      ]},
+      { "titulo": "Transferência entre Lojas", "itens": [
+        { "titulo": "Saída de Transferência", "tabelas": ["transferencias", "transferencia_itens"] },
+        { "titulo": "Entrada de Transferência", "tabelas": ["transferencias", "transferencia_itens", "mov_estoque"] }
+      ]},
+      { "titulo": "Ajuste de Estoque", "tabelas": ["estoque", "mov_estoque"] },
+      { "titulo": "Inventário", "submenu": true, "tabelas": ["estoque"] },
+      { "titulo": "Etiquetas de Preço", "tabelas": ["produtos"] }
+    ]},
+    { "titulo": "Fiscal", "itens": [
+      { "titulo": "Monitor NFC-e", "tela_codigo": "fis01", "tabelas": ["nfce", "nfce_itens", "vendas"] },
+      { "titulo": "Cancelamento de NFC-e", "tabelas": ["nfce", "nfce_eventos"] },
+      { "titulo": "Notas Fiscais", "itens": [
+        { "titulo": "Devolução ao Cliente", "tabelas": ["devolucoes", "nfce"] },
+        { "titulo": "Devolução ao Fornecedor", "tabelas": ["nf_entrada", "fornecedores"] }
+      ]}
+    ]},
+    { "titulo": "Financeiro", "itens": [
+      { "titulo": "Contas a Receber", "tabelas": ["contas_receber", "baixas_receber", "clientes"] },
+      { "titulo": "Baixa de Títulos", "tabelas": ["baixas_receber", "contas_receber"] }
+    ]},
+    { "titulo": "Relatórios", "itens": [
+      { "titulo": "Vendas", "itens": [
+        { "titulo": "Vendas por Forma de Pagamento", "tabelas": ["vendas", "venda_pagamentos", "formas_pgto"] },
+        { "titulo": "Vendas por Produto", "tabelas": ["venda_itens", "produtos"] }
+      ]},
+      { "titulo": "Estoque", "submenu": true },
+      { "titulo": "Caixa", "submenu": true }
+    ]},
+    { "titulo": "Utilitários", "itens": [
+      { "titulo": "Sincronização", "tabelas": ["sync_fila", "terminais"] },
+      { "titulo": "Parâmetros do Terminal", "tabelas": ["parametros", "terminais"] },
+      { "titulo": "Backup" }
+    ]}
+  ]
+}

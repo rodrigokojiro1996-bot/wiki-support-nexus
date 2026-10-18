@@ -1,0 +1,1783 @@
+{
+ "banco": "demo_pdv",
+ "origem": "importado",
+ "importadoEm": "18/10/2026 10:50",
+ "tables": {
+  "lojas": {
+   "id": "lojas",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "6",
+   "cols": [
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "nome",
+     "type": "varchar(60)",
+     "pk": false
+    },
+    {
+     "name": "cnpj",
+     "type": "varchar(18)",
+     "pk": false
+    },
+    {
+     "name": "uf",
+     "type": "char(2)",
+     "pk": false
+    }
+   ]
+  },
+  "usuarios": {
+   "id": "usuarios",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "48",
+   "cols": [
+    {
+     "name": "id_usuario",
+     "type": "int(6)",
+     "pk": true
+    },
+    {
+     "name": "nome",
+     "type": "varchar(60)",
+     "pk": false
+    },
+    {
+     "name": "login",
+     "type": "varchar(20)",
+     "pk": false
+    },
+    {
+     "name": "perfil",
+     "type": "varchar(20)",
+     "pk": false
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    }
+   ]
+  },
+  "cidades": {
+   "id": "cidades",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "5570",
+   "cols": [
+    {
+     "name": "id_cidade",
+     "type": "int(6)",
+     "pk": true
+    },
+    {
+     "name": "nome",
+     "type": "varchar(60)",
+     "pk": false
+    },
+    {
+     "name": "uf",
+     "type": "char(2)",
+     "pk": false
+    },
+    {
+     "name": "cod_ibge",
+     "type": "char(7)",
+     "pk": false
+    }
+   ]
+  },
+  "clientes": {
+   "id": "clientes",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "18420",
+   "cols": [
+    {
+     "name": "id_cliente",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "nome",
+     "type": "varchar(80)",
+     "pk": false
+    },
+    {
+     "name": "cpf_cnpj",
+     "type": "varchar(18)",
+     "pk": false
+    },
+    {
+     "name": "telefone",
+     "type": "varchar(15)",
+     "pk": false
+    },
+    {
+     "name": "limite_credito",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "id_cidade",
+     "type": "int(6)",
+     "pk": false
+    },
+    {
+     "name": "ativo",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "grupos": {
+   "id": "grupos",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "32",
+   "cols": [
+    {
+     "name": "id_grupo",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "descricao",
+     "type": "varchar(40)",
+     "pk": false
+    }
+   ]
+  },
+  "fabricantes": {
+   "id": "fabricantes",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "610",
+   "cols": [
+    {
+     "name": "id_fabricante",
+     "type": "int(6)",
+     "pk": true
+    },
+    {
+     "name": "nome",
+     "type": "varchar(60)",
+     "pk": false
+    }
+   ]
+  },
+  "produtos": {
+   "id": "produtos",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "21300",
+   "cols": [
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": true
+    },
+    {
+     "name": "descricao",
+     "type": "varchar(120)",
+     "pk": false
+    },
+    {
+     "name": "cod_barras",
+     "type": "varchar(14)",
+     "pk": false
+    },
+    {
+     "name": "ncm",
+     "type": "char(8)",
+     "pk": false
+    },
+    {
+     "name": "id_grupo",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_fabricante",
+     "type": "int(6)",
+     "pk": false
+    },
+    {
+     "name": "preco_venda",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "ativo",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "estoque": {
+   "id": "estoque",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "64200",
+   "cols": [
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": true
+    },
+    {
+     "name": "saldo",
+     "type": "decimal(12,3)",
+     "pk": false
+    },
+    {
+     "name": "minimo",
+     "type": "decimal(12,3)",
+     "pk": false
+    }
+   ]
+  },
+  "mov_estoque": {
+   "id": "mov_estoque",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "812000",
+   "cols": [
+    {
+     "name": "id_mov",
+     "type": "bigint(12)",
+     "pk": true
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": false
+    },
+    {
+     "name": "tipo",
+     "type": "char(2)",
+     "pk": false
+    },
+    {
+     "name": "quantidade",
+     "type": "decimal(12,3)",
+     "pk": false
+    },
+    {
+     "name": "documento",
+     "type": "varchar(20)",
+     "pk": false
+    },
+    {
+     "name": "data_mov",
+     "type": "datetime",
+     "pk": false
+    },
+    {
+     "name": "id_usuario",
+     "type": "int(6)",
+     "pk": false
+    }
+   ]
+  },
+  "terminais": {
+   "id": "terminais",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "22",
+   "cols": [
+    {
+     "name": "id_terminal",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "descricao",
+     "type": "varchar(40)",
+     "pk": false
+    },
+    {
+     "name": "ultimo_sync",
+     "type": "datetime",
+     "pk": false
+    }
+   ]
+  },
+  "formas_pgto": {
+   "id": "formas_pgto",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "9",
+   "cols": [
+    {
+     "name": "id_forma_pgto",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "descricao",
+     "type": "varchar(30)",
+     "pk": false
+    },
+    {
+     "name": "tipo",
+     "type": "char(2)",
+     "pk": false
+    },
+    {
+     "name": "gera_receber",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "caixas": {
+   "id": "caixas",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "9800",
+   "cols": [
+    {
+     "name": "id_caixa",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_terminal",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_usuario",
+     "type": "int(6)",
+     "pk": false
+    },
+    {
+     "name": "abertura",
+     "type": "datetime",
+     "pk": false
+    },
+    {
+     "name": "fechamento",
+     "type": "datetime",
+     "pk": false
+    },
+    {
+     "name": "valor_abertura",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "valor_informado",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(2)",
+     "pk": false
+    }
+   ]
+  },
+  "caixa_mov": {
+   "id": "caixa_mov",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "286000",
+   "cols": [
+    {
+     "name": "id_caixa_mov",
+     "type": "bigint(12)",
+     "pk": true
+    },
+    {
+     "name": "id_caixa",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "tipo",
+     "type": "char(1)",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "id_forma_pgto",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "historico",
+     "type": "varchar(60)",
+     "pk": false
+    }
+   ]
+  },
+  "vendas": {
+   "id": "vendas",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "402000",
+   "cols": [
+    {
+     "name": "id_venda",
+     "type": "bigint(12)",
+     "pk": true
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "num_venda",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_caixa",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_cliente",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_usuario",
+     "type": "int(6)",
+     "pk": false
+    },
+    {
+     "name": "data_venda",
+     "type": "datetime",
+     "pk": false
+    },
+    {
+     "name": "valor_total",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(2)",
+     "pk": false
+    }
+   ]
+  },
+  "venda_itens": {
+   "id": "venda_itens",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "1150000",
+   "cols": [
+    {
+     "name": "id_venda_item",
+     "type": "bigint(12)",
+     "pk": true
+    },
+    {
+     "name": "id_venda",
+     "type": "bigint(12)",
+     "pk": false
+    },
+    {
+     "name": "item",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": false
+    },
+    {
+     "name": "quantidade",
+     "type": "decimal(12,3)",
+     "pk": false
+    },
+    {
+     "name": "valor_unitario",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "desconto",
+     "type": "decimal(12,2)",
+     "pk": false
+    }
+   ]
+  },
+  "venda_pagamentos": {
+   "id": "venda_pagamentos",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "438000",
+   "cols": [
+    {
+     "name": "id_venda_pgto",
+     "type": "bigint(12)",
+     "pk": true
+    },
+    {
+     "name": "id_venda",
+     "type": "bigint(12)",
+     "pk": false
+    },
+    {
+     "name": "id_forma_pgto",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "nsu",
+     "type": "varchar(20)",
+     "pk": false
+    }
+   ]
+  },
+  "devolucoes": {
+   "id": "devolucoes",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "3100",
+   "cols": [
+    {
+     "name": "id_devolucao",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_venda",
+     "type": "bigint(12)",
+     "pk": false
+    },
+    {
+     "name": "id_cliente",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "data_dev",
+     "type": "datetime",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "credito",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "devolucao_itens": {
+   "id": "devolucao_itens",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "5200",
+   "cols": [
+    {
+     "name": "id_devolucao_item",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_devolucao",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": false
+    },
+    {
+     "name": "quantidade",
+     "type": "decimal(12,3)",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    }
+   ]
+  },
+  "nfce": {
+   "id": "nfce",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "398000",
+   "cols": [
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "numero",
+     "type": "int(9)",
+     "pk": true
+    },
+    {
+     "name": "serie",
+     "type": "int(3)",
+     "pk": true
+    },
+    {
+     "name": "id_venda",
+     "type": "bigint(12)",
+     "pk": false
+    },
+    {
+     "name": "chave",
+     "type": "varchar(44)",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(1)",
+     "pk": false
+    },
+    {
+     "name": "protocolo",
+     "type": "varchar(20)",
+     "pk": false
+    },
+    {
+     "name": "contingencia",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "nfce_itens": {
+   "id": "nfce_itens",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "1130000",
+   "cols": [
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "numero",
+     "type": "int(9)",
+     "pk": true
+    },
+    {
+     "name": "serie",
+     "type": "int(3)",
+     "pk": true
+    },
+    {
+     "name": "item",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": false
+    },
+    {
+     "name": "quantidade",
+     "type": "decimal(12,3)",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    }
+   ]
+  },
+  "nfce_eventos": {
+   "id": "nfce_eventos",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "4100",
+   "cols": [
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "numero",
+     "type": "int(9)",
+     "pk": true
+    },
+    {
+     "name": "serie",
+     "type": "int(3)",
+     "pk": true
+    },
+    {
+     "name": "seq_evento",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "tipo",
+     "type": "varchar(20)",
+     "pk": false
+    },
+    {
+     "name": "protocolo",
+     "type": "varchar(20)",
+     "pk": false
+    },
+    {
+     "name": "data_evento",
+     "type": "datetime",
+     "pk": false
+    }
+   ]
+  },
+  "fornecedores": {
+   "id": "fornecedores",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "940",
+   "cols": [
+    {
+     "name": "id_fornecedor",
+     "type": "int(6)",
+     "pk": true
+    },
+    {
+     "name": "razao_social",
+     "type": "varchar(80)",
+     "pk": false
+    },
+    {
+     "name": "cnpj",
+     "type": "varchar(18)",
+     "pk": false
+    }
+   ]
+  },
+  "nf_entrada": {
+   "id": "nf_entrada",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "28400",
+   "cols": [
+    {
+     "name": "id_nf_entrada",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_fornecedor",
+     "type": "int(6)",
+     "pk": false
+    },
+    {
+     "name": "numero",
+     "type": "int(9)",
+     "pk": false
+    },
+    {
+     "name": "serie",
+     "type": "int(3)",
+     "pk": false
+    },
+    {
+     "name": "chave",
+     "type": "varchar(44)",
+     "pk": false
+    },
+    {
+     "name": "data_entrada",
+     "type": "date",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "nf_entrada_itens": {
+   "id": "nf_entrada_itens",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "151000",
+   "cols": [
+    {
+     "name": "id_nf_entrada_item",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_nf_entrada",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": false
+    },
+    {
+     "name": "quantidade",
+     "type": "decimal(12,3)",
+     "pk": false
+    },
+    {
+     "name": "custo",
+     "type": "decimal(12,4)",
+     "pk": false
+    }
+   ]
+  },
+  "contas_receber": {
+   "id": "contas_receber",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "7800",
+   "cols": [
+    {
+     "name": "id_titulo",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "id_cliente",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_venda",
+     "type": "bigint(12)",
+     "pk": false
+    },
+    {
+     "name": "vencimento",
+     "type": "date",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "baixas_receber": {
+   "id": "baixas_receber",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "6900",
+   "cols": [
+    {
+     "name": "id_baixa",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_titulo",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "data_baixa",
+     "type": "date",
+     "pk": false
+    },
+    {
+     "name": "valor",
+     "type": "decimal(12,2)",
+     "pk": false
+    },
+    {
+     "name": "id_usuario",
+     "type": "int(6)",
+     "pk": false
+    }
+   ]
+  },
+  "transferencias": {
+   "id": "transferencias",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "5200",
+   "cols": [
+    {
+     "name": "id_transf",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "loja_origem",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "loja_destino",
+     "type": "int(4)",
+     "pk": false
+    },
+    {
+     "name": "data_envio",
+     "type": "datetime",
+     "pk": false
+    },
+    {
+     "name": "situacao",
+     "type": "char(1)",
+     "pk": false
+    },
+    {
+     "name": "em_uso",
+     "type": "char(1)",
+     "pk": false
+    }
+   ]
+  },
+  "transferencia_itens": {
+   "id": "transferencia_itens",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "41000",
+   "cols": [
+    {
+     "name": "id_transf_item",
+     "type": "int(10)",
+     "pk": true
+    },
+    {
+     "name": "id_transf",
+     "type": "int(10)",
+     "pk": false
+    },
+    {
+     "name": "id_produto",
+     "type": "int(8)",
+     "pk": false
+    },
+    {
+     "name": "quantidade",
+     "type": "decimal(12,3)",
+     "pk": false
+    }
+   ]
+  },
+  "sync_fila": {
+   "id": "sync_fila",
+   "desc": "",
+   "engine": "InnoDB",
+   "rows": "120",
+   "cols": [
+    {
+     "name": "id_sync",
+     "type": "bigint(12)",
+     "pk": true
+    },
+    {
+     "name": "tabela",
+     "type": "varchar(40)",
+     "pk": false
+    },
+    {
+     "name": "id_registro",
+     "type": "bigint(12)",
+     "pk": false
+    },
+    {
+     "name": "operacao",
+     "type": "char(1)",
+     "pk": false
+    },
+    {
+     "name": "enviado",
+     "type": "char(1)",
+     "pk": false
+    },
+    {
+     "name": "criado_em",
+     "type": "datetime",
+     "pk": false
+    }
+   ]
+  },
+  "parametros": {
+   "id": "parametros",
+   "desc": "",
+   "engine": "MyISAM",
+   "rows": "340",
+   "cols": [
+    {
+     "name": "id_loja",
+     "type": "int(4)",
+     "pk": true
+    },
+    {
+     "name": "chave",
+     "type": "varchar(40)",
+     "pk": true
+    },
+    {
+     "name": "valor",
+     "type": "varchar(255)",
+     "pk": false
+    }
+   ]
+  }
+ },
+ "edges": [
+  {
+   "id": "caixa_mov.id_caixa>caixas",
+   "source": "caixa_mov",
+   "target": "caixas",
+   "cols": [
+    [
+     "id_caixa",
+     "id_caixa"
+    ]
+   ],
+   "kind": "fk",
+   "regra": "fk",
+   "reason": "chave estrangeira declarada no MySQL"
+  },
+  {
+   "id": "vendas.id_caixa>caixas",
+   "source": "vendas",
+   "target": "caixas",
+   "cols": [
+    [
+     "id_caixa",
+     "id_caixa"
+    ]
+   ],
+   "kind": "fk",
+   "regra": "fk",
+   "reason": "chave estrangeira declarada no MySQL"
+  },
+  {
+   "id": "venda_itens.id_venda>vendas",
+   "source": "venda_itens",
+   "target": "vendas",
+   "cols": [
+    [
+     "id_venda",
+     "id_venda"
+    ]
+   ],
+   "kind": "fk",
+   "regra": "fk",
+   "reason": "chave estrangeira declarada no MySQL"
+  },
+  {
+   "id": "venda_pagamentos.id_venda>vendas",
+   "source": "venda_pagamentos",
+   "target": "vendas",
+   "cols": [
+    [
+     "id_venda",
+     "id_venda"
+    ]
+   ],
+   "kind": "fk",
+   "regra": "fk",
+   "reason": "chave estrangeira declarada no MySQL"
+  },
+  {
+   "id": "nf_entrada_itens.id_nf_entrada>nf_entrada",
+   "source": "nf_entrada_itens",
+   "target": "nf_entrada",
+   "cols": [
+    [
+     "id_nf_entrada",
+     "id_nf_entrada"
+    ]
+   ],
+   "kind": "fk",
+   "regra": "fk",
+   "reason": "chave estrangeira declarada no MySQL"
+  },
+  {
+   "id": "transferencias.loja_origem>lojas",
+   "source": "transferencias",
+   "target": "lojas",
+   "cols": [
+    [
+     "loja_origem",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "dicionario",
+   "reason": "dicionário de sinônimos: loja_origem → lojas.id_loja"
+  },
+  {
+   "id": "transferencias.loja_destino>lojas",
+   "source": "transferencias",
+   "target": "lojas",
+   "cols": [
+    [
+     "loja_destino",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "dicionario",
+   "reason": "dicionário de sinônimos: loja_destino → lojas.id_loja"
+  },
+  {
+   "id": "baixas_receber.id_titulo>contas_receber",
+   "source": "baixas_receber",
+   "target": "contas_receber",
+   "cols": [
+    [
+     "id_titulo",
+     "id_titulo"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de contas_receber"
+  },
+  {
+   "id": "baixas_receber.id_usuario>usuarios",
+   "source": "baixas_receber",
+   "target": "usuarios",
+   "cols": [
+    [
+     "id_usuario",
+     "id_usuario"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de usuarios"
+  },
+  {
+   "id": "caixa_mov.id_forma_pgto>formas_pgto",
+   "source": "caixa_mov",
+   "target": "formas_pgto",
+   "cols": [
+    [
+     "id_forma_pgto",
+     "id_forma_pgto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de formas_pgto"
+  },
+  {
+   "id": "caixas.id_loja>lojas",
+   "source": "caixas",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "caixas.id_terminal>terminais",
+   "source": "caixas",
+   "target": "terminais",
+   "cols": [
+    [
+     "id_terminal",
+     "id_terminal"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de terminais"
+  },
+  {
+   "id": "caixas.id_usuario>usuarios",
+   "source": "caixas",
+   "target": "usuarios",
+   "cols": [
+    [
+     "id_usuario",
+     "id_usuario"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de usuarios"
+  },
+  {
+   "id": "clientes.id_cidade>cidades",
+   "source": "clientes",
+   "target": "cidades",
+   "cols": [
+    [
+     "id_cidade",
+     "id_cidade"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de cidades"
+  },
+  {
+   "id": "contas_receber.id_cliente>clientes",
+   "source": "contas_receber",
+   "target": "clientes",
+   "cols": [
+    [
+     "id_cliente",
+     "id_cliente"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de clientes"
+  },
+  {
+   "id": "contas_receber.id_loja>lojas",
+   "source": "contas_receber",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "contas_receber.id_venda>vendas",
+   "source": "contas_receber",
+   "target": "vendas",
+   "cols": [
+    [
+     "id_venda",
+     "id_venda"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de vendas"
+  },
+  {
+   "id": "devolucao_itens.id_devolucao>devolucoes",
+   "source": "devolucao_itens",
+   "target": "devolucoes",
+   "cols": [
+    [
+     "id_devolucao",
+     "id_devolucao"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de devolucoes"
+  },
+  {
+   "id": "devolucao_itens.id_produto>produtos",
+   "source": "devolucao_itens",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "devolucoes.id_cliente>clientes",
+   "source": "devolucoes",
+   "target": "clientes",
+   "cols": [
+    [
+     "id_cliente",
+     "id_cliente"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de clientes"
+  },
+  {
+   "id": "devolucoes.id_venda>vendas",
+   "source": "devolucoes",
+   "target": "vendas",
+   "cols": [
+    [
+     "id_venda",
+     "id_venda"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de vendas"
+  },
+  {
+   "id": "estoque.id_loja>lojas",
+   "source": "estoque",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "estoque.id_produto>produtos",
+   "source": "estoque",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "mov_estoque.id_loja>lojas",
+   "source": "mov_estoque",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "mov_estoque.id_produto>produtos",
+   "source": "mov_estoque",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "mov_estoque.id_usuario>usuarios",
+   "source": "mov_estoque",
+   "target": "usuarios",
+   "cols": [
+    [
+     "id_usuario",
+     "id_usuario"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de usuarios"
+  },
+  {
+   "id": "nf_entrada.id_fornecedor>fornecedores",
+   "source": "nf_entrada",
+   "target": "fornecedores",
+   "cols": [
+    [
+     "id_fornecedor",
+     "id_fornecedor"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de fornecedores"
+  },
+  {
+   "id": "nf_entrada.id_loja>lojas",
+   "source": "nf_entrada",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "nf_entrada_itens.id_produto>produtos",
+   "source": "nf_entrada_itens",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "nfce.id_loja>lojas",
+   "source": "nfce",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "nfce.id_venda>vendas",
+   "source": "nfce",
+   "target": "vendas",
+   "cols": [
+    [
+     "id_venda",
+     "id_venda"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de vendas"
+  },
+  {
+   "id": "nfce_eventos.id_loja>lojas",
+   "source": "nfce_eventos",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "nfce_itens.id_loja>lojas",
+   "source": "nfce_itens",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "nfce_itens.id_produto>produtos",
+   "source": "nfce_itens",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "parametros.id_loja>lojas",
+   "source": "parametros",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "produtos.id_fabricante>fabricantes",
+   "source": "produtos",
+   "target": "fabricantes",
+   "cols": [
+    [
+     "id_fabricante",
+     "id_fabricante"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de fabricantes"
+  },
+  {
+   "id": "produtos.id_grupo>grupos",
+   "source": "produtos",
+   "target": "grupos",
+   "cols": [
+    [
+     "id_grupo",
+     "id_grupo"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de grupos"
+  },
+  {
+   "id": "terminais.id_loja>lojas",
+   "source": "terminais",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "transferencia_itens.id_produto>produtos",
+   "source": "transferencia_itens",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "transferencia_itens.id_transf>transferencias",
+   "source": "transferencia_itens",
+   "target": "transferencias",
+   "cols": [
+    [
+     "id_transf",
+     "id_transf"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de transferencias"
+  },
+  {
+   "id": "usuarios.id_loja>lojas",
+   "source": "usuarios",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "venda_itens.id_produto>produtos",
+   "source": "venda_itens",
+   "target": "produtos",
+   "cols": [
+    [
+     "id_produto",
+     "id_produto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de produtos"
+  },
+  {
+   "id": "venda_pagamentos.id_forma_pgto>formas_pgto",
+   "source": "venda_pagamentos",
+   "target": "formas_pgto",
+   "cols": [
+    [
+     "id_forma_pgto",
+     "id_forma_pgto"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de formas_pgto"
+  },
+  {
+   "id": "vendas.id_cliente>clientes",
+   "source": "vendas",
+   "target": "clientes",
+   "cols": [
+    [
+     "id_cliente",
+     "id_cliente"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de clientes"
+  },
+  {
+   "id": "vendas.id_loja>lojas",
+   "source": "vendas",
+   "target": "lojas",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de lojas"
+  },
+  {
+   "id": "vendas.id_usuario>usuarios",
+   "source": "vendas",
+   "target": "usuarios",
+   "cols": [
+    [
+     "id_usuario",
+     "id_usuario"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "pk_igual",
+   "reason": "mesmo nome da chave de usuarios"
+  },
+  {
+   "id": "nfce_eventos.id_loja+numero+serie>nfce",
+   "source": "nfce_eventos",
+   "target": "nfce",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ],
+    [
+     "numero",
+     "numero"
+    ],
+    [
+     "serie",
+     "serie"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "composta",
+   "reason": "repete a chave (id_loja, numero, serie) de nfce"
+  },
+  {
+   "id": "nfce_itens.id_loja+numero+serie>nfce",
+   "source": "nfce_itens",
+   "target": "nfce",
+   "cols": [
+    [
+     "id_loja",
+     "id_loja"
+    ],
+    [
+     "numero",
+     "numero"
+    ],
+    [
+     "serie",
+     "serie"
+    ]
+   ],
+   "kind": "sug",
+   "regra": "composta",
+   "reason": "repete a chave (id_loja, numero, serie) de nfce"
+  }
+ ],
+ "hubs": []
+}
