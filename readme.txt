@@ -242,11 +242,18 @@ React Router
   - Rotas com estado na URL (?item=…&aba=tabelas&tabela=…). Isso permite
     mandar o link de uma tela ou tabela específica para um colega.
 
-React Flow (@xyflow/react) + dagre (diagrama)
+React Flow (@xyflow/react) + ELK (diagrama)
   - O React Flow desenha nós como componentes React. Assim cada tabela vira um
     cartão com colunas, e cada coluna tem pontos de conexão próprios, o que
     permite ligar coluna a coluna como em um diagrama ER.
-  - O dagre calcula o layout automático da esquerda para a direita.
+  - O ELK (Eclipse Layout Kernel, via elkjs) posiciona as tabelas da esquerda
+    para a direita e roteia as ligações em ângulo reto, contornando os
+    cartões: nenhuma linha passa por cima de uma tabela ou coluna.
+  - Cada coluna é uma porta fixa do cartão (saída à direita na FK, entrada à
+    esquerda na PK), então a linha encaixa exatamente na altura da coluna.
+    Por isso o cartão tem medidas fixas no CSS (borda 1px, cabeçalho 38px,
+    linha 25px).
+  - Relações com chave composta desenham uma linha por par de colunas.
 
 CSS próprio (sem framework de UI)
   - O manual precisa de um layout fiel na tela e na impressão (regras @page e

@@ -4,8 +4,11 @@ import {
   type Edge, type EdgeProps, type Node, type NodeProps
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import dagre from '@dagrejs/dagre';
+import ELK from 'elkjs/lib/elk.bundled.js';
+import type { ElkNode } from 'elkjs/lib/elk-api';
 import type { Relacao } from '../tipos';
+
+const elk = new ELK();
 
 type Coluna = { nome: string; tipo: string; pk: boolean };
 type TabelaDiag = { nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; colunas: Coluna[] };
@@ -16,9 +19,29 @@ type DadosTabela = {
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
 };
 // uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação
-type DadosRelacao = { estado: Relacao['estado']; destaque: boolean; apagada: boolean; juncao: string; primeira: boolean; colOrigem: string; colDestino: string };
+type Ponto = { x: number; y: number };
+type DadosRelacao = {
+  estado: Relacao['estado']; destaque: boolean; apagada: boolean; juncao: string; primeira: boolean; colOrigem: string; colDestino: string;
+  pontos?: Ponto[]; // trajeto calculado pelo ELK (contorna os cartões)
+};
 
-const LARGURA = 290, CAB = 38, LINHA = 25, RODAPE = 24;
+// medidas fixas do cartão (iguais ao CSS .tb / .tb-cab / .tb-col / .tb-mais)
+const LARGURA = 290, BORDA = 1, CAB = 38, LINHA = 25, RODAPE = 24;
+const yColuna = (i: number) => BORDA + CAB + i * LINHA + LINHA / 2;
+
+/** Caminho ortogonal com cantos arredondados passando pelos pontos de dobra. */
+function caminhoArredondado(p: Ponto[], raio = 7): string {
+  let d = `M ${p[0].x} ${p[0].y}`;
+  for (let i = 1; i < p.length - 1; i++) {
+    const a = p[i - 1], b = p[i], c = p[i + 1];
+    const r = Math.min(raio, Math.hypot(b.x - a.x, b.y - a.y) / 2, Math.hypot(c.x - b.x, c.y - b.y) / 2);
+    const e = { x: b.x - Math.sign(b.x - a.x) * r, y: b.y - Math.sign(b.y - a.y) * r };
+    const s = { x: b.x + Math.sign(c.x - b.x) * r, y: b.y + Math.sign(c.y - b.y) * r };
+    d += ` L ${e.x} ${e.y} Q ${b.x} ${b.y} ${s.x} ${s.y}`;
+  }
+  const f = p[p.length - 1];
+  return d + ` L ${f.x} ${f.y}`;
+}
 
 function icone(tipo: string) {
   const t = tipo.toLowerCase();
@@ -54,8 +77,12 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
 
 /* ---------- ligação com marcas N (lado da chave estrangeira) e 1 (lado referenciado) ---------- */
 function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: EdgeProps<Edge<DadosRelacao>>) {
-  const [caminho] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 8, offset: 22 });
   const d = data!;
+  // trajeto do ELK quando existe; senão, o traçado padrão do React Flow
+  const p = d.pontos;
+  const caminho = p && p.length > 1 ? caminhoArredondado(p)
+    : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 8, offset: 22 })[0];
+  if (p && p.length > 1) { sourceX = p[0].x; sourceY = p[0].y; targetX = p[p.length - 1].x; targetY = p[p.length - 1].y; }
   const est = `${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`;
   return (
     <>
@@ -108,37 +135,86 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
     return m;
   }, [resp]);
 
-  // posições: só recalcula quando muda o conjunto de tabelas ou o modo de colunas
-  const base = useMemo(() => {
-    if (!resp) return { nos: [] as Node<DadosTabela>[], arestas: [] as Edge<DadosRelacao>[] };
-    const g = new dagre.graphlib.Graph();
-    g.setGraph({ rankdir: 'LR', nodesep: 36, ranksep: 120, marginx: 20, marginy: 20 });
-    g.setDefaultEdgeLabel(() => ({}));
+  // posições e trajetos: ELK (layered, roteamento ortogonal). Cada coluna é uma porta do cartão, na altura exata
+  // da linha; o ELK posiciona as tabelas e desvia as ligações dos cartões. Só recalcula quando muda o conjunto
+  // de tabelas ou o modo de colunas.
+  const [base, setBase] = useState<{ nos: Node<DadosTabela>[]; arestas: Edge<DadosRelacao>[] }>({ nos: [], arestas: [] });
+  useEffect(() => {
+    if (!resp) { setBase({ nos: [], arestas: [] }); return; }
+    let cancelado = false;
     const nos = resp.tabelas.map(t => {
       const chaves = chavesPorTabela.get(t.nome) ?? new Set<string>();
       let visiveis = todas ? t.colunas : t.colunas.filter(c => c.pk || chaves.has(c.nome));
       if (!visiveis.length) visiveis = t.colunas.slice(0, 3);
-      const altura = CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length ? RODAPE : 0) + 6;
-      g.setNode(t.nome, { width: LARGURA, height: altura });
+      const altura = BORDA * 2 + CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length ? RODAPE : 0);
       return {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
         data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
                 chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '' }
       } as Node<DadosTabela>;
     });
-    resp.relacoes.forEach(r => g.setEdge(r.origem, r.destino));
-    dagre.layout(g);
-    nos.forEach(n => { const p = g.node(n.id); n.position = { x: p.x - LARGURA / 2, y: p.y - (n.height ?? 0) / 2 }; });
+    const linhaDe = new Map(nos.map(n => [n.id, new Map(n.data.colunas.map((c, i) => [c.nome, i]))]));
+
     // uma linha por par de colunas: relação composta (loja + número + série) liga cada coluna à sua correspondente
     const arestas = resp.relacoes.flatMap(r => {
       const juncao = r.colunas.map(([a, b]) => `${r.origem}.${a} = ${r.destino}.${b}`).join(' e ');
-      return r.colunas.map(([a, b], i) => ({
-        id: `${r.id}#${i}`, source: r.origem, target: r.destino, type: 'relacao',
-        sourceHandle: `${a}-s`, targetHandle: `${b}-t`,
-        data: { estado: r.estado, destaque: false, apagada: false, juncao, primeira: i === 0, colOrigem: a, colDestino: b }
-      } as Edge<DadosRelacao>));
+      return r.colunas
+        .filter(([a, b]) => linhaDe.get(r.origem)?.has(a) && linhaDe.get(r.destino)?.has(b))
+        .map(([a, b], i) => ({
+          id: `${r.id}#${i}`, source: r.origem, target: r.destino, type: 'relacao',
+          sourceHandle: `${a}-s`, targetHandle: `${b}-t`,
+          data: { estado: r.estado, destaque: false, apagada: false, juncao, primeira: i === 0, colOrigem: a, colDestino: b }
+        } as Edge<DadosRelacao>));
     });
-    return { nos, arestas };
+
+    // portas: saída à direita na coluna de origem (FK), entrada à esquerda na coluna de destino (PK)
+    const portas = new Map<string, { id: string; x: number; y: number; width: number; height: number; layoutOptions: Record<string, string> }[]>();
+    const porta = (no: string, col: string, lado: 'E' | 'W') => {
+      const id = `${no}::${col}::${lado}`;
+      const lista = portas.get(no) ?? portas.set(no, []).get(no)!;
+      if (!lista.some(p => p.id === id)) {
+        lista.push({ id, x: lado === 'E' ? LARGURA : 0, y: yColuna(linhaDe.get(no)!.get(col)!), width: 0, height: 0,
+                     layoutOptions: { 'elk.port.side': lado === 'E' ? 'EAST' : 'WEST' } });
+      }
+      return id;
+    };
+    const grafo: ElkNode = {
+      id: 'raiz',
+      layoutOptions: {
+        'elk.algorithm': 'layered',
+        'elk.direction': 'RIGHT',
+        'elk.edgeRouting': 'ORTHOGONAL',
+        'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+        'elk.spacing.nodeNode': '44',
+        'elk.layered.spacing.edgeNodeBetweenLayers': '24',
+        'elk.spacing.edgeNode': '18',
+        'elk.spacing.edgeEdge': '9',
+        'elk.layered.spacing.edgeEdgeBetweenLayers': '9',
+        'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+        'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES'
+      },
+      edges: arestas.map(e => ({ id: e.id, sources: [porta(e.source, e.data!.colOrigem, 'E')], targets: [porta(e.target, e.data!.colDestino, 'W')] })),
+      children: []
+    };
+    grafo.children = nos.map(n => ({ id: n.id, width: LARGURA, height: n.height!, ports: portas.get(n.id) ?? [],
+                                     layoutOptions: { 'elk.portConstraints': 'FIXED_POS' } }));
+
+    elk.layout(grafo).then(res => {
+      if (cancelado) return;
+      const pos = new Map((res.children ?? []).map(c => [c.id, { x: c.x ?? 0, y: c.y ?? 0 }]));
+      const trajetos = new Map((res.edges ?? []).map(e => {
+        const s = e.sections?.[0];
+        return [e.id, s ? [s.startPoint, ...(s.bendPoints ?? []), s.endPoint] : undefined] as const;
+      }));
+      setBase({
+        nos: nos.map(n => ({ ...n, position: pos.get(n.id) ?? n.position })),
+        arestas: arestas.map(e => ({ ...e, data: { ...e.data!, pontos: trajetos.get(e.id) } }))
+      });
+    }).catch(() => {
+      // sem o ELK, cai no traçado padrão do React Flow (empilha as tabelas em coluna)
+      if (!cancelado) setBase({ nos: nos.map((n, i) => ({ ...n, position: { x: (i % 4) * (LARGURA + 120), y: Math.floor(i / 4) * 260 } })), arestas });
+    });
+    return () => { cancelado = true; };
   }, [resp, todas, chavesPorTabela]);
 
   // destaque: sem seleção, ilumina as tabelas da tela e as ligações delas; com seleção, só a tabela escolhida e vizinhas
