@@ -13,9 +13,10 @@ type RespostaDiagrama = { foco: string[]; tabelas: TabelaDiag[]; relacoes: Relac
 
 type DadosTabela = {
   nome: string; engine: string; foco: boolean; apoio: boolean; colunas: Coluna[]; ocultas: number;
-  chaves: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
+  chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
 };
-type DadosRelacao = { estado: Relacao['estado']; destaque: boolean; apagada: boolean; juncao: string };
+// uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação
+type DadosRelacao = { estado: Relacao['estado']; destaque: boolean; apagada: boolean; juncao: string; primeira: boolean; colOrigem: string; colDestino: string };
 
 const LARGURA = 290, CAB = 38, LINHA = 25, RODAPE = 24;
 
@@ -38,7 +39,7 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
         <small>{data.engine}</small>
       </div>
       {data.colunas.map(c => (
-        <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''}`}>
+        <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${data.acesas.has(c.nome) ? 'ligada' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''}`}>
           <Handle type="target" position={Position.Left} id={`${c.nome}-t`} className="tb-alca" isConnectable={false} />
           <i className="tb-ic">{icone(c.tipo)}</i>
           <b>{c.nome}</b>
@@ -55,13 +56,18 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
 function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: EdgeProps<Edge<DadosRelacao>>) {
   const [caminho] = getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 8, offset: 22 });
   const d = data!;
-  const classe = `rel-aresta ${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''} rel-${d.estado}`;
+  const est = `${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`;
   return (
     <>
-      <BaseEdge id={id} path={caminho} className={classe} />
+      <BaseEdge id={id} path={caminho} className={`rel-aresta ${est} rel-${d.estado}`} />
       <EdgeLabelRenderer>
-        <div className={`rel-marca ${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${sourceX + 12}px, ${sourceY}px)` }} title={d.juncao}>N</div>
-        <div className={`rel-marca ${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`} style={{ transform: `translate(-50%, -50%) translate(${targetX - 12}px, ${targetY}px)` }} title={d.juncao}>1</div>
+        {/* pontos de encaixe exatamente na linha de cada coluna */}
+        <div className={`rel-ponto ${est}`} style={{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY}px)` }} title={d.juncao} />
+        <div className={`rel-ponto ${est}`} style={{ transform: `translate(-50%, -50%) translate(${targetX}px, ${targetY}px)` }} title={d.juncao} />
+        {d.primeira && <>
+          <div className={`rel-marca ${est}`} style={{ transform: `translate(-50%, -50%) translate(${sourceX + 14}px, ${sourceY - 10}px)` }} title={d.juncao}>N</div>
+          <div className={`rel-marca ${est}`} style={{ transform: `translate(-50%, -50%) translate(${targetX - 14}px, ${targetY - 10}px)` }} title={d.juncao}>1</div>
+        </>}
       </EdgeLabelRenderer>
     </>
   );
@@ -117,17 +123,21 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
       return {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
         data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
-                chaves, estado: 'normal', selecionada: false, busca: '' }
+                chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '' }
       } as Node<DadosTabela>;
     });
     resp.relacoes.forEach(r => g.setEdge(r.origem, r.destino));
     dagre.layout(g);
     nos.forEach(n => { const p = g.node(n.id); n.position = { x: p.x - LARGURA / 2, y: p.y - (n.height ?? 0) / 2 }; });
-    const arestas = resp.relacoes.map(r => ({
-      id: r.id, source: r.origem, target: r.destino, type: 'relacao',
-      sourceHandle: `${r.colunas[0][0]}-s`, targetHandle: `${r.colunas[0][1]}-t`,
-      data: { estado: r.estado, destaque: false, apagada: false, juncao: r.colunas.map(([a, b]) => `${r.origem}.${a} = ${r.destino}.${b}`).join(' e ') }
-    } as Edge<DadosRelacao>));
+    // uma linha por par de colunas: relação composta (loja + número + série) liga cada coluna à sua correspondente
+    const arestas = resp.relacoes.flatMap(r => {
+      const juncao = r.colunas.map(([a, b]) => `${r.origem}.${a} = ${r.destino}.${b}`).join(' e ');
+      return r.colunas.map(([a, b], i) => ({
+        id: `${r.id}#${i}`, source: r.origem, target: r.destino, type: 'relacao',
+        sourceHandle: `${a}-s`, targetHandle: `${b}-t`,
+        data: { estado: r.estado, destaque: false, apagada: false, juncao, primeira: i === 0, colOrigem: a, colDestino: b }
+      } as Edge<DadosRelacao>));
+    });
     return { nos, arestas };
   }, [resp, todas, chavesPorTabela]);
 
@@ -138,10 +148,16 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
     const centro = sel ? new Set([sel]) : foco;
     const vizinhas = new Set<string>(centro);
     base.arestas.forEach(e => { if (centro.has(e.source)) vizinhas.add(e.target); if (centro.has(e.target)) vizinhas.add(e.source); });
+    // colunas nas pontas das linhas acesas ficam marcadas nos dois cartões
+    const acesas = new Map<string, Set<string>>();
+    const acender = (t: string, c: string) => (acesas.get(t) ?? acesas.set(t, new Set()).get(t)!).add(c);
+    base.arestas.forEach(e => {
+      if (centro.has(e.source) || centro.has(e.target)) { acender(e.source, e.data!.colOrigem); acender(e.target, e.data!.colDestino); }
+    });
     return {
       nos: base.nos.map(n => ({
         ...n,
-        data: { ...n.data, selecionada: n.id === sel, busca: termo,
+        data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
                 estado: sel ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal' }
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {

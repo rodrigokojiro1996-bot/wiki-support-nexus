@@ -183,19 +183,24 @@ a { color: var(--accent); }
 .tb-ic { font-style: normal; font-size: 10px; color: var(--muted); text-align: center; font-family: var(--mono); }
 .tb-col.pk .tb-ic, .tb-col.pk b { color: var(--destaque); }
 .tb-col.fk b { color: var(--fg); }
-.tb-foco .tb-col.fk, .tb-sel .tb-col.fk { background: var(--destaque-suave); }
+/* coluna na ponta de uma ligação acesa: faixa na cor da linha dos dois lados do cartão */
+.tb-col.ligada { background: var(--destaque-suave); box-shadow: inset 3px 0 0 var(--destaque), inset -3px 0 0 var(--destaque); }
+.tb-col.ligada b, .tb-col.ligada .tb-ic { color: var(--destaque); }
 .tb-col.achou, .tb-cab .achou { outline: 2px solid var(--laranja); outline-offset: -2px; }
 .tb-mais { padding: 4px 12px; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--line); }
 .tb-alca { width: 6px !important; height: 6px !important; min-width: 0 !important; min-height: 0 !important; background: transparent !important; border: 0 !important; }
-.rel-aresta { stroke: var(--line-strong) !important; stroke-width: 1.4 !important; }
-.rel-aresta.rel-documentada { stroke: var(--doc) !important; }
-.rel-aresta.rel-sugerida { stroke-dasharray: 2 4; }
-.rel-aresta.destaque { stroke: var(--destaque) !important; stroke-width: 2.2 !important; stroke-dasharray: 6 4; animation: tracejar 1s linear infinite; }
-.rel-aresta.apagada { opacity: .15; }
-@keyframes tracejar { to { stroke-dashoffset: -20; } }
-.rel-marca { position: absolute; pointer-events: all; font: 800 9px/1 var(--mono); padding: 2px 4px; border-radius: 3px; background: var(--fg); color: var(--bg); }
-.rel-marca.destaque { background: var(--destaque); color: #fff; }
-.rel-marca.apagada { opacity: .15; }
+/* todas as ligações na cor do destaque; confirmada/documentada contínua, sugerida tracejada */
+.rel-aresta { stroke: var(--destaque) !important; stroke-width: 1.6 !important; opacity: .5; }
+.rel-aresta.rel-sugerida { stroke-dasharray: 5 4; }
+.rel-aresta.destaque { stroke-width: 2.4 !important; opacity: 1; stroke-dasharray: 7 4; animation: tracejar 1s linear infinite; }
+.rel-aresta.apagada { opacity: .08; }
+@keyframes tracejar { to { stroke-dashoffset: -22; } }
+.rel-ponto { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--destaque); border: 2px solid var(--surface); opacity: .55; pointer-events: all; }
+.rel-ponto.destaque { opacity: 1; width: 10px; height: 10px; }
+.rel-ponto.apagada { opacity: .08; }
+.rel-marca { position: absolute; pointer-events: all; font: 800 9px/1 var(--mono); padding: 2px 4px; border-radius: 3px; background: var(--destaque); color: #fff; opacity: .6; }
+.rel-marca.destaque { opacity: 1; }
+.rel-marca.apagada { opacity: .08; }
 .rel-marca.estatica { position: static; display: inline-block; }
 .diag-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .diag-canvas { flex: 1; min-height: 0; position: relative; }
@@ -211,8 +216,8 @@ a { color: var(--accent); }
 .diag-legenda { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-size: 11.5px; color: var(--muted); max-width: calc(100% - 80px); }
 .diag-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .lg-foco { width: 12px; height: 12px; border: 2px solid var(--destaque); border-radius: 3px; background: var(--destaque-suave); }
-.lg-linha { stroke: var(--line-strong); stroke-width: 2; }
-.lg-linha.sug { stroke-dasharray: 2 4; }
+.lg-linha { stroke: var(--destaque); stroke-width: 2; }
+.lg-linha.sug { stroke-dasharray: 5 4; }
 .lg-ocultas { font-style: italic; }
 .diag-sel { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--destaque); border-radius: 8px; font-size: 12.5px; }
 .diag-erro { padding: 8px 12px; background: var(--crit); color: #fff; border-radius: 8px; }
