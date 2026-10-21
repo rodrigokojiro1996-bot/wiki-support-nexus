@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from .config import PROJETO, SEED, modulos, pasta_conteudo
-from .db import conectar, criar_schema
+from .db import conectar, migrar
 
 
 def slug(texto: str) -> str:
@@ -74,10 +74,6 @@ def importar_menus(con, arquivo: Path) -> None:
 
 
 def importar_manuais(con) -> None:
-    try:  # bancos criados antes da coluna fontes
-        con.execute("ALTER TABLE manuais ADD COLUMN fontes TEXT NOT NULL DEFAULT '[]'")
-    except Exception:
-        pass
     menus = {r["id"] for r in con.execute("SELECT id FROM menus")}
     n = 0
     for arq in sorted(pasta_conteudo("manuais").glob("*.json")):
@@ -97,7 +93,8 @@ def importar_manuais(con) -> None:
 
 def main():
     con = conectar()
-    criar_schema(con)
+    for m in migrar(con):
+        print(f"  migração aplicada: {m}")
     mods = modulos()
     con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", mods)
     for _, _, banco in mods:
