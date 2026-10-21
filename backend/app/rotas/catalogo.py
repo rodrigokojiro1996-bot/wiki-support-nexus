@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from ..db import caminho_menu
 from ..servicos import relacoes
 from ..servicos.diagrama import recortar
-from . import banco_do_modulo, db
+from . import banco_do_modulo, db, usuario
 
 router = APIRouter(prefix="/api/modulos/{modulo}")
 
@@ -56,15 +56,16 @@ class StatusRelacao(BaseModel):
 
 
 @router.put("/relacoes/status")
-def status_relacao(modulo: str, corpo: StatusRelacao, con=Depends(db)):
+def status_relacao(modulo: str, corpo: StatusRelacao, con=Depends(db), por: str = Depends(usuario)):
     banco = banco_do_modulo(con, modulo)
     if not con.execute("SELECT 1 FROM relacoes WHERE banco = ? AND id = ?", (banco, corpo.id)).fetchone():
         raise HTTPException(404, "Relação não encontrada")
     if corpo.status == "sugerida":
         con.execute("DELETE FROM relacao_status WHERE banco = ? AND id = ?", (banco, corpo.id))
     else:
-        con.execute("""INSERT INTO relacao_status (banco, id, status, observacao) VALUES (?, ?, ?, ?)
-                       ON CONFLICT(banco, id) DO UPDATE SET status = excluded.status, observacao = excluded.observacao, em = datetime('now', 'localtime')""",
-                    (banco, corpo.id, corpo.status, corpo.observacao))
+        con.execute("""INSERT INTO relacao_status (banco, id, status, observacao, por) VALUES (?, ?, ?, ?, ?)
+                       ON CONFLICT(banco, id) DO UPDATE SET status = excluded.status, observacao = excluded.observacao,
+                       por = excluded.por, em = datetime('now', 'localtime')""",
+                    (banco, corpo.id, corpo.status, corpo.observacao, por))
     con.commit()
     return {"ok": True}

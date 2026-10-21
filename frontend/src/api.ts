@@ -10,7 +10,19 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
   return r.json();
 }
 const enc = encodeURIComponent;
-const put = (body: unknown): RequestInit => ({ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+// autoria das alterações até ter login: o nome que a pessoa informa no topo, guardado só neste navegador
+const CHAVE_USUARIO = 'nexus.usuario';
+export const usuario = {
+  ler(): string { try { return localStorage.getItem(CHAVE_USUARIO) ?? ''; } catch { return ''; } },
+  gravar(nome: string) { try { localStorage.setItem(CHAVE_USUARIO, nome.trim()); } catch { /* navegador sem storage */ } }
+};
+
+const put = (body: unknown): RequestInit => ({
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json', 'X-Usuario': enc(usuario.ler()) },
+  body: JSON.stringify(body)
+});
 
 export const api = {
   modulos: () => json<Modulo[]>('/api/modulos'),
