@@ -1,0 +1,5 @@
+[
+  {"id": "pdv", "nome": "PDV", "banco": "demo_pdv"},
+  {"id": "adm", "nome": "Retaguarda", "banco": null},
+  {"id": "fin", "nome": "Financeiro", "banco": null}
+]

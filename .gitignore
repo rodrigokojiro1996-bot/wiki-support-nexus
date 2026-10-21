@@ -11,6 +11,7 @@ backend/ferramentas/autores.json
 coletor/saida/
 prototipo/
 backend/dados/
+backend/modulos.json
 
 # ambientes e dependências
 coletor/.venv/

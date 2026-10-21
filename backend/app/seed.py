@@ -12,10 +12,8 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from .config import PROJETO, SEED, pasta_conteudo
+from .config import PROJETO, SEED, modulos, pasta_conteudo
 from .db import conectar, criar_schema
-
-MODULOS = [("pdv", "PDV", "demo_pdv"), ("adm", "Retaguarda", None), ("fin", "Financeiro", None)]
 
 
 def slug(texto: str) -> str:
@@ -23,10 +21,15 @@ def slug(texto: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
 
 
-def importar_catalogo(con, banco: str) -> None:
+def arquivo_catalogo(banco: str) -> Path:
     arq = PROJETO / "coletor" / "saida" / banco / "catalogo.json"
     if not arq.exists():  # sem coleta real, usa o banco de exemplo versionado
         arq = PROJETO / "coletor" / "exemplo" / banco / "catalogo.json"
+    return arq
+
+
+def importar_catalogo(con, banco: str) -> None:
+    arq = arquivo_catalogo(banco)
     if not arq.exists():
         print(f"  catálogo não encontrado ({arq}); rode o coletor antes")
         return
@@ -95,8 +98,9 @@ def importar_manuais(con) -> None:
 def main():
     con = conectar()
     criar_schema(con)
-    con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", MODULOS)
-    for _, _, banco in MODULOS:
+    mods = modulos()
+    con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", mods)
+    for _, _, banco in mods:
         if banco:
             importar_catalogo(con, banco)
     for arq in sorted(SEED.glob("menus_*.json")):
