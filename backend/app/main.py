@@ -14,13 +14,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import pdf
-from .db import RAIZ, caminho_menu, conectar
+from .config import pasta_conteudo
+from .db import caminho_menu, conectar
 
 app = FastAPI(title="Support Nexus", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["*"], allow_headers=["*"])
 
-# prints dos manuais: backend/seed/imagens/<código>/<arquivo> → /api/imagens/<código>/<arquivo>
-IMAGENS = RAIZ / "seed" / "imagens"
+# prints dos manuais: backend/dados/imagens (real) ou backend/seed/imagens (exemplo) → /api/imagens/<código>/<arquivo>
+IMAGENS = pasta_conteudo("imagens")
 IMAGENS.mkdir(parents=True, exist_ok=True)
 app.mount("/api/imagens", StaticFiles(directory=IMAGENS), name="imagens")
 

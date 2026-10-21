@@ -1,8 +1,9 @@
 import sqlite3
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-ARQUIVO = RAIZ / "dados" / "nexus.db"
+from .config import DADOS, RAIZ  # noqa: F401  (RAIZ reexportado)
+
+ARQUIVO = DADOS / "nexus.db"
 
 
 def conectar() -> sqlite3.Connection:

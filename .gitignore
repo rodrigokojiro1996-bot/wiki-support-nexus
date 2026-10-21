@@ -17,6 +17,7 @@ coletor/.venv/
 backend/.venv/
 frontend/node_modules/
 frontend/dist/
+frontend/*.tsbuildinfo
 __pycache__/
 *.pyc
 
@@ -24,3 +25,11 @@ __pycache__/
 .vscode/
 Thumbs.db
 desktop.ini
+
+# backend/seed/ guarda SÓ o sistema de exemplo; o importador grava o conteúdo real em backend/dados/.
+# Reforço: qualquer manual ou print que não seja do exemplo fica fora do git mesmo se cair aqui por engano.
+backend/seed/manuais/*
+!backend/seed/manuais/DEMO.*.json
+backend/seed/imagens/*
+!backend/seed/imagens/.gitkeep
+!backend/seed/imagens/DEMO.*/

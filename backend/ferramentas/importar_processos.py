@@ -1,7 +1,7 @@
 """Converte documentos de suporte (PDF, Word e .txt) em manuais da Wiki.
 
-Lê ferramentas/curadoria.json (modelo em curadoria.exemplo.json), grava um JSON por manual em seed/manuais/ e os prints em
-seed/imagens/<código>/. Depois rode `python -m app.seed` para carregar no banco.
+Lê ferramentas/curadoria.json (modelo em curadoria.exemplo.json), grava um JSON por manual em dados/manuais/ e os prints em
+dados/imagens/<código>/ (fora do git: manuais reais nunca vão para o repositório). Depois rode `python -m app.seed` para carregar no banco.
 
 Uso (dentro de backend/):
     .venv\\Scripts\\python.exe -m ferramentas.importar_processos
@@ -24,8 +24,9 @@ import pypdf
 from PIL import Image
 
 RAIZ = Path(__file__).resolve().parent.parent
-MANUAIS = RAIZ / "seed" / "manuais"
-IMAGENS = RAIZ / "seed" / "imagens"
+# conteúdo real fica em backend/dados/ (no .gitignore); backend/seed/ guarda só o exemplo DEMO.*
+MANUAIS = RAIZ / "dados" / "manuais"
+IMAGENS = RAIZ / "dados" / "imagens"
 CURADORIA = Path(__file__).with_name("curadoria.json")
 
 # ---------------- limpeza ----------------
@@ -329,6 +330,7 @@ def main():
     menus = {r[0] for r in con.execute("SELECT id FROM menus")}
     con.close()
     MANUAIS.mkdir(parents=True, exist_ok=True)
+    IMAGENS.mkdir(parents=True, exist_ok=True)
     problemas = []
     # autores citados nos documentos ("Elaborado por: …"): coletados para serem removidos de qualquer linha solta
     textos_brutos = json.loads((Path(__file__).with_name("autores.json")).read_text(encoding="utf-8")) if Path(__file__).with_name("autores.json").exists() else []

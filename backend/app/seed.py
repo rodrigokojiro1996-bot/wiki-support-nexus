@@ -12,10 +12,9 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from .db import RAIZ, conectar, criar_schema
+from .config import PROJETO, SEED, pasta_conteudo
+from .db import conectar, criar_schema
 
-PROJETO = RAIZ.parent
-SEED = RAIZ / "seed"
 MODULOS = [("pdv", "PDV", "demo_pdv"), ("adm", "Retaguarda", None), ("fin", "Financeiro", None)]
 
 
@@ -78,7 +77,7 @@ def importar_manuais(con) -> None:
         pass
     menus = {r["id"] for r in con.execute("SELECT id FROM menus")}
     n = 0
-    for arq in sorted((SEED / "manuais").glob("*.json")):
+    for arq in sorted(pasta_conteudo("manuais").glob("*.json")):
         m = json.loads(arq.read_text(encoding="utf-8"))
         menu = m.get("menu") if m.get("menu") in menus else None
         if m.get("menu") and not menu:
