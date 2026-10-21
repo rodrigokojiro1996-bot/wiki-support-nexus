@@ -74,6 +74,10 @@ serve para rodar o projeto sem nenhum banco real. Os módulos Retaguarda e Finan
 - O manual é montado em blocos (seção, passo, texto, subtítulo, OBS, nota, SQL e imagem), os mesmos dos manuais
   importados: não há etapa de conversão. Ao lado fica a prévia ao vivo, com o mesmo componente do manual publicado.
 - Prints entram com Ctrl+V (ou arrastando a imagem), logo depois do bloco em que a pessoa está, com legenda.
+- Texto colado mantém a formatação (`componentes/textoRico.tsx`): linha em branco separa parágrafos; `•`, `-`
+  ou `*` no começo da linha vira lista, com Tab (ou 2 espaços) para subitem; linha sozinha que começa com emoji
+  ou `1.`, ou que termina em `:`, vira título do trecho; `[ Botão ]` aparece como botão da tela; `->` vira →;
+  `**texto**` é negrito. Vale para blocos Texto e Nota; Passo e OBS mantêm as quebras de linha.
 
 **Importação de documentos**
 - Converte PDFs, documentos Word e anotações .txt em manuais. O destino de cada documento é definido por uma

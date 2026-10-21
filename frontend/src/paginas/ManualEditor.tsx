@@ -202,7 +202,7 @@ export default function ManualEditor() {
           onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
           onDrop={e => { const f = e.dataTransfer.files[0]; if (f) { e.preventDefault(); subirImagem(f); } }}>
           <section className="editor-form" aria-label="Conteúdo do manual">
-            <p className="dica">Cole um print com <kbd>Ctrl</kbd>+<kbd>V</kbd> (ou arraste a imagem) e ele entra logo depois do bloco em que você está. Use <code>**texto**</code> para negrito.</p>
+            <p className="dica">Cole um print com <kbd>Ctrl</kbd>+<kbd>V</kbd> (ou arraste a imagem) e ele entra logo depois do bloco em que você está. Formatação ao colar ou digitar: linha em branco separa parágrafos; <code>•</code> ou <code>-</code> no começo da linha vira lista (Tab antes = subitem); linha sozinha que começa com emoji, com <code>1.</code> ou termina em <code>:</code> vira título; <code>[ Botão ]</code> aparece como botão; <code>**texto**</code> é negrito.</p>
 
             <label className="campo">
               <span>Título do manual</span>
@@ -261,7 +261,7 @@ export default function ManualEditor() {
                         </div>
                       </div>
                     ) : (
-                      <textarea value={b.texto} rows={b.tipo === 'sql' ? 4 : 2} spellCheck={b.tipo !== 'sql'}
+                      <textarea value={b.texto} rows={Math.min(24, Math.max(b.tipo === 'sql' ? 4 : 2, b.texto.split('\n').length + 1))} spellCheck={b.tipo !== 'sql'}
                         placeholder={TIPOS_TEXTO.find(t => t.tipo === b.tipo)?.dica} aria-label={`${ROTULO[b.tipo]} ${bi + 1} da seção ${si + 1}`}
                         aria-invalid={mostrarErros && vazio(b)}
                         onChange={e => alterarBloco(si, bi, { texto: e.target.value })} />

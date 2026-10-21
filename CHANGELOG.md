@@ -8,6 +8,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Editor de manuais na interface: "Criar manual para esta tela" na Visão geral, "+ Novo manual" e "Editar".
   Blocos iguais aos dos manuais existentes, prévia ao vivo e prints com Ctrl+V ou arrastando.
 - `POST /api/manuais`, `PUT /api/manuais/{código}` e `POST /api/imagens`.
+- Blocos de texto e nota com várias linhas saem formatados como foram colados: parágrafos, listas com subitens
+  (Tab), títulos de trecho (linha com emoji, "1." ou terminada em ":"), `[ Botão ]` como botão e `->` como seta.
+  Passos e OBS mantêm as quebras de linha. Manuais de uma linha por bloco não mudam.
 - Código automático por módulo (`PDV.001`…) e versão +0.1 a cada edição; quem salvou fica registrado
   (migração 004).
 
