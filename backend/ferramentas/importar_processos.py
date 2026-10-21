@@ -34,11 +34,17 @@ SEGREDOS = [
     (re.compile(r"(--password=)\S+", re.I), r"\1******"),
     (re.compile(r"(\bpassword\s*=\s*)\S+", re.I), r"\1******"),
 ]
-# senhas conhecidas que aparecem soltas nas anotações: uma por linha em ferramentas/segredos.txt (fora do git)
-_arq_segredos = Path(__file__).with_name("segredos.txt")
-if _arq_segredos.exists():
-    SEGREDOS += [(re.compile(re.escape(s.strip())), "******")
-                 for s in _arq_segredos.read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")]
+
+
+def carregar_segredos(arq: Path) -> list:
+    """Senhas conhecidas que aparecem soltas nas anotações: uma por linha (linhas com # são comentário)."""
+    if not arq.exists():
+        return []
+    return [(re.compile(re.escape(s.strip())), "******")
+            for s in arq.read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")]
+
+
+SEGREDOS += carregar_segredos(Path(__file__).with_name("segredos.txt"))  # fora do git
 RUIDO = re.compile(r"(elaborado por|revisado por|aprovado por|^cria[cç][aã]o:|^revis[aã]o:|n[ºo°]\.?\s*revis|vers[aã]o do documento|"
                    r"^sum[aá]rio$|\.{6,}|erro! indicador|^vers[aã]o \d{4} de)", re.I)
 SQL = re.compile(r"^(-|//)?\s*(select|update|delete|insert|repair|cd\\|mysql\b|mysqlcheck|mysqladmin)", re.I)
