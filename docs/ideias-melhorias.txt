@@ -1,0 +1,237 @@
+SUPPORT NEXUS - IDEIAS E SUGESTOES DE MELHORIA
+==============================================
+Anotacoes de 2026-10-21, a partir da versao 0.1.0 (branch main, commit 6cc33f5).
+Base de comparacao: a estrutura de outro sistema interno mais maduro (Next.js +
+Postgres em Docker, com testes, migracoes numeradas, login e tag por versao),
+adaptando os principios ao Support Nexus.
+
+Nada aqui foi implementado ainda. Cada item diz o que fazer, por que e como conferir.
+
+
+-------------------------------------------------------------
+0. RETRATO DE HOJE
+-------------------------------------------------------------
+- coletor/ ............ coletar.py (80 linhas), inferir.py (170), exemplo demo_pdv.
+- backend/app/ ........ main.py (188 linhas: TODAS as rotas + algoritmo do
+                        diagrama), db.py, schema.sql, seed.py, pdf.py.
+- backend/ferramentas/  importar_processos.py (338 linhas, PDF/Word -> manuais).
+- frontend/src/ ....... React + TS + Vite: MapaSistema.tsx (256), Diagrama.tsx (297),
+                        Documento.tsx, MenuArvore.tsx, api.ts, tipos.ts.
+- Testes .............. nenhum (backend, coletor e frontend).
+- Login ............... nenhum (readme.txt, secao 12, ja aponta como pendencia).
+- Banco ............... schema.sql com CREATE IF NOT EXISTS; seed.py faz
+                        "ALTER TABLE ... except: pass" para coluna nova.
+- Execucao ............ iniciar.ps1 abre uvicorn --reload (8010) e vite dev (5173).
+                        O PDF depende do frontend dev na 5173 + Edge instalado.
+- Versoes ............. 3 commits, nenhuma tag; versao 0.1.0 no package.json e
+                        no FastAPI.
+
+O QUE JA ESTA BOM E DEVE SER MANTIDO
+- Separacao clara coletor / backend / frontend.
+- Segredos fora do git (coletor/.env, segredos.txt, curadoria*.json, autores.json,
+  coletor/saida/, backend/dados/) - conferido: nunca foram commitados.
+- Mascaramento de senhas e remocao de autores na importacao de manuais.
+- Coletor le so o information_schema, nunca dados.
+- Banco de exemplo ficticio (demo_pdv) para rodar sem banco real.
+- relacao_status separada do catalogo: a validacao da equipe sobrevive a uma
+  nova importacao.
+- readme.txt tecnico com secao honesta de limitacoes.
+
+
+-------------------------------------------------------------
+1. SEPARAR CONTEUDO REAL DO EXEMPLO      (prioridade 1 - URGENTE)
+-------------------------------------------------------------
+Por que: o repositorio e PUBLICO. O importar_processos.py grava manuais reais em
+backend/seed/manuais/ e prints em backend/seed/imagens/ - e essas pastas SAO
+versionadas. Hoje so existem os DEMO.00x, mas o primeiro "git add ." depois de
+uma importacao real publica manuais internos no GitHub.
+
+Como:
+- backend/seed/ passa a ter SO o exemplo (DEMO.*, menus_pdv.json).
+- Saida real do importador -> backend/dados/manuais/ e backend/dados/imagens/
+  (backend/dados/ ja esta no .gitignore).
+- seed.py: se backend/dados/manuais existir, carrega de la; senao usa
+  backend/seed/manuais (mesmo padrao que ja existe para coletor/saida vs
+  coletor/exemplo).
+- main.py: montar /api/imagens a partir de dados/imagens quando existir, com
+  seed/imagens como alternativa.
+- Reforco no .gitignore: backend/seed/imagens/* exceto um .gitkeep, e qualquer
+  manual que nao comece com DEMO. (ex.: backend/seed/manuais/* + !DEMO.*.json).
+
+Como conferir: rodar o importador com um documento de teste e ver que
+"git status" continua limpo.
+
+
+-------------------------------------------------------------
+2. TESTES                                (prioridade 2)
+-------------------------------------------------------------
+Por que: hoje nada protege as regras mais delicadas (inferencia de relacoes,
+corte do diagrama, idempotencia do seed). Qualquer refatoracao do item 3 fica
+no escuro sem eles.
+
+Backend (pytest + SQLite temporario + fastapi.testclient):
+  tests/conftest.py        -> fixture que aponta db.ARQUIVO para tmp_path e roda
+                              o seed com o demo_pdv
+  tests/test_diagrama.py   -> nivel limitado a 3; tabelas de apoio (>= 40
+                              ligacoes) ocultas e listadas em apoio_ocultas;
+                              corte em 40 tabelas mantendo o foco
+  tests/test_seed.py       -> rodar o seed 2x nao apaga relacao_status nem
+                              vinculos menu_tabelas com origem 'equipe'
+  tests/test_relacoes.py   -> PUT status 'sugerida' apaga o registro;
+                              'descartada' some do /menus/{id}; 404 em id invalido
+  tests/test_menus.py      -> salvar_tabelas remove duplicadas e marca 'equipe'
+Coletor:
+  coletor/tests/test_inferir.py -> cada regra de inferencia com um catalogo
+                                   minimo montado no teste
+Importador:
+  tests/test_mascaramento.py -> SEGREDOS mascara --password=, password = e as
+                                senhas de segredos.txt (usar um arquivo ficticio)
+Frontend (depois): Vitest para caminhoTexto e a montagem do layout ELK.
+
+Como conferir: "pytest -q" verde; adicionar ao README.
+
+
+-------------------------------------------------------------
+3. DIVIDIR O main.py EM ROTAS E SERVICOS (prioridade 2, junto com testes)
+-------------------------------------------------------------
+Estrutura proposta:
+
+  backend/app/
+  |- main.py            -> cria o app, CORS, include_router, StaticFiles
+  |- config.py          -> portas, origens CORS, NEXUS_FRONTEND, NEXUS_PDF_CANAL,
+  |                        APOIO_MINIMO, limite de 40 tabelas, MODULOS
+  |- db.py
+  |- rotas/
+  |  |- modulos.py      -> /api/modulos, /api/modulos/{m}/menus
+  |  |- menus.py        -> /api/menus/{id}, PUT /api/menus/{id}/tabelas
+  |  |- catalogo.py     -> catalogo, diagrama, tabela, status de relacao
+  |  |- manuais.py      -> lista, detalhe, PDF
+  |  |- saude.py        -> /api/saude (item 6)
+  |- servicos/
+     |- diagrama.py     -> algoritmo puro: recebe relacoes e foco, devolve
+     |                     incluidas/arestas/apoio_ocultas (sem SQL -> testavel)
+     |- relacoes.py     -> relacao_dict, SQL_RELACOES
+     |- manuais.py      -> manual_completo
+
+- MODULOS sai de dentro do seed.py: hoje o README manda editar codigo para
+  apontar um banco real. Passar para config/modulos.json (com um
+  modulos.exemplo.json versionado e o real no .gitignore) ou variavel de ambiente.
+
+Ordem segura: servicos/diagrama.py primeiro (com teste), depois relacoes,
+depois cada router. "pytest" verde a cada commit.
+
+
+-------------------------------------------------------------
+4. MIGRACOES NUMERADAS DO BANCO          (prioridade 3)
+-------------------------------------------------------------
+Por que: CREATE IF NOT EXISTS nao altera tabela existente, e o
+"try: ALTER TABLE ... except: pass" no seed.py esconde qualquer outro erro.
+
+Como:
+- backend/app/migrations/001_inicial.sql (schema atual sem a coluna fontes),
+  002_manuais_fontes.sql (ALTER TABLE manuais ADD COLUMN fontes ...).
+- Tabela schema_version; db.py aplica em ordem so as que faltam, cada uma
+  numa transacao.
+- Banco existente sem schema_version mas com a coluna fontes -> marcar versao 2.
+- Remover o try/except do seed.py.
+
+Como conferir: banco novo e copia de um banco atual terminam com o mesmo
+".schema".
+
+
+-------------------------------------------------------------
+5. LOGIN E AUTORIA                       (prioridade 4 - antes de abrir p/ equipe)
+-------------------------------------------------------------
+Por que: hoje qualquer um que alcance a porta 8010 pode validar/descartar
+relacoes e trocar vinculos de tela. O readme.txt ja pede "registrar quem validou
+cada relacao".
+
+Passo 1 (sem login ainda):
+- relacao_status ganha colunas "por" (nome) e mantem "em".
+- menu_tabelas ganha "por" e "em".
+- O frontend manda um nome (campo simples guardado no navegador) ate ter login.
+Passo 2:
+- Login com a conta Microsoft da empresa (Entra ID / OAuth), que e o padrao dos
+  sistemas internos, ou login simples por senha se for so uso local.
+- Leitura livre para logados; PUT so para perfil "curador".
+
+Como conferir: PUT sem sessao -> 401; com sessao -> grava "por" com o usuario.
+
+
+-------------------------------------------------------------
+6. MODO DE PRODUCAO COM UM SO PROCESSO   (prioridade 3)
+-------------------------------------------------------------
+Por que: hoje so existe modo de desenvolvimento (--reload + vite dev). O PDF
+abre o frontend em localhost:5173, entao sem o vite rodando nao ha PDF.
+
+Como:
+- "npm run build" gera frontend/dist; o FastAPI serve dist/ como StaticFiles
+  na raiz (com fallback para index.html por causa do React Router).
+- NEXUS_FRONTEND passa a apontar para o proprio backend (ex.: 127.0.0.1:8010).
+- GET /api/saude: SELECT 1 no SQLite + versao -> {"ok": true, "versao": "0.1.0"}.
+- iniciar.ps1 continua para desenvolvimento; criar iniciar-producao.ps1
+  (build + uvicorn sem --reload).
+- Depois: Dockerfile com HEALTHCHECK em /api/saude, se for para um servidor.
+  Atencao: o PDF usa Edge (channel msedge); no Linux/Docker trocar
+  NEXUS_PDF_CANAL para chromium e instalar com "playwright install chromium".
+
+Como conferir: com o vite DESLIGADO, abrir a interface pela 8010 e baixar um PDF.
+
+
+-------------------------------------------------------------
+7. DEPENDENCIAS TRAVADAS E SEPARADAS     (prioridade 5)
+-------------------------------------------------------------
+- backend/requirements.txt          -> so a API (fastapi, uvicorn, playwright)
+- backend/requirements-ferramentas.txt -> pypdf, python-docx, pillow
+- Travar versoes com == (ou pip-tools / uv lock). Hoje tudo e ">=", inclusive
+  o playwright, sem teto.
+- frontend: trocar "^" de @xyflow/react e elkjs por versao exata, como ja e
+  feito com react e vite.
+
+
+-------------------------------------------------------------
+8. DOCUMENTACAO E VERSOES                (prioridade 1 - e rapido)
+-------------------------------------------------------------
+- Criar a tag v0.1.0 agora:
+    git tag -a v0.1.0 -m "Support Nexus 0.1.0" && git push origin v0.1.0
+- CHANGELOG.md na raiz.
+- readme.txt -> docs/arquitetura.md (o README.md ja aponta para ele; atualizar
+  o link).
+- Regra: commit antes de publicar/usar uma versao; uma tag por versao.
+- Mensagens no padrao Conventional Commits (feat:, fix:, docs:, refactor:, test:).
+- O repositorio e PUBLICO: nunca commitar manuais reais, prints, catalogo de
+  banco real, .env, nomes de servidores ou de clientes. Avaliar torna-lo privado.
+
+
+-------------------------------------------------------------
+9. DESEMPENHO DO DIAGRAMA COM BANCO REAL (prioridade 6)
+-------------------------------------------------------------
+Por que: com 30 tabelas nao aparece, mas um ERP real tem centenas.
+- /diagrama faz 2 consultas POR tabela incluida (tabelas + colunas): trocar por
+  uma consulta com "WHERE tabela IN (...)" e agrupar em Python.
+- O calculo de "conexoes" para o corte em 40 percorre todas as relacoes para
+  cada tabela: pre-calcular um indice {tabela: [relacoes]} uma vez.
+- Carregar SQL_RELACOES uma vez por requisicao (hoje e reaproveitado, ok) e
+  considerar cache por banco invalidado no seed.
+- Teste de desempenho: catalogo sintetico com 500 tabelas / 2000 relacoes,
+  /diagrama deve responder em menos de 500 ms.
+
+
+-------------------------------------------------------------
+ORDEM SUGERIDA DE TRABALHO
+-------------------------------------------------------------
+  [ ] 1  conteudo real fora de seed/ (antes de qualquer importacao real)
+  [ ] 8  tag v0.1.0 + CHANGELOG
+  [ ] 2  pytest + conftest com banco temporario
+  [ ] 3a servicos/diagrama.py + test_diagrama.py
+  [ ] 3b servicos/relacoes.py + test_relacoes.py
+  [ ] 3c rotas/ (um router por commit) + config.py + MODULOS fora do seed
+  [ ] 4  migracoes numeradas (remove o try/except do seed)
+  [ ] 6  build servido pelo FastAPI + /api/saude + iniciar-producao.ps1
+  [ ] 5  autoria (por/em) -> depois login
+  [ ] 7  requirements separados e travados
+  [ ] 9  desempenho do diagrama com catalogo grande
+  [ ] versao 0.2.0: CHANGELOG + tag
+
+Regra para todos os passos: "pytest -q" (backend) e "npm run build" (frontend)
+verdes antes de cada commit.
