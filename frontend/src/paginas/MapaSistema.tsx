@@ -22,6 +22,9 @@ const contar = (nos: MenuNo[]): { total: number; comTabela: number; aDetalhar: n
     return { total: a.total + 1 + f.total, comTabela: a.comTabela + (n.n_tabelas ? 1 : 0) + f.comTabela, aDetalhar: a.aDetalhar + (n.submenu && !n.itens.length ? 1 : 0) + f.aDetalhar };
   }, { total: 0, comTabela: 0, aDetalhar: 0 });
 
+const quando = (em: string | null) => (em ? new Date(em.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '');
+const autoria = (por: string | null, em: string | null) => [por && `por ${por}`, em && `em ${quando(em)}`].filter(Boolean).join(' ');
+
 const juncao = (r: Relacao) => r.colunas.map(([a, b]) => (a === b ? a : `${a} = ${b}`)).join(' + ');
 
 function RelacaoLinha({ r, onStatus }: { r: Relacao; onStatus: (r: Relacao, s: 'documentada' | 'descartada' | 'sugerida') => void }) {
@@ -33,6 +36,9 @@ function RelacaoLinha({ r, onStatus }: { r: Relacao; onStatus: (r: Relacao, s: '
       </div>
       <div className="rel-juncao">por <code>{juncao(r)}</code></div>
       {r.estado === 'sugerida' && r.motivo && <div className="rel-motivo">Sugerida porque {r.motivo}.</div>}
+      {(r.estado === 'documentada' || r.estado === 'descartada') && (r.por || r.em) && (
+        <div className="rel-autoria">{r.estado === 'documentada' ? 'Validada' : 'Descartada'} {autoria(r.por, r.em)}</div>
+      )}
       {r.estado !== 'confirmada' && (
         <div className="rel-acoes">
           {r.estado === 'sugerida' && <>
@@ -172,14 +178,22 @@ export default function MapaSistema() {
             <div className="painel-corpo">
 
               <div className="secao">
-                <h3>Manuais</h3>
+                <div className="secao-cab">
+                  <h3>Manuais</h3>
+                  {ficha.manuais.length > 0 && <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>+ Novo manual</Link>}
+                </div>
                 {ficha.manuais.length ? ficha.manuais.map(m => (
                   <Link key={m.codigo} to={`/manuais/${encodeURIComponent(m.codigo)}`} className="manual-card">
                     <span className="manual-cod">{m.codigo} · v{m.versao}</span>
                     <b>{m.titulo}</b>
                     <small>{m.subtitulo}</small>
                   </Link>
-                )) : <p className="vazio">Nenhum manual para esta tela ainda.</p>}
+                )) : (
+                  <div className="sem-manual">
+                    <p className="vazio">Nenhum manual para esta tela ainda.</p>
+                    <Link className="btn btn-primario" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>Criar manual para esta tela</Link>
+                  </div>
+                )}
               </div>
 
               {ficha.filhos.length > 0 && (
@@ -193,7 +207,7 @@ export default function MapaSistema() {
                 <h3>Tabelas que esta tela usa ({ficha.tabelas.length})</h3>
                 <div className="chips">
                   {ficha.tabelas.map(t => (
-                    <span key={t.tabela} className={`chip-tabela ${t.origem}`} title={t.origem === 'sugerido' ? 'Vínculo sugerido, ainda não confirmado pela equipe' : 'Vínculo confirmado pela equipe'}>
+                    <span key={t.tabela} className={`chip-tabela ${t.origem}`} title={t.origem === 'sugerido' ? 'Vínculo sugerido, ainda não confirmado pela equipe' : `Vínculo confirmado pela equipe ${autoria(t.por, t.em)}`.trim()}>
                       <button type="button" onClick={() => abrirTabela(t.tabela)}><code>{t.tabela}</code></button>
                       <button type="button" className="rm" aria-label={`Remover ${t.tabela}`} onClick={() => salvarVinculos(ficha.tabelas.filter(x => x.tabela !== t.tabela).map(x => x.tabela), `${t.tabela} removida desta tela.`)}>×</button>
                     </span>

@@ -31,8 +31,18 @@ cd ..\frontend
 npm install
 
 cd ..
-.\iniciar.ps1                                  # API em :8010, interface em :5173
+.\iniciar.ps1                                  # desenvolvimento: API em :8010, interface em :5173
+.\iniciar-producao.ps1                         # produção: build + um só processo em :8010
 ```
+
+## Testes
+
+```powershell
+backend\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+backend\.venv\Scripts\python.exe -m pytest -q     # na raiz do projeto
+```
+
+`pytest -q` e `npm run build` (em `frontend/`) verdes antes de cada commit.
 
 ## Usar com um banco real
 
@@ -45,7 +55,12 @@ copy .env.example .env                          # preencha host, usuário (só S
 .venv\Scripts\python.exe inferir.py meu_banco   # regras + dicionario.json
 ```
 
-Depois aponte o módulo para `meu_banco` em `backend/app/seed.py` e rode o seed de novo. A coleta real fica em
-`coletor/saida/`, que não é versionada.
+Depois copie `backend/modulos.exemplo.json` para `backend/modulos.json`, aponte o módulo para `meu_banco` e rode o
+seed de novo. A coleta real (`coletor/saida/`), os manuais importados (`backend/dados/`) e o `modulos.json` não são
+versionados.
 
-A documentação técnica completa (arquitetura, decisões, validações e API) está em [readme.txt](readme.txt).
+> **O repositório é público.** Nunca commite manuais reais, prints, catálogo de banco real, `.env`, nomes de
+> servidores ou de clientes.
+
+A documentação técnica completa (arquitetura, decisões, validações e API) está em
+[docs/arquitetura.md](docs/arquitetura.md). As mudanças de cada versão estão no [CHANGELOG](CHANGELOG.md).

@@ -52,6 +52,18 @@
 .doc-passo { display: grid; grid-template-columns: 11mm minmax(0, 1fr); margin: 0 0 3mm 5mm; }
 .doc-passo-n { font-weight: 400; }
 .doc-texto { margin: 0 0 3mm; }
+/* texto colado com várias linhas: parágrafos, listas, títulos de trecho e botões da tela */
+.doc-rico > :last-child { margin-bottom: 0; }
+.doc-rico-p { margin: 0 0 2.5mm; }
+.doc-rico-tit { margin: 4mm 0 1.5mm; font-weight: 700; color: var(--d-azul-esc); break-after: avoid; }
+.doc-rico > .doc-rico-tit:first-child { margin-top: 0; }
+.doc-lista { margin: 0 0 2.5mm; padding-left: 6mm; }
+.doc-lista .doc-lista { margin: 1mm 0 0; padding-left: 5.5mm; list-style-type: circle; }
+.doc-lista li { margin: 0 0 1mm; padding-left: 1mm; }
+.doc-lista li::marker { color: var(--d-azul); }
+.doc-botao { display: inline-block; padding: 0 2mm; margin: 0 .5mm; border: 1px solid #b7bdd6; border-bottom-width: 2px; border-radius: 1.2mm; background: #f6f7fc; font-size: .92em; font-weight: 600; line-height: 1.45; white-space: nowrap; }
+.doc-nota-corpo { margin: 0; }
+.doc-nota .doc-rico-tit { color: inherit; }
 .doc-subtitulo { font-size: 12.5pt; font-weight: 700; color: var(--d-azul-esc); margin: 5mm 0 2.5mm; break-after: avoid; }
 .doc-sql { margin: 1mm 0 4mm 5mm; padding: 3mm 4mm; border-left: 1mm solid var(--d-azul); background: #f5f6fb; font-family: Consolas, "Cascadia Mono", monospace; font-size: 9pt; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #1d1f2b; break-inside: avoid; }
 .doc-nota { margin: 2mm 0 5mm 16mm; padding: 3mm 4mm; border: 1.5px solid var(--d-azul); border-radius: 3mm; background: #f5f6ff; color: var(--d-azul-esc); font-size: 10.5pt; max-width: 120mm; }

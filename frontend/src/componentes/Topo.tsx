@@ -1,10 +1,23 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { usuario } from '../api';
 
 const MODULOS = [
   { id: 'pdv', nome: 'PDV', ativo: true },
   { id: 'adm', nome: 'Retaguarda', ativo: false },
   { id: 'fin', nome: 'Financeiro', ativo: false }
 ];
+
+function SeuNome() {
+  const [nome, setNome] = useState(usuario.ler);
+  return (
+    <label className="topo-usuario" title="Fica registrado em quem validou relações e vinculou tabelas (guardado só neste navegador)">
+      <span>Seu nome</span>
+      <input value={nome} placeholder="para a autoria" maxLength={80} aria-label="Seu nome, para registrar a autoria"
+        onChange={e => setNome(e.target.value)} onBlur={() => usuario.gravar(nome)} />
+    </label>
+  );
+}
 
 export default function Topo({ children }: { children?: React.ReactNode }) {
   return (
@@ -23,7 +36,7 @@ export default function Topo({ children }: { children?: React.ReactNode }) {
           </span>
         ))}
       </nav>
-      <div className="topo-extra">{children}</div>
+      <div className="topo-extra">{children}<SeuNome /></div>
     </header>
   );
 }

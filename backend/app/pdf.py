@@ -3,13 +3,11 @@
 Usa o Microsoft Edge já instalado (channel="msedge"), então não é preciso baixar o Chromium.
 Cabeçalho e rodapé (com número de página) seguem o modelo visual dos manuais do Support Nexus.
 """
-import os
-from urllib.parse import quote  # noqa: F401  (reexportado para o main)
+from urllib.parse import quote  # noqa: F401  (reexportado para as rotas)
 
 from playwright.sync_api import sync_playwright
 
-FRONTEND = os.environ.get("NEXUS_FRONTEND", "http://localhost:5173")
-CANAL = os.environ.get("NEXUS_PDF_CANAL", "msedge")
+from .config import FRONTEND, PDF_CANAL
 
 AZUL, AZUL_ESCURO, CIANO = "#4f5bd5", "#2f3a9e", "#22b8cf"
 
@@ -34,7 +32,7 @@ RODAPE = f"""
 
 def gerar(codigo: str) -> bytes:
     with sync_playwright() as p:
-        nav = p.chromium.launch(channel=CANAL)
+        nav = p.chromium.launch(channel=PDF_CANAL)
         try:
             pag = nav.new_page()
             pag.goto(f"{FRONTEND}/manuais/{quote(codigo)}/imprimir", wait_until="networkidle")

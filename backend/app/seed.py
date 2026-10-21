@@ -12,11 +12,10 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from .db import RAIZ, conectar, criar_schema
-
-PROJETO = RAIZ.parent
-SEED = RAIZ / "seed"
-MODULOS = [("pdv", "PDV", "demo_pdv"), ("adm", "Retaguarda", None), ("fin", "Financeiro", None)]
+from . import config
+from .config import PROJETO, SEED, modulos
+from .db import conectar, migrar
+from .servicos.manuais import gravar_no_banco
 
 
 def slug(texto: str) -> str:
@@ -24,10 +23,15 @@ def slug(texto: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", t).strip("-")
 
 
-def importar_catalogo(con, banco: str) -> None:
+def arquivo_catalogo(banco: str) -> Path:
     arq = PROJETO / "coletor" / "saida" / banco / "catalogo.json"
     if not arq.exists():  # sem coleta real, usa o banco de exemplo versionado
         arq = PROJETO / "coletor" / "exemplo" / banco / "catalogo.json"
+    return arq
+
+
+def importar_catalogo(con, banco: str) -> None:
+    arq = arquivo_catalogo(banco)
     if not arq.exists():
         print(f"  catálogo não encontrado ({arq}); rode o coletor antes")
         return
@@ -71,33 +75,35 @@ def importar_menus(con, arquivo: Path) -> None:
     print(f"  menus {modulo}: {len(vistos)} itens")
 
 
+def arquivos_de_manuais() -> list[Path]:
+    """Exemplos de seed/manuais e conteúdo real de dados/manuais; com o mesmo código, vale o de dados/."""
+    por_codigo = {}
+    for pasta in (SEED / "manuais", config.DADOS / "manuais"):
+        for arq in sorted(pasta.glob("*.json")):
+            por_codigo[arq.stem] = arq
+    return [por_codigo[c] for c in sorted(por_codigo)]
+
+
 def importar_manuais(con) -> None:
-    try:  # bancos criados antes da coluna fontes
-        con.execute("ALTER TABLE manuais ADD COLUMN fontes TEXT NOT NULL DEFAULT '[]'")
-    except Exception:
-        pass
     menus = {r["id"] for r in con.execute("SELECT id FROM menus")}
     n = 0
-    for arq in sorted((SEED / "manuais").glob("*.json")):
+    for arq in arquivos_de_manuais():
         m = json.loads(arq.read_text(encoding="utf-8"))
         menu = m.get("menu") if m.get("menu") in menus else None
         if m.get("menu") and not menu:
             print(f"  aviso: {m['codigo']} aponta para o menu inexistente {m['menu']}")
-        con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                       ON CONFLICT(codigo) DO UPDATE SET titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
-                       modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
-                       fontes = excluded.fontes, atualizado_em = datetime('now', 'localtime')""",
-                    (m["codigo"], m["titulo"], m.get("subtitulo", ""), m.get("versao", "1.0"), m["modulo"], menu,
-                     json.dumps(m["secoes"], ensure_ascii=False), json.dumps(m.get("tabelas", [])), json.dumps(m.get("fontes", []), ensure_ascii=False)))
+        gravar_no_banco(con, m, menu)
         n += 1
     print(f"  manuais: {n}")
 
 
 def main():
     con = conectar()
-    criar_schema(con)
-    con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", MODULOS)
-    for _, _, banco in MODULOS:
+    for m in migrar(con):
+        print(f"  migração aplicada: {m}")
+    mods = modulos()
+    con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", mods)
+    for _, _, banco in mods:
         if banco:
             importar_catalogo(con, banco)
     for arq in sorted(SEED.glob("menus_*.json")):

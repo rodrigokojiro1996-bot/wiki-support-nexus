@@ -1,14 +1,8 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment } from 'react';
 import { caminhoTexto } from '../api';
 import type { Bloco, Manual } from '../tipos';
 import Marca from './Marca';
-
-/** **negrito** → <strong> (único marcador usado nos manuais) */
-function rico(texto: string): ReactNode {
-  return texto.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
-    p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : <Fragment key={i}>{p}</Fragment>
-  );
-}
+import { blocoRico, inline, linhas } from './textoRico';
 
 const SOBRESCRITO = ['¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
 
@@ -20,17 +14,17 @@ function Blocos({ secao, blocos }: { secao: number; blocos: Bloco[] }) {
         switch (b.tipo) {
           case 'passo':
             passo++;
-            return <p key={i} className="doc-passo"><span className="doc-passo-n">{b.rotulo ?? `${secao}.${passo}`}.</span><span>{rico(b.texto)}</span></p>;
+            return <p key={i} className="doc-passo"><span className="doc-passo-n">{b.rotulo ?? `${secao}.${passo}`}.</span><span>{linhas(b.texto)}</span></p>;
           case 'subtitulo':
-            return <h3 key={i} className="doc-subtitulo">{rico(b.texto)}</h3>;
+            return <h3 key={i} className="doc-subtitulo">{inline(b.texto)}</h3>;
           case 'sql':
             return <pre key={i} className="doc-sql">{b.texto}</pre>;
           case 'obs':
-            return <p key={i} className="doc-obs">OBS{SOBRESCRITO[obs++] ?? ''}: {rico(b.texto)}</p>;
+            return <p key={i} className="doc-obs">OBS{SOBRESCRITO[obs++] ?? ''}: {linhas(b.texto)}</p>;
           case 'nota':
-            return <aside key={i} className="doc-nota">{rico(b.texto)}</aside>;
+            return <aside key={i} className="doc-nota">{blocoRico(b.texto, 'doc-nota-corpo')}</aside>;
           case 'texto':
-            return <p key={i} className="doc-texto">{rico(b.texto)}</p>;
+            return <Fragment key={i}>{blocoRico(b.texto, 'doc-texto')}</Fragment>;
           case 'imagem':
             return (
               <figure key={i} className="doc-figura">
