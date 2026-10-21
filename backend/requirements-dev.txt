@@ -1,0 +1,5 @@
+# testes: backend\.venv\Scripts\python.exe -m pytest -q (na raiz do projeto)
+-r requirements.txt
+-r requirements-ferramentas.txt
+pytest==9.1.1
+httpx2==2.16.0

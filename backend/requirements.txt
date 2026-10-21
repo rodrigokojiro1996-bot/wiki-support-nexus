@@ -1,9 +1,4 @@
-# API
-fastapi>=0.115
-uvicorn[standard]>=0.32
-playwright>=1.55
-
-# ferramentas/importar_processos.py (conversão de PDF/Word em manuais)
-pypdf>=5.0
-python-docx>=1.1
-pillow>=11.0
+# API (o que o servidor precisa para rodar). Versões travadas: atualizar de propósito, com os testes verdes.
+fastapi==0.159.1
+uvicorn[standard]==0.54.0
+playwright==1.64.0
