@@ -3,7 +3,7 @@ import json
 import os
 from pathlib import Path
 
-VERSAO = "0.1.0"
+VERSAO = "0.2.0"
 
 RAIZ = Path(__file__).resolve().parent.parent  # backend/
 PROJETO = RAIZ.parent

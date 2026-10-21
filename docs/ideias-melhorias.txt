@@ -5,7 +5,9 @@ Base de comparacao: a estrutura de outro sistema interno mais maduro (Next.js +
 Postgres em Docker, com testes, migracoes numeradas, login e tag por versao),
 adaptando os principios ao Support Nexus.
 
-Nada aqui foi implementado ainda. Cada item diz o que fazer, por que e como conferir.
+Cada item diz o que fazer, por que e como conferir.
+Situacao em 2026-10-21: implementado na versao 0.2.0, exceto o que esta marcado [ ] abaixo
+(detalhes no CHANGELOG.md).
 
 
 -------------------------------------------------------------
@@ -220,18 +222,21 @@ Por que: com 30 tabelas nao aparece, mas um ERP real tem centenas.
 -------------------------------------------------------------
 ORDEM SUGERIDA DE TRABALHO
 -------------------------------------------------------------
-  [ ] 1  conteudo real fora de seed/ (antes de qualquer importacao real)
-  [ ] 8  tag v0.1.0 + CHANGELOG
-  [ ] 2  pytest + conftest com banco temporario
-  [ ] 3a servicos/diagrama.py + test_diagrama.py
-  [ ] 3b servicos/relacoes.py + test_relacoes.py
-  [ ] 3c rotas/ (um router por commit) + config.py + MODULOS fora do seed
-  [ ] 4  migracoes numeradas (remove o try/except do seed)
-  [ ] 6  build servido pelo FastAPI + /api/saude + iniciar-producao.ps1
-  [ ] 5  autoria (por/em) -> depois login
-  [ ] 7  requirements separados e travados
-  [ ] 9  desempenho do diagrama com catalogo grande
-  [ ] versao 0.2.0: CHANGELOG + tag
+  [x] 1  conteudo real fora de seed/ (antes de qualquer importacao real)
+  [x] 8  tag v0.1.0 + CHANGELOG + readme.txt -> docs/arquitetura.md
+  [x] 2  pytest + conftest com banco temporario (backend, coletor, importador)
+  [ ] 2  testes do frontend com Vitest (o plano ja deixava para depois)
+  [x] 3a servicos/diagrama.py + test_diagrama.py
+  [x] 3b servicos/relacoes.py + test_relacoes.py
+  [x] 3c rotas/ + config.py + MODULOS fora do seed (modulos.json)
+  [x] 4  migracoes numeradas (remove o try/except do seed)
+  [x] 6  build servido pelo FastAPI + /api/saude + iniciar-producao.ps1
+  [ ] 6  Dockerfile com HEALTHCHECK (so se for para um servidor)
+  [x] 5  autoria (por/em)
+  [ ] 5  login (falta decidir: Entra ID ou senha simples)
+  [x] 7  requirements separados e travados
+  [x] 9  desempenho do diagrama com catalogo grande (516 ms -> ~35 ms)
+  [x] versao 0.2.0: CHANGELOG + tag
 
 Regra para todos os passos: "pytest -q" (backend) e "npm run build" (frontend)
 verdes antes de cada commit.
