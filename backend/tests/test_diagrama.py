@@ -84,3 +84,43 @@ def test_rota_ignora_tabela_inexistente(cliente):
 
 def test_rota_modulo_inexistente(cliente):
     assert cliente.get("/api/modulos/zz/diagrama", params={"tabelas": "vendas"}).status_code == 404
+
+
+def recortar_referencia(foco, rels, nivel=1, apoio=False, limite=40, apoio_minimo=40):
+    """O algoritmo da 0.1.0 (varre todas as relações a cada nível), com o mesmo desempate por nome."""
+    apoio_tab = tabelas_de_apoio(rels, apoio_minimo)
+    incluidas, fronteira, apoio_ocultas = set(foco), set(foco), set()
+    for _ in range(max(0, min(nivel, 3))):
+        nova = set()
+        for r in rels:
+            for a, b in ((r["origem"], r["destino"]), (r["destino"], r["origem"])):
+                if a in fronteira and b not in incluidas and (apoio or a not in apoio_tab):
+                    if b in apoio_tab and not apoio:
+                        apoio_ocultas.add(b)
+                    else:
+                        nova.add(b)
+        incluidas |= nova
+        fronteira = nova
+    if len(incluidas) > limite:
+        conexoes = {t: sum(1 for r in rels if {r["origem"], r["destino"]} & set(foco) and t in (r["origem"], r["destino"])) for t in incluidas}
+        incluidas = set(foco) | set(sorted(incluidas - set(foco), key=lambda t: (-conexoes[t], t))[: max(0, limite - len(foco))])
+    arestas = [r for r in rels if r["origem"] in incluidas and r["destino"] in incluidas]
+    return incluidas, arestas, sorted(apoio_ocultas - incluidas)
+
+
+def test_igual_ao_algoritmo_da_0_1_0_em_grafos_aleatorios():
+    import random
+    rnd = random.Random(7)
+    for _ in range(300):
+        n = rnd.randint(2, 120)
+        nomes = [f"t{i}" for i in range(n)]
+        hubs = nomes[: rnd.randint(0, 3)]
+        rels = []
+        for _ in range(rnd.randint(0, 4 * n)):
+            o = rnd.choice(nomes)
+            d = rnd.choice(hubs) if hubs and rnd.random() < 0.4 else rnd.choice(nomes)
+            rels.append(rel(o, d))  # inclui laços (o == d) e ligações repetidas de propósito
+        foco = rnd.sample(nomes, rnd.randint(1, min(5, n)))
+        args = dict(nivel=rnd.randint(-1, 5), apoio=rnd.random() < 0.5, limite=rnd.choice([5, 15, 40]), apoio_minimo=rnd.choice([3, 8, 40]))
+        r = recortar(foco, rels, **args)
+        assert (r.incluidas, r.arestas, r.apoio_ocultas) == recortar_referencia(foco, rels, **args), args

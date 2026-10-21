@@ -27,12 +27,15 @@ def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con
     foco = [t for t in dict.fromkeys(tabelas.split(",")) if t in existentes]
     rels = [x for x in relacoes.listar(con, banco) if x["estado"] != "descartada"]
     rec = recortar(foco, rels, nivel, apoio)
-    saida = []
-    for nome in sorted(rec.incluidas):
-        t = con.execute("SELECT engine, linhas FROM tabelas WHERE banco = ? AND nome = ?", (banco, nome)).fetchone()
-        cols = [{"nome": c["nome"], "tipo": c["tipo"], "pk": bool(c["pk"])} for c in con.execute(
-            "SELECT nome, tipo, pk FROM colunas WHERE banco = ? AND tabela = ? ORDER BY ordem", (banco, nome))]
-        saida.append({"nome": nome, "engine": t["engine"], "linhas": t["linhas"], "foco": nome in foco, "apoio": nome in rec.apoio, "colunas": cols})
+    # uma consulta para as tabelas e uma para as colunas (não duas por tabela)
+    nomes = sorted(rec.incluidas)
+    marca = ",".join("?" * len(nomes))
+    info = {t["nome"]: t for t in con.execute(f"SELECT nome, engine, linhas FROM tabelas WHERE banco = ? AND nome IN ({marca})", (banco, *nomes))}
+    colunas: dict[str, list[dict]] = {n: [] for n in nomes}
+    for c in con.execute(f"SELECT tabela, nome, tipo, pk FROM colunas WHERE banco = ? AND tabela IN ({marca}) ORDER BY tabela, ordem", (banco, *nomes)):
+        colunas[c["tabela"]].append({"nome": c["nome"], "tipo": c["tipo"], "pk": bool(c["pk"])})
+    saida = [{"nome": n, "engine": info[n]["engine"], "linhas": info[n]["linhas"], "foco": n in foco, "apoio": n in rec.apoio, "colunas": colunas[n]}
+             for n in nomes]
     return {"foco": foco, "tabelas": saida, "relacoes": rec.arestas, "apoio_ocultas": rec.apoio_ocultas}
 
 
