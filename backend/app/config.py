@@ -9,11 +9,13 @@ RAIZ = Path(__file__).resolve().parent.parent  # backend/
 PROJETO = RAIZ.parent
 SEED = RAIZ / "seed"     # só o sistema de exemplo (versionado)
 DADOS = RAIZ / "dados"   # banco gerado e conteúdo real (fora do git)
+DIST = PROJETO / "frontend" / "dist"  # build do frontend, servido pela API no modo de produção
 
 PORTA_API = 8010
 ORIGENS_CORS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
-# PDF: página de impressão aberta num navegador headless (Edge no Windows; "chromium" no Linux/Docker)
+# PDF: página de impressão aberta num navegador headless (Edge no Windows; "chromium" no Linux/Docker).
+# Em produção NEXUS_FRONTEND aponta para a própria API (http://127.0.0.1:8010), que serve o build.
 FRONTEND = os.environ.get("NEXUS_FRONTEND", "http://localhost:5173")
 PDF_CANAL = os.environ.get("NEXUS_PDF_CANAL", "msedge")
 

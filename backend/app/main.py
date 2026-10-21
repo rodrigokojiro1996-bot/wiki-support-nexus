@@ -11,7 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import ORIGENS_CORS, VERSAO, pasta_conteudo
 from .db import conectar, migrar
-from .rotas import catalogo, manuais, menus, modulos
+from .rotas import catalogo, frontend, manuais, menus, modulos, saude
 
 
 @asynccontextmanager
@@ -28,10 +28,13 @@ async def ciclo(_app):
 app = FastAPI(title="Support Nexus", version=VERSAO, lifespan=ciclo)
 app.add_middleware(CORSMiddleware, allow_origins=ORIGENS_CORS, allow_methods=["*"], allow_headers=["*"])
 
-for r in (modulos, menus, catalogo, manuais):
+for r in (saude, modulos, menus, catalogo, manuais):
     app.include_router(r.router)
 
 # prints dos manuais: backend/dados/imagens (real) ou backend/seed/imagens (exemplo) → /api/imagens/<código>/<arquivo>
 IMAGENS = pasta_conteudo("imagens")
 IMAGENS.mkdir(parents=True, exist_ok=True)
 app.mount("/api/imagens", StaticFiles(directory=IMAGENS), name="imagens")
+
+# por último: o build do frontend (modo de produção) responde o que não for da API
+app.include_router(frontend.router)
