@@ -1,4 +1,4 @@
-from ferramentas import importar_processos as imp
+from app.servicos import limpeza as imp
 
 
 def test_mascara_parametro_password():

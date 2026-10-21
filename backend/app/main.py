@@ -7,9 +7,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
-from .config import ORIGENS_CORS, VERSAO, pasta_conteudo
+from .config import ORIGENS_CORS, VERSAO
 from .db import conectar, migrar
 from .rotas import catalogo, frontend, manuais, menus, modulos, saude
 
@@ -30,11 +29,6 @@ app.add_middleware(CORSMiddleware, allow_origins=ORIGENS_CORS, allow_methods=["*
 
 for r in (saude, modulos, menus, catalogo, manuais):
     app.include_router(r.router)
-
-# prints dos manuais: backend/dados/imagens (real) ou backend/seed/imagens (exemplo) → /api/imagens/<código>/<arquivo>
-IMAGENS = pasta_conteudo("imagens")
-IMAGENS.mkdir(parents=True, exist_ok=True)
-app.mount("/api/imagens", StaticFiles(directory=IMAGENS), name="imagens")
 
 # por último: o build do frontend (modo de produção) responde o que não for da API
 app.include_router(frontend.router)

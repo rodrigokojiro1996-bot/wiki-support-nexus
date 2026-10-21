@@ -23,6 +23,8 @@ import docx
 import pypdf
 from PIL import Image
 
+from app.servicos.limpeza import mascarar, tabelas_citadas
+
 RAIZ = Path(__file__).resolve().parent.parent
 # conteúdo real fica em backend/dados/ (no .gitignore); backend/seed/ guarda só o exemplo DEMO.*
 MANUAIS = RAIZ / "dados" / "manuais"
@@ -30,21 +32,7 @@ IMAGENS = RAIZ / "dados" / "imagens"
 CURADORIA = Path(__file__).with_name("curadoria.json")
 
 # ---------------- limpeza ----------------
-SEGREDOS = [
-    (re.compile(r"(--password=)\S+", re.I), r"\1******"),
-    (re.compile(r"(\bpassword\s*=\s*)\S+", re.I), r"\1******"),
-]
-
-
-def carregar_segredos(arq: Path) -> list:
-    """Senhas conhecidas que aparecem soltas nas anotações: uma por linha (linhas com # são comentário)."""
-    if not arq.exists():
-        return []
-    return [(re.compile(re.escape(s.strip())), "******")
-            for s in arq.read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")]
-
-
-SEGREDOS += carregar_segredos(Path(__file__).with_name("segredos.txt"))  # fora do git
+# senhas mascaradas e tabelas citadas: as mesmas regras do editor de manuais (app/servicos/limpeza.py)
 RUIDO = re.compile(r"(elaborado por|revisado por|aprovado por|^cria[cç][aã]o:|^revis[aã]o:|n[ºo°]\.?\s*revis|vers[aã]o do documento|"
                    r"^sum[aá]rio$|\.{6,}|erro! indicador|^vers[aã]o \d{4} de)", re.I)
 SQL = re.compile(r"^(-|//)?\s*(select|update|delete|insert|repair|cd\\|mysql\b|mysqlcheck|mysqladmin)", re.I)
@@ -54,12 +42,6 @@ BULLET = re.compile(r"^[•\uf0b7\uf0a7\uf0d8▪●◦\-–*]\s*(.+)$")
 OBS = re.compile(r"^OBS\S*\s*[:.]?\s*(.+)$", re.I)
 NOTA = re.compile(r"^(importante|aten[cç][aã]o|nota)\s*[:!]\s*(.+)$", re.I)
 FIM_FRASE = (".", ":", ";", "!", "?")
-
-
-def mascarar(t: str) -> str:
-    for rx, sub in SEGREDOS:
-        t = rx.sub(sub, t)
-    return t
 
 
 def norm(s: str) -> str:
@@ -306,26 +288,6 @@ def ler_txt(arq: Path, m: Montador) -> str:
     for p in linhas:
         m.paragrafo(p)
     return t
-
-
-# ---------------- tabelas citadas ----------------
-# nomes de tabela sem "_" que também valem como citação técnica no texto (ajuste para o seu banco)
-TECNICAS = {"vendas", "produtos", "clientes", "caixas", "estoque"}
-
-
-def tabelas_citadas(texto: str, sqls: str, nomes: set[str]) -> list[str]:
-    achadas = set()
-    baixo, sql_baixo = texto.lower(), sqls.lower()
-    for n in nomes:
-        rx = re.compile(rf"\b{re.escape(n)}\b")
-        if rx.search(sql_baixo):
-            achadas.add(n)
-        elif ("_" in n or n in TECNICAS) and rx.search(baixo) and (n not in TECNICAS or re.search(rf"tabela\s+[\"'“]?{re.escape(n)}\b", baixo) or "_" in n):
-            achadas.add(n)
-    for cand in re.findall(r"tabela\s+[\"'“]?([a-z0-9_]+)", baixo):
-        if cand in nomes:
-            achadas.add(cand)
-    return sorted(achadas)
 
 
 def main():

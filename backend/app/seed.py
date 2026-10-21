@@ -12,8 +12,10 @@ import unicodedata
 from datetime import datetime
 from pathlib import Path
 
-from .config import PROJETO, SEED, modulos, pasta_conteudo
+from . import config
+from .config import PROJETO, SEED, modulos
 from .db import conectar, migrar
+from .servicos.manuais import gravar_no_banco
 
 
 def slug(texto: str) -> str:
@@ -73,20 +75,24 @@ def importar_menus(con, arquivo: Path) -> None:
     print(f"  menus {modulo}: {len(vistos)} itens")
 
 
+def arquivos_de_manuais() -> list[Path]:
+    """Exemplos de seed/manuais e conteúdo real de dados/manuais; com o mesmo código, vale o de dados/."""
+    por_codigo = {}
+    for pasta in (SEED / "manuais", config.DADOS / "manuais"):
+        for arq in sorted(pasta.glob("*.json")):
+            por_codigo[arq.stem] = arq
+    return [por_codigo[c] for c in sorted(por_codigo)]
+
+
 def importar_manuais(con) -> None:
     menus = {r["id"] for r in con.execute("SELECT id FROM menus")}
     n = 0
-    for arq in sorted(pasta_conteudo("manuais").glob("*.json")):
+    for arq in arquivos_de_manuais():
         m = json.loads(arq.read_text(encoding="utf-8"))
         menu = m.get("menu") if m.get("menu") in menus else None
         if m.get("menu") and not menu:
             print(f"  aviso: {m['codigo']} aponta para o menu inexistente {m['menu']}")
-        con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                       ON CONFLICT(codigo) DO UPDATE SET titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
-                       modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
-                       fontes = excluded.fontes, atualizado_em = datetime('now', 'localtime')""",
-                    (m["codigo"], m["titulo"], m.get("subtitulo", ""), m.get("versao", "1.0"), m["modulo"], menu,
-                     json.dumps(m["secoes"], ensure_ascii=False), json.dumps(m.get("tabelas", [])), json.dumps(m.get("fontes", []), ensure_ascii=False)))
+        gravar_no_banco(con, m, menu)
         n += 1
     print(f"  manuais: {n}")
 

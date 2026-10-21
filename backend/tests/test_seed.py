@@ -29,10 +29,13 @@ def test_seed_de_novo_nao_duplica(con):
     assert antes == depois
 
 
-def test_conteudo_real_tem_preferencia(banco, con):
-    # manual em dados/manuais (conteúdo real) é carregado no lugar dos DEMO.*
+def test_seed_carrega_exemplo_e_conteudo_real(banco, con):
+    # manuais reais em dados/manuais entram junto com os DEMO.*; com o mesmo código, vale o de dados/
     real = banco / "manuais"
     real.mkdir()
     (real / "REAL.001.json").write_text('{"codigo": "REAL.001", "titulo": "Real", "modulo": "pdv", "secoes": []}', encoding="utf-8")
+    (real / "DEMO.001.json").write_text('{"codigo": "DEMO.001", "titulo": "Editado", "modulo": "pdv", "secoes": []}', encoding="utf-8")
     seed.main()
-    assert con.execute("SELECT 1 FROM manuais WHERE codigo = 'REAL.001'").fetchone()
+    titulos = {r["codigo"]: r["titulo"] for r in con.execute("SELECT codigo, titulo FROM manuais")}
+    assert titulos["REAL.001"] == "Real" and titulos["DEMO.001"] == "Editado"
+    assert {"DEMO.002", "DEMO.006"} <= set(titulos)

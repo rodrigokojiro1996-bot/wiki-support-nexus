@@ -29,12 +29,6 @@ MODULOS_REAL = RAIZ / "modulos.json"
 MODULOS_EXEMPLO = RAIZ / "modulos.exemplo.json"
 
 
-def pasta_conteudo(nome: str) -> Path:
-    """Conteúdo real (dados/<nome>) quando existir; senão o exemplo versionado (seed/<nome>)."""
-    real = DADOS / nome
-    return real if real.is_dir() else SEED / nome
-
-
 def modulos() -> list[tuple[str, str, str | None]]:
     """[(id, nome, banco), ...] na ordem em que aparecem na interface."""
     arq = MODULOS_REAL if MODULOS_REAL.exists() else MODULOS_EXEMPLO
