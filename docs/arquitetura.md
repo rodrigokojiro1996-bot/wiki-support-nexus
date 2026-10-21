@@ -68,6 +68,13 @@ serve para rodar o projeto sem nenhum banco real. Os módulos Retaguarda e Finan
 - Exibem o caminho da tela no sistema.
 - Botão "Exportar PDF": gera um A4 com cabeçalho, rodapé e número de página.
 
+**Editor de manuais**
+- Na Visão geral, uma tela sem manual mostra "Criar manual para esta tela"; nas que já têm, "+ Novo manual". Na
+  página do manual, "Editar".
+- O manual é montado em blocos (seção, passo, texto, subtítulo, OBS, nota, SQL e imagem), os mesmos dos manuais
+  importados: não há etapa de conversão. Ao lado fica a prévia ao vivo, com o mesmo componente do manual publicado.
+- Prints entram com Ctrl+V (ou arrastando a imagem), logo depois do bloco em que a pessoa está, com legenda.
+
 **Importação de documentos**
 - Converte PDFs, documentos Word e anotações .txt em manuais. O destino de cada documento é definido por uma
   curadoria em JSON. Na importação, os autores são removidos, as senhas são mascaradas e os prints são extraídos
@@ -264,6 +271,7 @@ estrutura: versão 2 se `manuais` já tem a coluna `fontes`, senão versão 1.
 | `001_inicial` | estrutura da 0.1.0 |
 | `002_manuais_fontes` | `manuais.fontes` (documentos de origem) |
 | `003_autoria` | `relacao_status.por`, `menu_tabelas.por` e `menu_tabelas.em` |
+| `004_manuais_autoria` | `manuais.por` (quem criou ou editou pela interface) |
 
 
 ## 7. Fluxos principais
@@ -290,8 +298,8 @@ No banco de exemplo: 5 FKs declaradas e 43 relações inferidas, cobrindo 29 das
 ### 7.3 Carga (`app/seed.py`)
 Aplica as migrações e importa módulos (`modulos.json` ou `modulos.exemplo.json`), catálogo, menus e manuais.
 Pode ser executado quantas vezes for preciso: preserva `relacao_status` e os vínculos `menu_tabelas` com origem
-"equipe". Os manuais vêm de `backend/dados/manuais/` quando essa pasta existe; senão, dos exemplos em
-`backend/seed/manuais/`.
+"equipe". Os manuais vêm dos exemplos em `backend/seed/manuais/` e do conteúdo real em `backend/dados/manuais/`
+(importados e feitos no editor); com o mesmo código, vale o de `dados/`.
 
 ### 7.4 Importação de manuais (`ferramentas/importar_processos.py`)
 Para cada manual definido em `curadoria.json`:
@@ -303,12 +311,24 @@ Para cada manual definido em `curadoria.json`:
 - Detecta as tabelas citadas (nomes técnicos e blocos SQL).
 - Grava o manual em `backend/dados/manuais/<código>.json`. Manuais com `"editado": true` não são sobrescritos.
 
-### 7.5 Exportação de PDF
+### 7.5 Criação e edição de manuais pela interface
+1. O print colado vai para `POST /api/imagens`. O backend confere pelo conteúdo que é PNG, JPG, GIF ou WebP (até
+   8 MB) e guarda em `dados/imagens/_rascunho/`. A prévia já mostra a imagem. Rascunhos abandonados somem depois de
+   um dia.
+2. `POST /api/manuais` (novo) ou `PUT /api/manuais/{código}` (edição) recebe título, subtítulo, tela e seções.
+   A API valida (título, seções com título, blocos com texto, imagem existente, tela do mesmo módulo).
+3. Ao salvar: código novo no padrão do módulo (`PDV.001`, `PDV.002`…), ou versão +0.1 na edição; senhas
+   mascaradas e tabelas citadas detectadas com as mesmas regras do importador (`app/servicos/limpeza.py`); os
+   prints do rascunho vão para `dados/imagens/<código>/NN.ext`.
+4. O manual é gravado em `dados/manuais/<código>.json` com `"editado": true` (o importador não sobrescreve) e no
+   banco na mesma hora. Editar um manual de exemplo grava a cópia em `dados/manuais/`, que passa a valer.
+
+### 7.6 Exportação de PDF
 O botão chama `GET /api/manuais/{código}/pdf`. O backend abre a rota `/manuais/{código}/imprimir` no Edge
 headless (no endereço de `NEXUS_FRONTEND`) e gera um A4 com cabeçalho, marca e rodapé com número de página. Em
 desenvolvimento o endereço é o Vite (5173); em produção, a própria API (8010).
 
-### 7.6 Diagrama
+### 7.7 Diagrama
 `servicos/diagrama.py` recebe as relações (sem as descartadas) e o foco, e devolve as tabelas incluídas, as
 ligações entre elas e as tabelas de apoio ocultas. Um índice `{tabela: vizinhas}` é montado uma vez, e a rota
 busca tabelas e colunas em duas consultas. Com 500 tabelas e 2000 relações a resposta fica abaixo de 50 ms.
@@ -377,7 +397,10 @@ Prefixo `/api`. Documentação interativa em http://localhost:8010/docs.
 | GET | `/manuais?modulo=pdv` | lista de manuais |
 | GET | `/manuais/{código}` | manual completo |
 | GET | `/manuais/{código}/pdf` | download do PDF |
-| GET | `/imagens/{código}/{arquivo}` | prints dos manuais |
+| POST | `/manuais` | cria um manual pelo editor (autor em `X-Usuario`) |
+| PUT | `/manuais/{código}` | salva a edição de um manual (autor em `X-Usuario`) |
+| POST | `/imagens` | recebe um print (corpo = bytes da imagem) e devolve o arquivo de rascunho |
+| GET | `/imagens/{código}/{arquivo}` | prints dos manuais (procura em `dados/imagens` e depois em `seed/imagens`) |
 
 No modo de produção, qualquer caminho fora de `/api` e `/docs` devolve o build do frontend (com `index.html` como
 alternativa, para o React Router).
@@ -461,7 +484,8 @@ backend\.venv\Scripts\python.exe -m pytest -q      # na raiz do projeto
 
 - Em `backend/seed/` o `.gitignore` só aceita os arquivos `DEMO.*`: um manual real que caia ali por engano não é
   versionado.
-- Os manuais importados passam por mascaramento de senhas e remoção de autores antes de serem gravados.
+- Os manuais importados ou feitos no editor passam por mascaramento de senhas antes de serem gravados; os
+  importados também pela remoção de autores. O conteúdo dos prints não é verificado: confira antes de colar.
 - A interface não executa SQL no banco do ERP. Os blocos SQL dos manuais são só texto para o analista copiar.
 - O modo de produção serve só arquivos de dentro de `frontend/dist`.
 - **O repositório é público**: nunca commitar manuais reais, prints, catálogo de banco real, `.env`, nomes de
@@ -481,7 +505,6 @@ backend\.venv\Scripts\python.exe -m pytest -q      # na raiz do projeto
 - **Login**: a autoria hoje é o nome informado na interface, sem verificação. Antes de abrir para uma equipe
   grande, incluir login (conta Microsoft da empresa via Entra ID, ou senha simples se for só uso local), com
   leitura livre para logados e alterações só para o perfil "curador".
-- Os manuais não têm editor na interface. A edição é feita nos arquivos JSON.
 - Módulos Retaguarda e Financeiro: a estrutura está pronta (tabela `modulos`), falta mapear menus e bancos.
 - Relações entre bancos de módulos diferentes (ex.: PDV ← Retaguarda) como um quarto tipo de ligação.
 - Integração com a ferramenta de chamados da equipe de suporte.

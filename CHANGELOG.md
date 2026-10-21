@@ -2,6 +2,21 @@
 
 Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [Não publicado]
+
+### Adicionado
+- Editor de manuais na interface: "Criar manual para esta tela" na Visão geral, "+ Novo manual" e "Editar".
+  Blocos iguais aos dos manuais existentes, prévia ao vivo e prints com Ctrl+V ou arrastando.
+- `POST /api/manuais`, `PUT /api/manuais/{código}` e `POST /api/imagens`.
+- Código automático por módulo (`PDV.001`…) e versão +0.1 a cada edição; quem salvou fica registrado
+  (migração 004).
+
+### Alterado
+- Mascaramento de senhas e detecção de tabelas citadas em `app/servicos/limpeza.py`, usados pelo editor e pelo
+  importador.
+- O seed lê os manuais de `seed/manuais` e de `dados/manuais` juntos (antes, uma pasta ou a outra).
+- `/api/imagens` procura em `dados/imagens` e depois em `seed/imagens`.
+
 ## [0.2.0] - 2026-10-21
 
 Estrutura e boas práticas a partir do plano em [docs/ideias-melhorias.txt](docs/ideias-melhorias.txt).

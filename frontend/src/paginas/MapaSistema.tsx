@@ -178,14 +178,22 @@ export default function MapaSistema() {
             <div className="painel-corpo">
 
               <div className="secao">
-                <h3>Manuais</h3>
+                <div className="secao-cab">
+                  <h3>Manuais</h3>
+                  {ficha.manuais.length > 0 && <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>+ Novo manual</Link>}
+                </div>
                 {ficha.manuais.length ? ficha.manuais.map(m => (
                   <Link key={m.codigo} to={`/manuais/${encodeURIComponent(m.codigo)}`} className="manual-card">
                     <span className="manual-cod">{m.codigo} · v{m.versao}</span>
                     <b>{m.titulo}</b>
                     <small>{m.subtitulo}</small>
                   </Link>
-                )) : <p className="vazio">Nenhum manual para esta tela ainda.</p>}
+                )) : (
+                  <div className="sem-manual">
+                    <p className="vazio">Nenhum manual para esta tela ainda.</p>
+                    <Link className="btn btn-primario" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>Criar manual para esta tela</Link>
+                  </div>
+                )}
               </div>
 
               {ficha.filhos.length > 0 && (

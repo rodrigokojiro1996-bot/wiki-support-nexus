@@ -37,6 +37,9 @@ export type Manual = {
   codigo: string; titulo: string; subtitulo: string; versao: string; modulo: string; modulo_nome: string;
   menu: string | null; caminho: Passo[]; tabelas: string[]; fontes: string[]; atualizado_em: string;
   secoes: { titulo: string; blocos: Bloco[] }[];
+  por?: string;
 };
+
+export type ManualEntrada = Pick<Manual, 'titulo' | 'subtitulo' | 'modulo' | 'secoes'> & { menu: string | null };
 
 export type Catalogo = { banco: string; tabelas: { nome: string; engine: string; linhas: number | null }[]; relacoes: Relacao[] };
