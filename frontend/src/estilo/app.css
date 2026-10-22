@@ -251,6 +251,13 @@ a.btn-primario { color: var(--sobre-accent); }
 .editor-vistas button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }
 .editor-problemas { margin: 12px 20px 0; padding: 10px 14px; border: 1px solid var(--crit); border-radius: 8px; color: var(--crit); background: color-mix(in srgb, var(--crit) 7%, var(--surface)); font-size: 13px; }
 .editor-problemas ul { margin: 4px 0 0; padding-left: 18px; }
+.secao-acoes { display: flex; gap: 6px; flex-wrap: wrap; }
+/* importação de documento: área de soltar o arquivo e quadro de avisos da conversão */
+.editor-importar { margin: 12px 20px 0; padding: 18px; border: 2px dashed var(--accent); border-radius: var(--raio); background: var(--accent-soft); display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; font-size: 13px; }
+.editor-importar span { color: var(--muted); max-width: 560px; }
+.editor-importar.enviando { border-style: solid; opacity: .8; }
+.editor-avisos { margin: 12px 20px 0; padding: 10px 14px; border: 1px solid var(--warn); border-radius: 8px; background: color-mix(in srgb, var(--warn) 8%, var(--surface)); font-size: 13px; }
+.editor-avisos ul { margin: 4px 0 6px; padding-left: 18px; }
 .editor { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; padding: 20px 20px 60px; }
 .editor-form { display: flex; flex-direction: column; gap: 14px; min-width: 0; max-width: 760px; width: 100%; justify-self: center; }
 .editor-form .dica { margin: 0; }

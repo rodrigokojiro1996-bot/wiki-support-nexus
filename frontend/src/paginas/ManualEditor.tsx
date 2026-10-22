@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { api, caminhoTexto } from '../api';
+import { api, caminhoTexto, IMPORTACAO_ACEITA, IMPORTACAO_MAXIMO_MB } from '../api';
 import Documento from '../componentes/Documento';
 import Topo from '../componentes/Topo';
 import type { Bloco, Manual, Passo } from '../tipos';
@@ -52,6 +52,11 @@ export default function ManualEditor() {
   const [vista, setVista] = useState<'editar' | 'previa'>('editar');
   const [erro, setErro] = useState('');
   const [aviso, setAviso] = useState('');
+  // importação: painel aberto pelo "Importar documento" do mapa; avisos e fontes vêm do documento convertido
+  const [importando, setImportando] = useState<'fechado' | 'aberto' | 'enviando'>(params.get('importar') ? 'aberto' : 'fechado');
+  const [avisosImportacao, setAvisosImportacao] = useState<{ arquivo: string; avisos: string[] } | null>(null);
+  const [fontes, setFontes] = useState<string[]>([]);
+  const seletorDocumento = useRef<HTMLInputElement>(null);
   const alvo = useRef<{ secao: number; bloco: number | null }>({ secao: -1, bloco: null }); // onde o print colado entra
   const seletor = useRef<HTMLInputElement>(null);
   const trocando = useRef<{ secao: number; bloco: number } | null>(null);
@@ -113,6 +118,28 @@ export default function ManualEditor() {
       avisar('Print adicionado. Escreva uma legenda, se quiser.');
     } catch (e) { setErro((e as Error).message); }
   }
+  async function importarDocumento(arquivo: File) {
+    if (!contexto) return;
+    if (sujo && !window.confirm('O conteúdo importado substitui o que já está no editor. Continuar?')) return;
+    setImportando('enviando');
+    try {
+      const r = await api.importarManual(contexto.modulo, arquivo);
+      setTitulo(r.titulo || titulo);
+      setSubtitulo(r.subtitulo);
+      // PDF escaneado não traz texto: fica uma seção vazia para começar
+      setSecoes(r.secoes.length ? comIds(r.secoes) : [{ id: novoId(), titulo: 'Procedimento', blocos: [blocoVazio('passo')] }]);
+      setFontes(r.fontes);
+      setAvisosImportacao({ arquivo: arquivo.name, avisos: r.avisos });
+      setSujo(true);
+      setImportando('fechado');
+      setMostrarErros(false);
+      avisar('Documento importado. Revise e clique em Salvar manual.');
+    } catch (e) {
+      setImportando('aberto');
+      setErro(`Não foi possível importar ${arquivo.name}: ${(e as Error).message}`);
+    }
+  }
+
   const subir = useRef(subirImagem);
   subir.current = subirImagem;
 
@@ -146,7 +173,7 @@ export default function ManualEditor() {
     setSalvando(true);
     try {
       const r = await api.salvarManual({
-        titulo, subtitulo, modulo: contexto.modulo, menu: contexto.menu,
+        titulo, subtitulo, modulo: contexto.modulo, menu: contexto.menu, fontes,
         secoes: secoes.map(s => ({ titulo: s.titulo, blocos: s.blocos.map(semId) }))
       }, codigo);
       setSujo(false);
@@ -165,7 +192,7 @@ export default function ManualEditor() {
   const previa: Manual | null = contexto && {
     codigo: codigo ?? `${contexto.modulo.toUpperCase()}.???`, titulo: titulo || 'Título do manual', subtitulo,
     versao: contexto.versao ? proximaVersao(contexto.versao) : '1.0', modulo: contexto.modulo, modulo_nome: contexto.moduloNome, menu: contexto.menu,
-    caminho: contexto.caminho, tabelas: [], fontes: [], atualizado_em: '',
+    caminho: contexto.caminho, tabelas: [], fontes, atualizado_em: '',
     secoes: secoes.map(s => ({ titulo: s.titulo || 'Seção sem título', blocos: s.blocos.map(semId) }))
   };
 
@@ -185,6 +212,8 @@ export default function ManualEditor() {
             <button type="button" role="tab" aria-selected={vista === 'editar'} onClick={() => setVista('editar')}>Editar</button>
             <button type="button" role="tab" aria-selected={vista === 'previa'} onClick={() => setVista('previa')}>Prévia</button>
           </div>
+          {!codigo && <button type="button" className="btn" onClick={() => setImportando(i => (i === 'fechado' ? 'aberto' : 'fechado'))}
+            aria-expanded={importando !== 'fechado'} disabled={!contexto || importando === 'enviando'}>Importar documento</button>}
           <button type="button" className="btn" onClick={cancelar}>Cancelar</button>
           <button type="button" className="btn btn-primario" onClick={salvar} disabled={!contexto || salvando}>{salvando ? 'Salvando…' : 'Salvar manual'}</button>
         </div>
@@ -197,10 +226,40 @@ export default function ManualEditor() {
         </div>
       )}
 
+      {!codigo && contexto && importando !== 'fechado' && (
+        <div className={`editor-importar${importando === 'enviando' ? ' enviando' : ''}`}
+          onDragOver={e => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); e.stopPropagation(); } }}
+          onDrop={e => { const f = e.dataTransfer.files[0]; if (f) { e.preventDefault(); e.stopPropagation(); importarDocumento(f); } }}>
+          {importando === 'enviando' ? <b>Convertendo o documento…</b> : (
+            <>
+              <b>Arraste o documento para cá</b>
+              <span>PDF, Word (.docx), .txt ou .md, até {IMPORTACAO_MAXIMO_MB} MB. O conteúdo abre aqui no editor para revisar; nada é salvo até você clicar em Salvar manual.</span>
+              <button type="button" className="btn btn-primario" onClick={() => seletorDocumento.current?.click()}>Escolher arquivo</button>
+            </>
+          )}
+          <input ref={seletorDocumento} type="file" accept={IMPORTACAO_ACEITA} hidden
+            onChange={e => { const f = e.target.files?.[0]; if (f) importarDocumento(f); e.target.value = ''; }} />
+        </div>
+      )}
+
+      {avisosImportacao && (
+        <div className="editor-avisos" role="status">
+          <b>Importado de {avisosImportacao.arquivo}.</b> A conversão é automática: confira o texto, as seções e os prints antes de salvar.
+          {avisosImportacao.avisos.length > 0 && <ul>{avisosImportacao.avisos.map(a => <li key={a}>{a}</li>)}</ul>}
+          <button type="button" className="link" onClick={() => setAvisosImportacao(null)}>Fechar</button>
+        </div>
+      )}
+
       {contexto && (
         <main className={`editor vista-${vista}`}
           onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
-          onDrop={e => { const f = e.dataTransfer.files[0]; if (f) { e.preventDefault(); subirImagem(f); } }}>
+          onDrop={e => {
+            const f = e.dataTransfer.files[0];
+            if (!f) return;
+            e.preventDefault();
+            // documento solto no editor de um manual novo: importa; imagem: vira print
+            if (!codigo && !f.type.startsWith('image/')) importarDocumento(f); else subirImagem(f);
+          }}>
           <section className="editor-form" aria-label="Conteúdo do manual">
             <p className="dica">Cole um print com <kbd>Ctrl</kbd>+<kbd>V</kbd> (ou arraste a imagem) e ele entra logo depois do bloco em que você está. Formatação ao colar ou digitar: linha em branco separa parágrafos; <code>•</code> ou <code>-</code> no começo da linha vira lista (Tab antes = subitem); linha sozinha que começa com emoji, com <code>1.</code> ou termina em <code>:</code> vira título; <code>[ Botão ]</code> aparece como botão; <code>**texto**</code> é negrito.</p>
 

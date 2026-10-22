@@ -180,7 +180,12 @@ export default function MapaSistema() {
               <div className="secao">
                 <div className="secao-cab">
                   <h3>Manuais</h3>
-                  {ficha.manuais.length > 0 && <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>+ Novo manual</Link>}
+                  {ficha.manuais.length > 0 && (
+                    <div className="secao-acoes">
+                      <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}&importar=1`}>Importar documento</Link>
+                      <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>+ Novo manual</Link>
+                    </div>
+                  )}
                 </div>
                 {ficha.manuais.length ? ficha.manuais.map(m => (
                   <Link key={m.codigo} to={`/manuais/${encodeURIComponent(m.codigo)}`} className="manual-card">
@@ -192,6 +197,7 @@ export default function MapaSistema() {
                   <div className="sem-manual">
                     <p className="vazio">Nenhum manual para esta tela ainda.</p>
                     <Link className="btn btn-primario" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>Criar manual para esta tela</Link>
+                    <Link className="btn" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}&importar=1`}>Importar documento</Link>
                   </div>
                 )}
               </div>

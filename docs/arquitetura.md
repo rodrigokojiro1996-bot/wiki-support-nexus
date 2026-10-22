@@ -332,6 +332,10 @@ A conversão de um documento em manual fica em `converter()`, usada pela rota `P
   sobrescritos.
 
 ### 7.5 Criação e edição de manuais pela interface
+0. Opcional, num manual novo: "Importar documento" (no mapa ou no editor) envia um PDF, `.docx`, `.txt` ou `.md`
+   para `POST /api/manuais/importar` (seção 7.4). O editor abre preenchido, com os avisos da conversão no topo; o
+   documento também pode ser arrastado para o editor. Nada é salvo até clicar em Salvar manual, que grava o nome
+   do documento em `fontes`.
 1. O print colado vai para `POST /api/imagens`. O backend confere pelo conteúdo que é PNG, JPG, GIF ou WebP (até
    8 MB) e guarda em `dados/imagens/_rascunho/`. A prévia já mostra a imagem. Rascunhos abandonados somem depois de
    um dia.

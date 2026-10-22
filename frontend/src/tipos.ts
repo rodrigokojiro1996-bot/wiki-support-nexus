@@ -40,6 +40,9 @@ export type Manual = {
   por?: string;
 };
 
-export type ManualEntrada = Pick<Manual, 'titulo' | 'subtitulo' | 'modulo' | 'secoes'> & { menu: string | null };
+export type ManualEntrada = Pick<Manual, 'titulo' | 'subtitulo' | 'modulo' | 'secoes'> & { menu: string | null; fontes?: string[] };
+
+/** POST /api/manuais/importar: documento convertido, ainda não salvo (os prints ficam em rascunho) */
+export type Rascunho = Pick<Manual, 'titulo' | 'subtitulo' | 'secoes' | 'tabelas' | 'fontes'> & { avisos: string[] };
 
 export type Catalogo = { banco: string; tabelas: { nome: string; engine: string; linhas: number | null }[]; relacoes: Relacao[] };

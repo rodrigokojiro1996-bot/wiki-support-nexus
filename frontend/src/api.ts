@@ -1,4 +1,4 @@
-import type { Catalogo, Manual, ManualEntrada, MenuFicha, MenuNo, Modulo } from './tipos';
+import type { Catalogo, Manual, ManualEntrada, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);
@@ -25,13 +25,24 @@ const enviar = (method: 'PUT' | 'POST', body: unknown): RequestInit => ({
 });
 const put = (body: unknown) => enviar('PUT', body);
 
+/** frase para quando a resposta não traz o motivo (ex.: o proxy cortou um arquivo grande) */
+const SEM_DETALHE: Record<number, string> = {
+  413: 'Arquivo grande demais.',
+  415: 'Tipo de arquivo não suportado.',
+  422: 'Não foi possível ler o arquivo.'
+};
+
 /** 422 do FastAPI vem como lista de erros; vira uma frase só */
 async function erroDe(r: Response): Promise<Error> {
   const corpo = await r.json().catch(() => null);
   const d = corpo?.detail;
   if (Array.isArray(d)) return new Error(d.map((x: { msg: string }) => x.msg.replace(/^Value error, /, '')).join('; '));
-  return new Error(d ?? `${r.status} ${r.statusText}`);
+  return new Error(d ?? SEM_DETALHE[r.status] ?? `${r.status} ${r.statusText}`);
 }
+
+/** mesmo limite da API (servicos/importacao.py): recusa antes de enviar */
+export const IMPORTACAO_MAXIMO_MB = 20;
+export const IMPORTACAO_ACEITA = '.pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown';
 
 export const api = {
   modulos: () => json<Modulo[]>('/api/modulos'),
@@ -52,6 +63,15 @@ export const api = {
     const r = await fetch('/api/imagens', { method: 'POST', headers: { 'Content-Type': arquivo.type || 'application/octet-stream' }, body: arquivo });
     if (!r.ok) throw await erroDe(r);
     return (await r.json()).arquivo;
+  },
+  /** documento (PDF, Word, .txt, .md) → rascunho para revisar no editor; nada é salvo */
+  async importarManual(modulo: string, arquivo: File): Promise<Rascunho> {
+    if (arquivo.size > IMPORTACAO_MAXIMO_MB * 1024 * 1024) throw new Error(`Arquivo maior que ${IMPORTACAO_MAXIMO_MB} MB.`);
+    const r = await fetch(`/api/manuais/importar?modulo=${enc(modulo)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Arquivo': enc(arquivo.name) }, body: arquivo
+    });
+    if (!r.ok) throw await erroDe(r);
+    return r.json();
   },
   async pdf(codigo: string): Promise<Blob> {
     const r = await fetch(`/api/manuais/${enc(codigo)}/pdf`);
