@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usuario } from '../api';
+import { ambienteDoServidor, usuario } from '../api';
 
 const MODULOS = [
   { id: 'pdv', nome: 'PDV', ativo: true },
@@ -19,8 +19,17 @@ function SeuNome() {
   );
 }
 
+/** Homologação: avisa em toda tela que o conteúdo é de exemplo e pode sumir (NEXUS_AMBIENTE=homologacao) */
+function FaixaAmbiente() {
+  const [ambiente, setAmbiente] = useState('');
+  useEffect(() => { ambienteDoServidor().then(setAmbiente); }, []);
+  if (ambiente !== 'homologacao') return null;
+  return <div className="faixa-ambiente" role="note"><b>Ambiente de homologação</b> — dados de exemplo, podem ser apagados a qualquer momento.</div>;
+}
+
 export default function Topo({ children }: { children?: React.ReactNode }) {
   return (
+    <>
     <header className="topo">
       <Link to="/" className="topo-marca" aria-label="Support Nexus – início">
         <img className="topo-logo" src="/marca/nexus.svg" alt="" />
@@ -38,5 +47,7 @@ export default function Topo({ children }: { children?: React.ReactNode }) {
       </nav>
       <div className="topo-extra">{children}<SeuNome /></div>
     </header>
+    <FaixaAmbiente />
+    </>
   );
 }

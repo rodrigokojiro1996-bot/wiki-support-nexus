@@ -49,8 +49,11 @@ COPY backend/requirements.txt ./
 # --with-deps instala também as bibliotecas do sistema que o Chromium precisa (fontes, libnss, ...);
 # --no-shell: só o Chromium completo, que é o que NEXUS_PDF_CANAL=chromium usa (o "headless shell" seria +273 MB);
 # a limpeza do apt no mesmo RUN evita que a lista de pacotes fique gravada numa camada da imagem
+# tini: processo init (PID 1) que recolhe os processos do Chromium que terminam, sem depender do "init: true"
+# do compose; assim a imagem funciona igual num "docker run" simples (homologação na VPS, por exemplo)
 RUN pip install -r requirements.txt \
  && python -m playwright install --with-deps --no-shell chromium \
+ && apt-get install -y --no-install-recommends tini \
  && rm -rf /var/lib/apt/lists/*
 
 # usuário sem privilégios: se alguém explorar uma falha da aplicação, não é root dentro do contêiner
@@ -80,4 +83,4 @@ EXPOSE 8010
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
   CMD ["python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8010/api/saude', timeout=4).status == 200 else 1)"]
 
-ENTRYPOINT ["nexus-entrypoint"]
+ENTRYPOINT ["tini", "--", "nexus-entrypoint"]

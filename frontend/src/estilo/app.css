@@ -38,6 +38,8 @@ a { color: var(--accent); }
 .app { min-height: 100%; display: flex; flex-direction: column; }
 
 /* ---------- topo ---------- */
+/* faixa da homologação: laranja de atenção, com texto (não só cor) */
+.faixa-ambiente { padding: 6px 20px; font-size: 13px; text-align: center; color: #5c3a00; background: #ffe2a8; border-bottom: 1px solid var(--warn); }
 .topo { position: sticky; top: 0; z-index: 20; height: var(--topo-h); display: flex; align-items: center; gap: 22px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 /* faixa da marca: índigo que termina em ciano */
 .topo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: linear-gradient(90deg, var(--marca), var(--marca-2)); }

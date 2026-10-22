@@ -1,6 +1,18 @@
 from app import config
 
 
+def test_paginas_e_api_fora_dos_buscadores(cliente):
+    for url in ("/api/saude", "/api/modulos", "/qualquer-tela"):
+        assert cliente.get(url).headers["X-Robots-Tag"] == "noindex, nofollow"
+
+
+def test_saude_informa_o_ambiente(cliente, monkeypatch):
+    from app.rotas import saude
+    assert cliente.get("/api/saude").json()["ambiente"] == ""
+    monkeypatch.setattr(saude, "AMBIENTE", "homologacao")
+    assert cliente.get("/api/saude").json()["ambiente"] == "homologacao"
+
+
 def test_saude(cliente):
     r = cliente.get("/api/saude")
     assert r.status_code == 200

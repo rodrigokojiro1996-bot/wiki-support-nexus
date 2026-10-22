@@ -4,6 +4,15 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Adicionado
+- Homologação: `NEXUS_AMBIENTE=homologacao` mostra a faixa "Ambiente de homologação" em todas as telas, e
+  `/api/saude` informa o ambiente. Guia de `docker run` sem o compose em `docs/docker.md` (seção 10).
+- Fora dos buscadores: `robots.txt` e o cabeçalho `X-Robots-Tag: noindex, nofollow` em toda resposta.
+
+### Alterado
+- A imagem tem o `tini` como PID 1 e o Chromium do PDF roda com `--disable-dev-shm-usage`: funciona num
+  `docker run` simples, sem o `init: true` e o `shm_size` do compose.
+
 ## [0.3.0] - 2026-10-22
 
 ### Adicionado

@@ -19,6 +19,9 @@ ORIGENS_CORS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 FRONTEND = os.environ.get("NEXUS_FRONTEND", "http://localhost:5173")
 PDF_CANAL = os.environ.get("NEXUS_PDF_CANAL", "msedge")
 
+# "homologacao" mostra a faixa "Ambiente de homologação" na interface (GET /api/saude informa o valor)
+AMBIENTE = os.environ.get("NEXUS_AMBIENTE", "").strip().lower()
+
 # diagrama
 APOIO_MINIMO = 40     # tabelas referenciadas por tantas outras (empresas, usuarios…) ficam ocultas por padrão
 LIMITE_DIAGRAMA = 40  # máximo de tabelas no diagrama, para continuar legível
