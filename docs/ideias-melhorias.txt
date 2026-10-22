@@ -231,7 +231,7 @@ ORDEM SUGERIDA DE TRABALHO
   [x] 3c rotas/ + config.py + MODULOS fora do seed (modulos.json)
   [x] 4  migracoes numeradas (remove o try/except do seed)
   [x] 6  build servido pelo FastAPI + /api/saude + iniciar-producao.ps1
-  [ ] 6  Dockerfile com HEALTHCHECK (so se for para um servidor)
+  [x] 6  Dockerfile com HEALTHCHECK + docker-compose (docs/docker.md)
   [x] 5  autoria (por/em)
   [ ] 5  login (falta decidir: Entra ID ou senha simples)
   [x] 7  requirements separados e travados

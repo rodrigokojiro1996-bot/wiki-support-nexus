@@ -13,6 +13,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   Passos e OBS mantêm as quebras de linha. Manuais de uma linha por bloco não mudam.
 - Código automático por módulo (`PDV.001`…) e versão +0.1 a cada edição; quem salvou fica registrado
   (migração 004).
+- Docker: `Dockerfile` em duas etapas (imagens base travadas por versão e digest, usuário sem privilégios,
+  `HEALTHCHECK` em `/api/saude`, Chromium para o PDF), `docker-compose.yml` (porta só local, volume `nexus-dados`,
+  `init`, `shm_size`, limite de memória) e guia em `docs/docker.md`.
 
 ### Alterado
 - Mascaramento de senhas e detecção de tabelas citadas em `app/servicos/limpeza.py`, usados pelo editor e pelo

@@ -1,0 +1,33 @@
+# Support Nexus com Docker Compose.
+#
+#   docker compose up -d --build     sobe (e reconstrói a imagem se o código mudou)
+#   docker compose ps                estado e saúde (healthy / unhealthy)
+#   docker compose logs -f           acompanha o log
+#   docker compose down              para e remove o contêiner (o volume com os dados continua)
+#
+# Detalhes e explicação de cada escolha: docs/docker.md
+name: support-nexus
+
+services:
+  nexus:
+    build: .
+    image: support-nexus:local
+    # Só esta máquina acessa: ainda não há login. Para liberar na rede troque por "8010:8010"
+    # (e leia a seção de segurança de docs/docker.md antes).
+    ports:
+      - "127.0.0.1:8010:8010"
+    volumes:
+      # banco SQLite, manuais e prints criados pela interface: sobrevivem a "down" e a uma imagem nova
+      - nexus-dados:/app/backend/dados
+      # Banco real (opcional), sempre somente leitura (:ro). Descomente depois de gerar os arquivos:
+      # - ./backend/modulos.json:/app/backend/modulos.json:ro
+      # - ./coletor/saida:/app/coletor/saida:ro
+    # processo "init" (tini) como PID 1: recolhe os processos do Chromium que terminam (evita zumbis)
+    init: true
+    # o Chromium usa memória compartilhada; os 64 MB padrão do Docker fazem PDFs grandes falharem
+    shm_size: "256m"
+    mem_limit: 1g
+    restart: unless-stopped
+
+volumes:
+  nexus-dados:

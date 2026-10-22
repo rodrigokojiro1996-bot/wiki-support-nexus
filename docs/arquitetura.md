@@ -180,6 +180,9 @@ frontend/
 
 iniciar.ps1                desenvolvimento: sobe API (--reload) e Vite e abre o navegador
 iniciar-producao.ps1       produção: build + seed + um só processo na 8010
+Dockerfile                 imagem em duas etapas (build do frontend + API com Chromium)
+docker-compose.yml         como o contêiner roda: porta, volume de dados, limites
+docker/entrypoint.sh       subida do contêiner: seed e uvicorn
 pytest.ini                 configuração dos testes (rodar na raiz)
 ```
 
@@ -436,6 +439,9 @@ http://localhost:5173).
 http://localhost:8010, sem `--reload`. O PDF funciona sem o Vite. Use `-Rede` para aceitar acesso de outras
 máquinas. Para monitoramento, `GET /api/saude`.
 
+**Docker** — `docker compose up -d --build` sobe a mesma aplicação num contêiner (API + interface + Chromium para
+o PDF), com os dados num volume. Guia completo em [docker.md](docker.md).
+
 **Usar com um banco real**
 ```powershell
 cd coletor
@@ -513,4 +519,3 @@ backend\.venv\Scripts\python.exe -m pytest -q      # na raiz do projeto
 - Relações entre bancos de módulos diferentes (ex.: PDV ← Retaguarda) como um quarto tipo de ligação.
 - Integração com a ferramenta de chamados da equipe de suporte.
 - Testes do frontend (Vitest) para `caminhoTexto` e a montagem do layout ELK.
-- Dockerfile com `HEALTHCHECK` em `/api/saude`, se a wiki for para um servidor.

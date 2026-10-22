@@ -35,6 +35,16 @@ cd ..
 .\iniciar-producao.ps1                         # produção: build + um só processo em :8010
 ```
 
+## Rodar com Docker
+
+```powershell
+docker compose up -d --build                    # http://localhost:8010 (só nesta máquina)
+docker compose ps                               # espere "(healthy)"
+```
+
+Um contêiner com a API, a interface e o Chromium do PDF; banco, manuais e prints ficam no volume `nexus-dados`.
+Instalação do Docker no Windows, backup dos dados e o porquê de cada escolha: [docs/docker.md](docs/docker.md).
+
 ## Testes
 
 ```powershell

@@ -1,0 +1,6 @@
+# Scripts e arquivos lidos dentro do contêiner Linux: sempre LF, mesmo com o Git do Windows convertendo para CRLF.
+# (um .sh com CRLF falha no Linux com "bad interpreter" ou "set: illegal option")
+*.sh            text eol=lf
+Dockerfile      text eol=lf
+.dockerignore   text eol=lf
+docker-compose.yml text eol=lf
