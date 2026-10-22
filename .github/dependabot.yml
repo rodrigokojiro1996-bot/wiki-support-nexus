@@ -1,0 +1,50 @@
+# Dependabot: abre PRs semanais para atualizar as versões travadas com "==".
+# Cada PR passa pelo CI antes do merge. Atualizações de patch vêm agrupadas num PR só por ecossistema.
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule: { interval: weekly, day: monday }
+    labels: ["chore", "area: backend"]
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      patches: { update-types: ["patch"] }
+
+  - package-ecosystem: pip
+    directory: /coletor
+    schedule: { interval: weekly, day: monday }
+    labels: ["chore", "area: coletor"]
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      patches: { update-types: ["patch"] }
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly, day: monday }
+    labels: ["chore", "area: frontend"]
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      patches: { update-types: ["patch"] }
+
+  # imagens base do Dockerfile (node e python, travadas por versão e digest)
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    labels: ["chore", "area: docker"]
+    commit-message: { prefix: "chore(deps)" }
+
+  # imagens do docker-compose.yml (Prometheus e Grafana)
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    labels: ["chore", "area: monitoramento"]
+    commit-message: { prefix: "chore(deps)" }
+
+  # as Actions do CI (travadas por SHA): o Dependabot atualiza o SHA e o comentário da versão
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    labels: ["ci"]
+    commit-message: { prefix: "ci(deps)" }
+    groups:
+      actions: { patterns: ["*"] }

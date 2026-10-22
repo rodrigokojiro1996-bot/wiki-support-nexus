@@ -10,6 +10,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   Actions travadas por SHA, permissão só de leitura e execução antiga cancelada a cada push novo.
 - Template de pull request (o que muda, por que, como testei, checklist) e templates de issue "Bug" e
   "Melhoria" (`.github/`). Falha de segurança vai para o aviso privado, não para issue pública.
+- Dependabot (`.github/dependabot.yml`): PRs semanais de atualização para pip (backend e coletor), npm, imagens do
+  Dockerfile e do docker-compose e GitHub Actions, com os patches agrupados. Alertas de dependência, secret scanning
+  e push protection ligados no repositório.
 - Editor de manuais na interface: "Criar manual para esta tela" na Visão geral, "+ Novo manual" e "Editar".
   Blocos iguais aos dos manuais existentes, prévia ao vivo e prints com Ctrl+V ou arrastando.
 - `POST /api/manuais`, `PUT /api/manuais/{código}` e `POST /api/imagens`.
