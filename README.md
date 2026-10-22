@@ -35,6 +35,23 @@ cd ..
 .\iniciar-producao.ps1                         # produção: build + um só processo em :8010
 ```
 
+## Rodar com Docker
+
+```powershell
+copy .env.example .env                          # defina GRAFANA_SENHA
+docker compose up -d --build                    # sobe a aplicação, o Prometheus e o Grafana
+docker compose ps                               # espere os três "(healthy)"
+```
+
+| Endereço | Serviço |
+|---|---|
+| http://localhost:8010 | Support Nexus |
+| http://localhost:3000 | Grafana: painel "Support Nexus · API" (usuário `admin`, senha do `.env`) |
+| http://localhost:9090 | Prometheus: métricas, alvos e alertas |
+
+Tudo só nesta máquina. Instalação do Docker no Windows, backup dos dados e o porquê de cada escolha:
+[docs/docker.md](docs/docker.md). Métricas, painel e alertas: [docs/monitoramento.md](docs/monitoramento.md).
+
 ## Testes
 
 ```powershell

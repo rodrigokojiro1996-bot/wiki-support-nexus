@@ -18,8 +18,8 @@
   --doc: #1f8a4c;
   --warn: #a8701a;
   --crit: #c2412d;
-  --font: "Manrope", "Segoe UI", system-ui, sans-serif;
-  --mono: "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+  --font: "Manrope Variable", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono Variable", "Cascadia Mono", Consolas, monospace;
   --raio: 10px;
   --topo-h: 58px;
   color-scheme: light;

@@ -1,0 +1,64 @@
+# Testes das regras de alerta, com séries simuladas no tempo.
+# Rodar: docker compose run --rm --entrypoint promtool prometheus test rules /etc/prometheus/alertas.test.yml
+rule_files:
+  - alertas.yml
+
+evaluation_interval: 15s
+
+tests:
+  # API caiu: depois de 1 minuto fora, dispara; com 30 s ainda não
+  - interval: 15s
+    input_series:
+      - series: 'up{job="nexus", instance="nexus:8010"}'
+        values: "1 1 0 0 0 0 0 0"
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: NexusForaDoAr
+        exp_alerts: []
+      - eval_time: 1m45s
+        alertname: NexusForaDoAr
+        exp_alerts:
+          - exp_labels: { severity: critical, job: nexus, instance: "nexus:8010" }
+            exp_annotations:
+              summary: "A API do Support Nexus não responde ao Prometheus há 1 minuto"
+              description: "Veja docker compose ps e docker compose logs nexus."
+
+  # 10% de 5xx por mais de 5 minutos: dispara
+  - interval: 1m
+    input_series:
+      - series: 'nexus_http_requests_total{method="GET", route="/api/modulos", status="200"}'
+        values: "0+90x15"
+      - series: 'nexus_http_requests_total{method="GET", route="/api/modulos", status="500"}'
+        values: "0+10x15"
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: NexusErros5xx
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "Mais de 5% das respostas da API são erro do servidor (5xx)"
+              description: "Fração atual: 10%."
+
+  # só 2xx: não dispara
+  - interval: 1m
+    input_series:
+      - series: 'nexus_http_requests_total{method="GET", route="/api/modulos", status="200"}'
+        values: "0+100x15"
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: NexusErros5xx
+        exp_alerts: []
+
+  # uma falha de PDF: dispara logo (sem "for")
+  - interval: 1m
+    input_series:
+      - series: 'nexus_pdf_generation_failures_total{job="nexus", instance="nexus:8010"}'
+        values: "0 0 0 1 1 1"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: NexusPdfFalhando
+        exp_alerts:
+          - exp_labels: { severity: warning, job: nexus, instance: "nexus:8010" }
+            exp_annotations:
+              summary: "A geração de PDF falhou nos últimos 15 minutos"
+              description: "Veja docker compose logs nexus (Chromium, memória compartilhada, shm_size)."

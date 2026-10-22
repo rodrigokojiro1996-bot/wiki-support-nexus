@@ -180,6 +180,9 @@ frontend/
 
 iniciar.ps1                desenvolvimento: sobe API (--reload) e Vite e abre o navegador
 iniciar-producao.ps1       produção: build + seed + um só processo na 8010
+Dockerfile                 imagem em duas etapas (build do frontend + API com Chromium)
+docker-compose.yml         como o contêiner roda: porta, volume de dados, limites
+docker/entrypoint.sh       subida do contêiner: seed e uvicorn
 pytest.ini                 configuração dos testes (rodar na raiz)
 ```
 
@@ -241,6 +244,8 @@ pytest.ini                 configuração dos testes (rodar na raiz)
 **CSS próprio (sem framework de UI)**
 - O manual precisa de um layout fiel na tela e na impressão (regras `@page` e `@media print`). CSS escrito à mão
   dá esse controle.
+- Fontes empacotadas no build (`@fontsource-variable/manrope` e `jetbrains-mono`): sem depender do Google Fonts.
+  O manual usa Segoe UI/Consolas (Windows), com Liberation Sans/Mono como alternativa no Linux.
 - Cores definidas como variáveis: índigo `#4F5BD5` e ciano `#22B8CF` (marca), roxo `#7C3AED` (destaque no
   diagrama).
 
@@ -332,7 +337,12 @@ O botão chama `GET /api/manuais/{código}/pdf`. O backend abre a rota `/manuais
 headless (no endereço de `NEXUS_FRONTEND`) e gera um A4 com cabeçalho, marca e rodapé com número de página. Em
 desenvolvimento o endereço é o Vite (5173); em produção, a própria API (8010).
 
-### 7.7 Diagrama
+### 7.7 Métricas e cobertura
+A API publica em `/metrics` as métricas técnicas (requisições, tempo de resposta, PDF) e as de cobertura da wiki
+(`nexus_wiki_*`, calculadas no banco a cada coleta por `servicos/cobertura.py`). O Prometheus coleta e o Grafana
+mostra dois painéis. Detalhes em [monitoramento.md](monitoramento.md).
+
+### 7.8 Diagrama
 `servicos/diagrama.py` recebe as relações (sem as descartadas) e o foco, e devolve as tabelas incluídas, as
 ligações entre elas e as tabelas de apoio ocultas. Um índice `{tabela: vizinhas}` é montado uma vez, e a rota
 busca tabelas e colunas em duas consultas. Com 500 tabelas e 2000 relações a resposta fica abaixo de 50 ms.
@@ -389,6 +399,7 @@ Prefixo `/api`. Documentação interativa em http://localhost:8010/docs.
 
 | Método | Rota | O que faz |
 |---|---|---|
+| GET | `/metrics` (fora de `/api`) | métricas no formato do Prometheus ([monitoramento.md](monitoramento.md)) |
 | GET | `/saude` | `{"ok": true, "versao": "…", "schema": N}`; 503 se o banco não responder |
 | GET | `/modulos` | módulos e data da última coleta |
 | GET | `/modulos/{m}/menus` | árvore de menus com contagens |
@@ -435,6 +446,9 @@ http://localhost:5173).
 **Produção** — `.\iniciar-producao.ps1` compila o frontend, roda o seed e sobe um só processo em
 http://localhost:8010, sem `--reload`. O PDF funciona sem o Vite. Use `-Rede` para aceitar acesso de outras
 máquinas. Para monitoramento, `GET /api/saude`.
+
+**Docker** — `docker compose up -d --build` sobe a mesma aplicação num contêiner (API + interface + Chromium para
+o PDF), com os dados num volume. Guia completo em [docker.md](docker.md).
 
 **Usar com um banco real**
 ```powershell
@@ -513,4 +527,3 @@ backend\.venv\Scripts\python.exe -m pytest -q      # na raiz do projeto
 - Relações entre bancos de módulos diferentes (ex.: PDV ← Retaguarda) como um quarto tipo de ligação.
 - Integração com a ferramenta de chamados da equipe de suporte.
 - Testes do frontend (Vitest) para `caminhoTexto` e a montagem do layout ELK.
-- Dockerfile com `HEALTHCHECK` em `/api/saude`, se a wiki for para um servidor.

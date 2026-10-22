@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+import time
+
 from .. import pdf
+from ..metricas import PDF_DURACAO, PDF_FALHAS
 from ..servicos import manuais as servico
 from ..servicos.manuais import manual_completo
 from . import db, usuario
@@ -37,10 +40,13 @@ def manual(codigo: str, con=Depends(db)):
 @router.get("/manuais/{codigo}/pdf")
 def manual_pdf(codigo: str, con=Depends(db)):
     m = _manual(con, codigo)
+    inicio = time.perf_counter()
     try:
         conteudo = pdf.gerar(codigo)
     except Exception as e:  # sem Edge/Chromium ou frontend fora do ar
+        PDF_FALHAS.inc()
         raise HTTPException(503, f"Não foi possível gerar o PDF: {e}") from e
+    PDF_DURACAO.observe(time.perf_counter() - inicio)
     nome = f"{codigo} - {m['modulo_nome']} - {m['titulo']}.pdf".replace("/", "-")
     return Response(conteudo, media_type="application/pdf",
                     headers={"Content-Disposition": f"attachment; filename*=UTF-8''{pdf.quote(nome)}"})

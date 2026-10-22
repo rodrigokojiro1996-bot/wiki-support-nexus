@@ -13,6 +13,28 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   Passos e OBS mantêm as quebras de linha. Manuais de uma linha por bloco não mudam.
 - Código automático por módulo (`PDV.001`…) e versão +0.1 a cada edição; quem salvou fica registrado
   (migração 004).
+- Docker: `Dockerfile` em duas etapas (imagens base travadas por versão e digest, usuário sem privilégios,
+  `HEALTHCHECK` em `/api/saude`, Chromium para o PDF), `docker-compose.yml` (porta só local, volume `nexus-dados`,
+  `init`, `shm_size`, limite de memória) e guia em `docs/docker.md`. Imagem de 1,5 GB (Chromium sem o
+  "headless shell").
+
+- Monitoramento: a API publica métricas em `/metrics` (requisições, tempo de resposta por rota, tempo e falhas do
+  PDF, memória e CPU); Prometheus coleta a cada 15 s e avalia 4 regras de alerta (com testes do `promtool`);
+  Grafana com o painel "Support Nexus · API" provisionado por arquivo. Senha do Grafana no `.env`. Guia em
+  `docs/monitoramento.md`.
+
+- Painel "Support Nexus · Cobertura da wiki" no Grafana: telas com e sem manual (total e por menu), vínculos
+  confirmados, relações por estado, evolução no tempo e contribuições dos últimos 7 dias por pessoa e tipo. Os
+  números vêm de métricas `nexus_wiki_*`, calculadas no banco a cada coleta do Prometheus.
+
+### Corrigido
+- O seed regravava a data `atualizado_em` de todos os manuais a cada execução (e o contêiner roda o seed a cada
+  subida): um manual parado há meses aparecia como "atualizado hoje". Agora a data só muda quando o conteúdo muda,
+  e o editor grava a data real no JSON.
+- Fontes da interface (Manrope, JetBrains Mono) empacotadas no build em vez de baixadas do Google Fonts a cada
+  acesso: funcionam sem internet e atrás de antivírus/proxy.
+- PDF no Linux/Docker: alternativas abertas Liberation Sans/Mono para Segoe UI/Consolas (o SQL saía numa fonte
+  chinesa monoespaçada), e o gerador espera as fontes carregarem antes de imprimir.
 
 ### Alterado
 - Mascaramento de senhas e detecção de tabelas citadas em `app/servicos/limpeza.py`, usados pelo editor e pelo

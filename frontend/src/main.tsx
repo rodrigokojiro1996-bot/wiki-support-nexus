@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
+// fontes da interface empacotadas no build: funcionam sem internet e não consultam o Google a cada acesso
+import '@fontsource-variable/manrope';
+import '@fontsource-variable/jetbrains-mono';
 import './estilo/app.css';
 import './estilo/documento.css';
 import MapaSistema from './paginas/MapaSistema';

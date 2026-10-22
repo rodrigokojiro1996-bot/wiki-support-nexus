@@ -1,4 +1,5 @@
 # credenciais e segredos (nunca versionar)
+.env
 coletor/.env
 backend/ferramentas/segredos.txt
 
