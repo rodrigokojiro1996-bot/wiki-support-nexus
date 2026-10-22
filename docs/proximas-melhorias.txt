@@ -1,0 +1,329 @@
+SUPPORT NEXUS - PROXIMAS MELHORIAS (depois da 0.2.0)
+=====================================================
+Anotacoes de 2026-10-22, a partir da branch main em d8e081d (merge do PR #2).
+Continuacao de docs/ideias-melhorias.txt, cujo plano foi quase todo
+implementado na 0.2.0.
+
+Conferido nesse commit: 104 testes do pytest passando (backend + coletor),
+num ambiente limpo com as dependencias travadas do repositorio.
+
+Cada item diz o que fazer, por que e como conferir.
+Fora deste arquivo de proposito: login, testes do frontend com Vitest e versao
+num lugar so (ficam para depois).
+
+
+-------------------------------------------------------------
+0. O QUE JA ESTA BOM E DEVE SER MANTIDO
+-------------------------------------------------------------
+- Backend dividido em rotas/ (um router por assunto), servicos/ e config.py.
+- Migracoes numeradas 001-004 com schema_version; banco da 0.1.0 e atualizado
+  sem perder dados.
+- 104 testes: diagrama, relacoes, seed, migracoes, autoria, editor, manuais/PDF,
+  producao, metricas, mascaramento, inferencia do coletor e desempenho.
+- Docker: build em duas etapas, imagens base travadas por versao E digest,
+  usuario sem privilegios, HEALTHCHECK em /api/saude, portas so em 127.0.0.1,
+  limite de memoria.
+- Prometheus + Grafana provisionados por arquivo, com regras de alerta testadas
+  pelo promtool.
+- CHANGELOG no formato Keep a Changelog, tags v0.1.0 e v0.2.0, Conventional
+  Commits.
+- Conteudo real (manuais, prints, modulos.json, banco) fora do git.
+- Editor: tipo de imagem conferido pelos bytes, protecao contra "..", rascunhos
+  que expiram em 1 dia, senhas mascaradas, seed que nao mexe na data de manual
+  que nao mudou.
+
+
+=============================================================
+PARTE 1 - IMPORTAR MANUAL PELA INTERFACE (txt, Word, PDF)
+=============================================================
+
+Por que: o conversor ja existe (backend/ferramentas/importar_processos.py) e ja
+gera o formato de blocos do projeto (passo, texto, subtitulo, obs, nota, sql,
+imagem), remove logos repetidos, autores e senhas. Mas so roda pela linha de
+comando, em lote, e exige um curadoria.json. A ideia e REAPROVEITAR o conversor,
+nao reescrever, e entregar o resultado no editor que ja existe para a pessoa
+revisar antes de salvar.
+
+Branch sugerida: feat/importar-manual (um PR so para isto).
+
+
+1.1 UM CONVERSOR, DUAS ENTRADAS
+-------------------------------------------------------------
+- Mover de ferramentas/importar_processos.py para
+  backend/app/servicos/importacao.py:
+    Montador, juntar_linhas, limpar_emoji, norm, regex (RUIDO, SQL, PASSO, TOPO,
+    BULLET, OBS, NOTA), ler_pdf, ler_docx, ler_txt, imagens_desenhadas, Imagens.
+- Nova funcao pura, sem gravar nada no disco alem dos prints de rascunho:
+
+    def converter(dados: bytes, nome_arquivo: str, nomes_tabelas: set[str],
+                  secao_unica: str | None = None) -> dict:
+        # -> {"titulo", "subtitulo", "secoes", "fontes", "tabelas", "avisos"}
+
+- Imagens: em vez de gravar em dados/imagens/<codigo>/, usar o
+  guardar_rascunho() que ja existe em servicos/manuais.py. Ao salvar o manual,
+  o _promover_imagens() ja move os prints de _rascunho/ para <codigo>/NN.ext.
+- ferramentas/importar_processos.py vira uma casca: le o curadoria.json, chama
+  converter() para cada fonte e grava o JSON, como hoje.
+- Ordem segura: mover o codigo sem mudar comportamento (pytest verde), depois
+  criar converter(), depois a rota.
+
+Como conferir: o importador em lote gera exatamente o mesmo JSON de antes para
+os mesmos documentos (comparar a saida antes e depois do refactor).
+
+
+1.2 CORRIGIR JUNTO: MODULO FIXO NO IMPORTADOR
+-------------------------------------------------------------
+- importar_processos.py grava "modulo": "pdv" fixo. Um manual do Financeiro
+  importado em lote cairia no PDV.
+- Correcao: "modulo" vem de cada item do curadoria.json (padrao: o modulo do
+  menu informado, pegando o prefixo do id, ex.: "fin.contas..." -> "fin").
+- O "banco" usado para achar as tabelas citadas tambem deve vir do modulo
+  (tabela modulos), nao de um campo solto no curadoria.json.
+- Teste: curadoria com um manual de cada modulo grava o modulo certo.
+
+
+1.3 ROTA DA API
+-------------------------------------------------------------
+  POST /api/manuais/importar?modulo=pdv
+    corpo: os bytes do arquivo (mesmo estilo do POST /api/imagens, sem precisar
+           do pacote python-multipart)
+    cabecalho: X-Arquivo: <nome do arquivo, URL-encoded>
+    resposta 200: o rascunho {titulo, subtitulo, secoes, fontes, tabelas, avisos}
+    NAO salva o manual. Quem salva e o POST /api/manuais de sempre.
+
+- Titulo sugerido: o primeiro titulo do documento; senao, o nome do arquivo
+  sem extensao.
+- fontes: [nome do arquivo]. Acrescentar "fontes" (opcional) ao ManualEntrada
+  para o POST /api/manuais gravar a origem do manual.
+- Rota "def" (nao "async def"): o FastAPI roda em thread e a conversao de PDF
+  nao trava o servidor.
+- Metricas: contador nexus_importacoes_total{formato, resultado} e histograma
+  de duracao, no mesmo padrao das metricas do PDF.
+
+
+1.4 SEGURANCA DA IMPORTACAO
+-------------------------------------------------------------
+- Tamanho maximo do arquivo (sugestao: 20 MB) -> 413.
+- Tipo pelos BYTES, nao pela extensao (mesma ideia de extensao_imagem):
+    %PDF-         -> pdf
+    PK\x03\x04    -> docx (e conferir que existe word/document.xml no zip)
+    texto puro    -> txt (decodifica em UTF-8, UTF-8 com BOM ou cp1252)
+  Qualquer outra coisa -> 415 com mensagem clara.
+- Recusar com mensagem explicativa:
+    .doc (Word antigo)   -> "salve como .docx e importe de novo"
+    .docm (com macros)   -> "salve como .docx sem macros"
+- Zip bomb: antes de abrir o docx, somar file_size de zipfile.ZipFile.infolist()
+  e recusar acima de um limite (ex.: 100 MB descompactado) ou com taxa de
+  compressao absurda.
+- PDF: limite de paginas (ex.: 200) e de imagens extraidas (ex.: 300).
+- Continua valendo: senhas mascaradas (servicos/limpeza.py), autores removidos,
+  nenhuma macro ou script executado, nada escrito fora de dados/.
+- Dependencias: pypdf, python-docx e pillow passam de
+  requirements-ferramentas.txt para requirements.txt (a API passa a usar) e
+  entram na imagem Docker. Versoes continuam travadas com ==.
+
+
+1.5 AVISOS PARA QUEM VAI REVISAR
+-------------------------------------------------------------
+A conversao e heuristica; o rascunho deve dizer onde ela pode ter errado.
+Exemplos de "avisos":
+- "PDF sem texto: parece escaneado. Leitura de imagem (OCR) nao e suportada."
+- "Nenhum titulo encontrado: todo o conteudo ficou em uma secao."
+- "3 imagens ignoradas por se repetirem (logo/rodape)."
+- "2 senhas mascaradas."
+- "Tabela do Word convertida em texto com ' | ' entre as colunas."
+- "Arquivo .txt em cp1252 (nao UTF-8): confira os acentos."
+
+
+1.6 LAYOUT IGUAL AO PADRAO DO PROJETO
+-------------------------------------------------------------
+O manual importado tem que sair igual a um manual feito no editor.
+- As regras do conversor e as do "texto colado mantem a formatacao"
+  (frontend/src/componentes/textoRico.tsx) precisam produzir os mesmos blocos.
+  Criar um conjunto de textos de exemplo (fixtures) e testar os dois lados com
+  ele: lista com subitens, "1." como titulo de trecho, linha terminada em ":",
+  "[ Botao ]", "->", OBS:, Importante:, bloco ```sql.
+- Word, usando os estilos do documento:
+    Titulo 1 / Heading 1 -> nova secao
+    Titulo 2 / Heading 2 -> bloco subtitulo
+    Lista numerada       -> bloco passo (com rotulo)
+    Lista com marcador   -> bloco texto com "• "
+    Fonte monoespacada   -> candidato a bloco sql
+- Markdown (.md) de brinde: o Montador ja entende # titulos e ```blocos```;
+  aceitar .md custa so liberar a extensao.
+- Futuro (muda o formato, decidir antes): um bloco "tabela" de verdade, em vez
+  de "col1 | col2" em texto.
+
+
+1.7 INTERFACE
+-------------------------------------------------------------
+- Botao "Importar documento" em "+ Novo manual" e em "Criar manual para esta
+  tela": escolher arquivo ou arrastar para a area.
+- api.ts: importarManual(modulo, arquivo: File) -> Promise<Rascunho>.
+- Abre o ManualEditor ja preenchido (titulo, subtitulo, secoes, prints), com a
+  previa ao vivo e os avisos num quadro no topo.
+- Nada e salvo ate a pessoa clicar em Salvar. Fechar sem salvar descarta (os
+  prints de rascunho expiram em 1 dia, como ja acontece).
+- Mensagens de erro da API (413, 415, recusa de .doc/.docm) aparecem como
+  texto claro, nao como codigo.
+
+
+1.8 TESTES
+-------------------------------------------------------------
+backend/tests/test_importacao.py:
+- txt: UTF-8, UTF-8 com BOM e cp1252 geram os mesmos blocos.
+- docx gerado DENTRO do teste com python-docx (titulo, lista numerada, OBS,
+  bloco SQL, uma imagem pequena) -> JSON esperado.
+- pdf: um PDF pequeno de exemplo em backend/tests/dados/ (conteudo ficticio,
+  nada de manual real) -> JSON esperado.
+- Senha no documento sai mascarada.
+- Imagem repetida 3x (logo) e ignorada; imagens viram _rascunho/<id>.<ext>.
+- Rota: 413 (grande demais), 415 (tipo errado), recusa de .doc e .docm,
+  docx com taxa de compressao absurda recusado, modulo inexistente -> 404.
+- Fluxo completo: importar -> POST /api/manuais com o rascunho -> manual salvo
+  com os prints em <codigo>/ e "fontes" preenchido.
+- Refactor do 1.1: o importador em lote gera o mesmo JSON de antes.
+
+Como conferir no fim: importar um .txt, um .docx e um .pdf de exemplo pela
+interface, revisar, salvar e baixar o PDF do manual.
+
+
+=============================================================
+PARTE 2 - BOAS PRATICAS DO GITHUB
+=============================================================
+
+2.1 CI NO GITHUB ACTIONS              (fazer primeiro - protege o resto)
+-------------------------------------------------------------
+Hoje nao existe .github/. Os testes existem, mas so rodam quando alguem lembra.
+
+.github/workflows/ci.yml, em todo pull request e push na main:
+  job backend:
+    - actions/setup-python (mesma versao do Dockerfile)
+    - pip install -r backend/requirements-dev.txt
+    - python -m pytest -q
+  job frontend:
+    - actions/setup-node (versao do Dockerfile)
+    - cd frontend && npm ci && npm run build   (o tsc -b confere os tipos)
+  job prometheus:
+    - promtool check config docker/prometheus/prometheus.yml
+    - promtool test rules docker/prometheus/alertas.test.yml
+  job docker:
+    - docker build . (sem push) - garante que a imagem continua montando
+
+Boas praticas no proprio workflow:
+- Actions travadas por SHA de commit (nao so @v4), com o numero da versao em
+  comentario.
+- permissions: contents: read no topo do arquivo.
+- Cache de pip e npm (actions/setup-python e setup-node ja fazem com
+  cache: pip / cache: npm).
+- concurrency por branch, cancelando execucao antiga do mesmo PR.
+
+Como conferir: abrir um PR de teste com um teste quebrado de proposito e ver
+o CI ficar vermelho.
+
+
+2.2 PROTEGER A MAIN
+-------------------------------------------------------------
+O repositorio e publico, entao as regras de protecao (rulesets) funcionam no
+plano gratuito.
+Settings > Rules > Rulesets > New branch ruleset, alvo "main":
+- Require a pull request before merging.
+- Require status checks to pass: os jobs do ci.yml.
+- Block force pushes.
+- Restrict deletions.
+- (Opcional) Require linear history, se preferir "Squash and merge".
+Settings > General:
+- Ligar "Automatically delete head branches" (a branch "melhorias" continua
+  no GitHub depois dos merges #1 e #2: pode apagar).
+
+
+2.3 PULL REQUESTS MENORES E DESCRITOS
+-------------------------------------------------------------
+Hoje: PR #1 e #2 com o mesmo titulo "Melhorias", sem descricao, saindo da mesma
+branch e juntando ~17 commits.
+- Uma branch por mudanca: feat/importar-manual, ci/github-actions,
+  fix/modulo-importador, docs/...
+- Titulo do PR no padrao Conventional Commits: "feat: importar manual de txt,
+  Word e PDF pela interface".
+- .github/pull_request_template.md:
+    ## O que muda
+    ## Por que
+    ## Como testei
+    - [ ] pytest verde
+    - [ ] npm run build verde
+    - [ ] CHANGELOG atualizado (secao Nao publicado)
+    - [ ] nada de conteudo real (manuais, prints, banco, .env) no diff
+    Fecha #<issue>
+- Preferir "Squash and merge" para PR pequeno (um commit limpo na main) ou
+  "Rebase and merge" quando os commits do PR ja forem bons isoladamente.
+
+
+2.4 RELEASES A PARTIR DAS TAGS
+-------------------------------------------------------------
+As tags v0.1.0 e v0.2.0 existem, mas nao ha nenhuma Release no GitHub.
+- Criar as Releases das duas tags usando o texto do CHANGELOG.
+- Automatizar: .github/workflows/release.yml disparado por push de tag v*,
+  que cria a Release com a secao correspondente do CHANGELOG.
+- Fluxo de versao: CHANGELOG "Nao publicado" -> [0.3.0] - data, commit
+  "chore: versao 0.3.0", tag anotada v0.3.0, push da tag -> Release sozinha.
+
+
+2.5 ISSUES, ROTULOS E BACKLOG
+-------------------------------------------------------------
+- Transformar os itens abertos em issues: importacao (este arquivo, Parte 1),
+  CI, protecao da main, login, Vitest, versao num lugar so.
+- Rotulos: tipo (feat, fix, docs, ci, refactor, test), area (backend,
+  frontend, coletor, docker, monitoramento), prioridade.
+- .github/ISSUE_TEMPLATE/: "bug" (passos para reproduzir, esperado, obtido) e
+  "melhoria" (problema, proposta, como conferir).
+- Cada PR fecha sua issue ("Fecha #N"), e o historico de decisao fica ligado
+  ao codigo.
+- (Opcional) GitHub Project com colunas A fazer / Fazendo / Feito.
+
+
+2.6 DEPENDABOT
+-------------------------------------------------------------
+Tudo esta travado com == (correto), mas sem atualizacao automatica as versoes
+envelhecem em silencio. .github/dependabot.yml com 4 ecossistemas:
+- pip       em /backend e /coletor
+- npm       em /frontend
+- docker    em / (Dockerfile) e nas imagens do docker-compose
+- github-actions em /
+Frequencia semanal, agrupando patches. Com o CI do 2.1, cada PR do Dependabot
+ja chega testado.
+Ligar tambem em Settings > Code security: Dependabot alerts, secret scanning e
+push protection (gratis em repositorio publico).
+
+
+2.7 LICENCA, SEGURANCA E CONTRIBUICAO
+-------------------------------------------------------------
+- LICENSE: o repositorio e PUBLICO e nao tem licenca. Sem licenca, ninguem tem
+  direito legal de reutilizar o codigo. Decidir: escolher uma licenca (ex.: MIT)
+  ou tornar o repositorio privado.
+- SECURITY.md: como avisar uma falha sem abrir issue publica.
+- CONTRIBUTING.md curto: como rodar, como testar, padrao de branch/commit/PR,
+  e a regra "nunca commitar manual real, print, banco ou .env".
+- (Opcional) .github/CODEOWNERS.
+
+
+-------------------------------------------------------------
+ORDEM SUGERIDA DE TRABALHO
+-------------------------------------------------------------
+  [ ] 2.2 ligar "apagar branch apos merge" e apagar a branch "melhorias"
+  [ ] 2.1 CI (branch ci/github-actions, PR)
+  [ ] 2.2 ruleset da main exigindo PR + CI verde
+  [ ] 2.3 template de PR  (+ 2.5 templates de issue e rotulos)
+  [ ] 2.5 abrir as issues da Parte 1 e das pendencias
+  [ ] 2.6 dependabot.yml + alertas e secret scanning
+  [ ] 2.7 decidir LICENSE ou repositorio privado; SECURITY.md; CONTRIBUTING.md
+  [ ] 2.4 Releases das tags v0.1.0 e v0.2.0 + release.yml
+  [ ] 1.2 fix: modulo fixo no importador (PR pequeno, com teste)
+  [ ] 1.1 refactor: conversor em app/servicos/importacao.py (mesmo JSON de antes)
+  [ ] 1.3 + 1.4 + 1.5 rota /api/manuais/importar com seguranca e avisos
+  [ ] 1.6 fixtures compartilhadas: importador x texto colado
+  [ ] 1.7 interface: "Importar documento" abrindo o editor preenchido
+  [ ] 1.8 testes completos da importacao
+  [ ] versao 0.3.0: CHANGELOG + tag v0.3.0 -> Release automatica
+
+Regra para todos os passos: pytest -q e npm run build verdes (agora pelo CI)
+antes de cada merge.
