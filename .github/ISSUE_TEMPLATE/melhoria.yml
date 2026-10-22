@@ -1,0 +1,31 @@
+name: Melhoria
+description: Uma ideia ou mudança para o Support Nexus.
+labels: ["feat"]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Problema
+      description: O que hoje é difícil, lento ou não existe.
+    validations:
+      required: true
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Proposta
+      description: O que mudar e onde (rota da API, tela, coletor, ...).
+    validations:
+      required: true
+  - type: textarea
+    id: conferir
+    attributes:
+      label: Como conferir
+      description: Como saber que ficou pronto (teste, comportamento esperado na tela).
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      multiple: true
+      options: [backend, frontend, coletor, docker, monitoramento]
