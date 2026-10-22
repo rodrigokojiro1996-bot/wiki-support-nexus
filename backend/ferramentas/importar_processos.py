@@ -13,7 +13,6 @@ import io
 import json
 import re
 import shutil
-import sqlite3
 import unicodedata
 from collections import Counter
 from math import ceil
@@ -23,13 +22,24 @@ import docx
 import pypdf
 from PIL import Image
 
+from app import config, db
 from app.servicos.limpeza import mascarar, tabelas_citadas
 
-RAIZ = Path(__file__).resolve().parent.parent
 # conteúdo real fica em backend/dados/ (no .gitignore); backend/seed/ guarda só o exemplo DEMO.*
-MANUAIS = RAIZ / "dados" / "manuais"
-IMAGENS = RAIZ / "dados" / "imagens"
 CURADORIA = Path(__file__).with_name("curadoria.json")
+
+
+def pasta_manuais() -> Path:
+    return config.DADOS / "manuais"
+
+
+def pasta_imagens() -> Path:
+    return config.DADOS / "imagens"
+
+
+def modulo_do_item(spec: dict) -> str:
+    """O módulo vem do item da curadoria; sem ele, é o prefixo do id do menu ("fin.contas..." -> "fin")."""
+    return spec.get("modulo") or spec["menu"].split(".", 1)[0]
 
 # ---------------- limpeza ----------------
 # senhas mascaradas e tabelas citadas: as mesmas regras do editor de manuais (app/servicos/limpeza.py)
@@ -156,7 +166,7 @@ def juntar_linhas(linhas: list[str]) -> list[str]:
 # ---------------- imagens ----------------
 class Imagens:
     def __init__(self, codigo: str):
-        self.dir = IMAGENS / codigo
+        self.dir = pasta_imagens() / codigo
         self.codigo = codigo
         self.n = 0
         self.vistos: set[str] = set()
@@ -290,21 +300,29 @@ def ler_txt(arq: Path, m: Montador) -> str:
     return t
 
 
-def main():
-    cur = json.loads(CURADORIA.read_text(encoding="utf-8"))
+def main(curadoria: Path = CURADORIA) -> list[str]:
+    """Importa os manuais da curadoria; devolve a lista de problemas encontrados (também impressa)."""
+    cur = json.loads(curadoria.read_text(encoding="utf-8"))
     origem = Path(cur["origem"])
-    con = sqlite3.connect(RAIZ / "dados" / "nexus.db")
-    nomes = {r[0].lower() for r in con.execute("SELECT nome FROM tabelas WHERE banco = ?", (cur.get("banco", "demo_pdv"),))}
+    con = db.conectar()
+    # o banco de cada módulo (tabela modulos) diz em quais tabelas procurar as citações do manual
+    bancos = {r["id"]: r["banco"] for r in con.execute("SELECT id, banco FROM modulos")}
+    nomes_por_banco = {b: {r[0].lower() for r in con.execute("SELECT nome FROM tabelas WHERE banco = ?", (b,))}
+                       for b in set(bancos.values()) if b}
     menus = {r[0] for r in con.execute("SELECT id FROM menus")}
     con.close()
-    MANUAIS.mkdir(parents=True, exist_ok=True)
-    IMAGENS.mkdir(parents=True, exist_ok=True)
+    pasta_manuais().mkdir(parents=True, exist_ok=True)
+    pasta_imagens().mkdir(parents=True, exist_ok=True)
     problemas = []
     # autores citados nos documentos ("Elaborado por: …"): coletados para serem removidos de qualquer linha solta
     textos_brutos = json.loads((Path(__file__).with_name("autores.json")).read_text(encoding="utf-8")) if Path(__file__).with_name("autores.json").exists() else []
     Montador.autores = {norm(n) for n in textos_brutos}
     for spec in cur["manuais"]:
-        destino = MANUAIS / f"{spec['codigo']}.json"
+        modulo = modulo_do_item(spec)
+        if modulo not in bancos:
+            problemas.append(f"{spec['codigo']}: módulo {modulo} não existe; manual não importado")
+            continue
+        destino = pasta_manuais() / f"{spec['codigo']}.json"
         try:
             editado = destino.exists() and json.loads(destino.read_text(encoding="utf-8")).get("editado")
         except ValueError:
@@ -314,7 +332,7 @@ def main():
             continue
         if spec["menu"] not in menus:
             problemas.append(f"{spec['codigo']}: menu {spec['menu']} não existe")
-        shutil.rmtree(IMAGENS / spec["codigo"], ignore_errors=True)
+        shutil.rmtree(pasta_imagens() / spec["codigo"], ignore_errors=True)
         imgs = Imagens(spec["codigo"])
         secoes, textos, versao = [], [], "1.0"
         for f in spec["fontes"]:
@@ -337,14 +355,16 @@ def main():
         sqls = "\n".join(b["texto"] for s in secoes for b in s["blocos"] if b["tipo"] == "sql")
         manual = {
             "codigo": spec["codigo"], "titulo": spec["titulo"], "subtitulo": spec.get("subtitulo", ""), "versao": versao,
-            "modulo": "pdv", "menu": spec["menu"], "fontes": [f["arquivo"] for f in spec["fontes"]],
-            "tabelas": tabelas_citadas(mascarar("\n".join(textos)), sqls, nomes), "secoes": secoes,
+            "modulo": modulo, "menu": spec["menu"], "fontes": [f["arquivo"] for f in spec["fontes"]],
+            "tabelas": tabelas_citadas(mascarar("\n".join(textos)), sqls, nomes_por_banco.get(bancos[modulo], set())),
+            "secoes": secoes,
         }
         destino.write_text(json.dumps(manual, ensure_ascii=False, indent=2), encoding="utf-8")
         nb = sum(len(s["blocos"]) for s in secoes)
         print(f"+ {spec['codigo']:12} {len(secoes):2} seções {nb:3} blocos {imgs.n:3} prints  tabelas={','.join(manual['tabelas'][:6])}")
     if problemas:
         print("\nATENÇÃO:\n  " + "\n  ".join(problemas))
+    return problemas
 
 
 if __name__ == "__main__":

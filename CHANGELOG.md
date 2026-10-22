@@ -40,6 +40,10 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   números vêm de métricas `nexus_wiki_*`, calculadas no banco a cada coleta do Prometheus.
 
 ### Corrigido
+- O importador em lote (`ferramentas/importar_processos.py`) gravava todo manual no módulo PDV. Agora o módulo vem
+  do item da curadoria (campo `modulo` ou o prefixo do id do menu) e as tabelas citadas são procuradas no banco desse
+  módulo; o campo solto `banco` do `curadoria.json` deixou de ser usado. Módulo inexistente é avisado e o manual não
+  é importado.
 - O seed regravava a data `atualizado_em` de todos os manuais a cada execução (e o contêiner roda o seed a cada
   subida): um manual parado há meses aparecia como "atualizado hoje". Agora a data só muda quando o conteúdo muda,
   e o editor grava a data real no JSON.
