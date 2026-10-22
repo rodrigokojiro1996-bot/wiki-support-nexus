@@ -52,6 +52,11 @@ docker compose ps                               # espere os três "(healthy)"
 Tudo só nesta máquina. Instalação do Docker no Windows, backup dos dados e o porquê de cada escolha:
 [docs/docker.md](docs/docker.md). Métricas, painel e alertas: [docs/monitoramento.md](docs/monitoramento.md).
 
+## Servidor de testes (Oracle Cloud)
+
+Link HTTPS para a equipe testar, com senha única na entrada (sem login ainda), num servidor gratuito da Oracle:
+passo a passo em [docs/oracle-cloud.md](docs/oracle-cloud.md). Arquivos em `deploy/oracle/`.
+
 ## Testes
 
 ```powershell

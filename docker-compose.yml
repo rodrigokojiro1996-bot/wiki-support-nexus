@@ -21,6 +21,9 @@ services:
     # (e leia a seção de segurança de docs/docker.md antes).
     ports:
       - "127.0.0.1:8010:8010"
+    environment:
+      # o banco grava datas em "hora local" (quem validou, quando): sem isto o contêiner usaria UTC, 3 h adiantado
+      TZ: ${NEXUS_FUSO:-America/Sao_Paulo}
     volumes:
       # banco SQLite, manuais e prints criados pela interface: sobrevivem a "down" e a uma imagem nova
       - nexus-dados:/app/backend/dados

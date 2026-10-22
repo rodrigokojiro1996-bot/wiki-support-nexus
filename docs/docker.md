@@ -2,7 +2,7 @@
 
 Como rodar o Support Nexus em um contêiner, e o porquê de cada escolha. Para a arquitetura da aplicação em si,
 veja [arquitetura.md](arquitetura.md); para o Prometheus e o Grafana, que sobem no mesmo compose,
-[monitoramento.md](monitoramento.md).
+[monitoramento.md](monitoramento.md); para o servidor na internet, [oracle-cloud.md](oracle-cloud.md).
 
 1. [Conceitos em 1 minuto](#1-conceitos-em-1-minuto)
 2. [Arquivos](#2-arquivos)
@@ -276,6 +276,10 @@ digest no `Dockerfile`, rode `pytest -q` e `npm run build` localmente e depois `
 
 
 ## 10. Homologação num servidor (sem o compose)
+
+> Esta seção é para um servidor que **já tem** um proxy reverso com HTTPS (Traefik, nginx…). Num servidor novo e
+> só seu (por exemplo, o gratuito da Oracle Cloud), use [oracle-cloud.md](oracle-cloud.md): o compose com o Caddy na
+> frente faz o HTTPS, põe uma senha na entrada e já liga esta mesma faixa de homologação.
 
 Para a equipe testar antes de usar de verdade. **Não há login**: a homologação roda só com o sistema de exemplo
 (`demo_pdv`, manuais `DEMO.*`) e documentos de teste. Nada de catálogo real, manual interno ou `modulos.json`.
