@@ -1,4 +1,4 @@
-"""Gera docker/grafana/dashboards/support-nexus.json (o painel "Support Nexus · API").
+"""Gera os painéis do Grafana em docker/grafana/dashboards/: "Support Nexus · API" e "Support Nexus · Cobertura da wiki".
 
 O JSON é gerado, não editado à mão: aqui ficam as decisões (consultas, cores, unidades) em poucas linhas.
 Rodar depois de mudar algo:  python docker/grafana/gerar_painel.py
@@ -123,31 +123,121 @@ paineis = [
            "Fração de um núcleo usada pelo processo da API (1 = 100% de um núcleo).", "percentunit", [cor_fixa("CPU", SERIE[0])]),
 ]
 
-painel_json = {
-    "uid": "support-nexus", "title": "Support Nexus · API", "tags": ["support-nexus"], "editable": True,
-    "description": "Saúde técnica da API do Support Nexus (métricas de /metrics coletadas pelo Prometheus).",
-    "schemaVersion": 39, "version": 1, "refresh": "15s", "time": {"from": "now-1h", "to": "now"},
-    "timezone": "browser", "graphTooltip": 1, "panels": paineis,
+
+def barras(titulo, x, y, w, h, alvos, descricao, unidade="none", cor=SERIE[0], overrides=None, sem_dado="Sem dados",
+           nome="left", **defaults):
+    """Barras horizontais. Uma cor só quando é a mesma medida por categoria; cores próprias só via overrides.
+    nome="top" põe o rótulo acima da barra (nomes longos, como os menus, não são cortados)."""
+    d = {"unit": unidade, "noValue": sem_dado, "min": 0, "color": {"mode": "fixed", "fixedColor": cor}, **defaults}
+    return painel("bargauge", titulo, x, y, w, h, [{"instant": True, **a} for a in alvos], descricao, d, overrides,
+                  options={"orientation": "horizontal", "displayMode": "basic", "showUnfilled": True, "valueMode": "text",
+                           "namePlacement": nome, "sizing": "auto", "minVizHeight": 16, "maxVizHeight": 26,
+                           "reduceOptions": {"calcs": ["lastNotNull"], "values": False}})
+
+
+def cor_e_nome(nome, cor, exibir):
+    o = cor_fixa(nome, cor)
+    o["properties"].append({"id": "displayName", "value": exibir})
+    return o
+
+
+paineis_api = paineis
+
+# ---------------------------------------------------------------------------------------------------------------
+# Painel 2 · Cobertura da wiki (métricas nexus_wiki_*, calculadas no banco a cada coleta; ver servicos/cobertura.py)
+# ---------------------------------------------------------------------------------------------------------------
+TELAS, COM_MANUAL = "sum(nexus_wiki_screens)", "sum(nexus_wiki_screens_with_manual)"
+DECIDIDAS = 'sum(nexus_wiki_relations{state!="sugerida"}) / sum(nexus_wiki_relations)'
+ESTADOS = [("confirmada", SERIE[0]), ("documentada", SERIE[2]), ("sugerida", SERIE[3]), ("descartada", CINZA)]
+TIPOS = [("relacao", "Relações"), ("vinculo", "Vínculos"), ("manual", "Manuais")]
+
+paineis_cobertura = [
+    # ---------- linha 1: números-chave ----------
+    estatistica("Telas com manual", 0, 5, f"{COM_MANUAL} / {TELAS}",
+                "Fração das telas (itens de menu sem subitens) com pelo menos um manual.", "percentunit", decimais=0),
+    estatistica("Telas sem manual", 5, 4, f"{TELAS} - {COM_MANUAL}",
+                "Telas que ainda não têm nenhum manual: o tamanho da fila de documentação.", decimais=0),
+    estatistica("Vínculos de tabela confirmados", 9, 5, "sum(nexus_wiki_screens_tables_confirmed) / sum(nexus_wiki_screens)",
+                "Fração das telas cujas tabelas a equipe já confirmou (nenhum vínculo só sugerido).", "percentunit", decimais=0),
+    estatistica("Relações a validar", 14, 5, 'sum(nexus_wiki_relations{state="sugerida"})',
+                "Relações inferidas pelo nome das colunas que ninguém validou nem descartou ainda.", decimais=0),
+    estatistica("Contribuições (7 dias)", 19, 5, "sum(nexus_wiki_contributions_7d) or vector(0)",
+                "Relações validadas ou descartadas, vínculos confirmados e manuais salvos pela interface nos últimos 7 dias.", decimais=0),
+
+    # ---------- linha 2: onde está e onde falta ----------
+    barras("Cobertura de manuais por menu", 0, 4, 12, 12,
+           [{"expr": "sort_desc(sum by (menu) (nexus_wiki_screens_with_manual) / sum by (menu) (nexus_wiki_screens))", "legendFormat": "{{menu}}"}],
+           "Fração das telas de cada menu principal que já têm manual.", "percentunit", nome="top", max=1, decimals=0),
+    barras("Telas sem manual, por menu", 12, 4, 12, 12,
+           [{"expr": "sort_desc(sum by (menu) (nexus_wiki_screens) - sum by (menu) (nexus_wiki_screens_with_manual))", "legendFormat": "{{menu}}"}],
+           "Onde começar: quantas telas de cada menu ainda não têm nenhum manual.", cor=SERIE[1], nome="top", decimals=0),
+
+    # ---------- linha 3: evolução e relações ----------
+    linhas("Cobertura ao longo do tempo", 0, 16, 16, 9,
+           [{"expr": f"{COM_MANUAL} / {TELAS}", "legendFormat": "telas com manual"},
+            {"expr": "sum(nexus_wiki_screens_tables_confirmed) / sum(nexus_wiki_screens)", "legendFormat": "vínculos confirmados"},
+            {"expr": DECIDIDAS, "legendFormat": "relações decididas"}],
+           "Evolução da documentação. O Prometheus guarda 15 dias: para comparar períodos maiores, aumente a retenção (docs/monitoramento.md).",
+           "percentunit", [cor_fixa("telas com manual", SERIE[0]), cor_fixa("vínculos confirmados", SERIE[1]), cor_fixa("relações decididas", SERIE[2])],
+           sem_dado="Sem histórico ainda"),
+    # uma consulta por estado: a ordem das consultas é a ordem das barras (o ciclo de vida de uma relação)
+    barras("Relações por estado", 16, 16, 8, 9,
+           [{"expr": f'sum(nexus_wiki_relations{{state="{e}"}}) or vector(0)', "legendFormat": e} for e, _ in ESTADOS],
+           "Confirmada = FK no banco; documentada = validada pela equipe; sugerida = inferida, falta validar; descartada = a equipe rejeitou.",
+           overrides=[cor_fixa(e, c) for e, c in ESTADOS], decimals=0),
+
+    # ---------- linha 4: quem está contribuindo ----------
+    barras("Contribuições por pessoa (7 dias)", 0, 25, 12, 8,
+           [{"expr": "sort_desc(sum by (author) (nexus_wiki_contributions_7d))", "legendFormat": "{{author}}"}],
+           'Nome informado no campo "Seu nome" do topo da interface. (sem nome) = alteração feita sem preencher o nome.',
+           decimals=0, sem_dado="Nenhuma contribuição nos últimos 7 dias"),
+    barras("Contribuições por tipo (7 dias)", 12, 25, 12, 8,
+           [{"expr": f'sum(nexus_wiki_contributions_7d{{kind="{k}"}}) or vector(0)', "legendFormat": k} for k, _ in TIPOS],
+           "Relações = validadas ou descartadas; Vínculos = tabelas confirmadas numa tela; Manuais = criados ou editados pela interface.",
+           overrides=[cor_e_nome(k, SERIE[i], nome) for i, (k, nome) in enumerate(TIPOS)],
+           decimals=0, sem_dado="Nenhuma contribuição nos últimos 7 dias"),
+]
+
+LINKS = [{"title": "Painéis do Support Nexus", "type": "dashboards", "tags": ["support-nexus"], "asDropdown": False, "includeVars": False},
+         {"title": "Abrir o Support Nexus", "type": "link", "url": "http://localhost:8010", "targetBlank": True, "icon": "external link"}]
+
+
+def dashboard(uid, titulo, descricao, paineis_, desde, refresh):
+    return {"uid": uid, "title": titulo, "tags": ["support-nexus"], "editable": True, "description": descricao,
+            "schemaVersion": 39, "version": 1, "refresh": refresh, "time": {"from": desde, "to": "now"},
+            "timezone": "browser", "graphTooltip": 1, "links": LINKS, "panels": paineis_}
+
+
+PAINEIS = {
+    "support-nexus.json": dashboard("support-nexus", "Support Nexus · API",
+                                    "Saúde técnica da API do Support Nexus (métricas de /metrics coletadas pelo Prometheus).",
+                                    paineis_api, "now-1h", "15s"),
+    "support-nexus-cobertura.json": dashboard("support-nexus-cobertura", "Support Nexus · Cobertura da wiki",
+                                              "Quanto do sistema está documentado e quem está contribuindo (métricas nexus_wiki_*).",
+                                              paineis_cobertura, "now-7d", "1m"),
 }
 
-destino = Path(__file__).parent / "dashboards" / "support-nexus.json"
-destino.parent.mkdir(exist_ok=True)
-destino.write_text(json.dumps(painel_json, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-print(f"{destino} · {len(paineis)} painéis")
+pasta = Path(__file__).parent / "dashboards"
+pasta.mkdir(exist_ok=True)
+for arquivo, d in PAINEIS.items():
+    (pasta / arquivo).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"{pasta / arquivo} · {len(d['panels'])} painéis")
 
 
 def conferir(prometheus: str) -> int:
     """Manda cada consulta ao Prometheus: erro de sintaxe aparece aqui, não como um painel vermelho no Grafana."""
     erros = 0
-    for p in paineis:
-        for t in p["targets"]:
-            url = f"{prometheus.rstrip('/')}/api/v1/query?" + urllib.parse.urlencode({"query": t["expr"]})
-            try:
-                n = len(json.load(urllib.request.urlopen(url, timeout=10))["data"]["result"])
-                print(f"  ok    {n:2} série(s)  {p['title']}")
-            except urllib.error.HTTPError as e:
-                erros += 1
-                print(f"  ERRO  {p['title']}: {json.load(e).get('error')}")
+    for d in PAINEIS.values():
+        print(d["title"])
+        for p in d["panels"]:
+            for t in p["targets"]:
+                url = f"{prometheus.rstrip('/')}/api/v1/query?" + urllib.parse.urlencode({"query": t["expr"]})
+                try:
+                    n = len(json.load(urllib.request.urlopen(url, timeout=10))["data"]["result"])
+                    print(f"  ok    {n:2} série(s)  {p['title']}")
+                except urllib.error.HTTPError as e:
+                    erros += 1
+                    print(f"  ERRO  {p['title']}: {json.load(e).get('error')}")
     return erros
 
 

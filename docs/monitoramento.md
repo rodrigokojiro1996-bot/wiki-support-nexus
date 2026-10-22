@@ -8,11 +8,12 @@ contêineres, veja [docker.md](docker.md).
 3. [Subir e acessar](#3-subir-e-acessar)
 4. [As métricas da API](#4-as-métricas-da-api)
 5. [O painel do Grafana](#5-o-painel-do-grafana)
-6. [Alertas](#6-alertas)
-7. [Consultas úteis (PromQL)](#7-consultas-úteis-promql)
-8. [Segurança](#8-segurança)
-9. [Operação](#9-operação)
-10. [Problemas comuns](#10-problemas-comuns)
+6. [Cobertura da wiki](#6-cobertura-da-wiki)
+7. [Alertas](#7-alertas)
+8. [Consultas úteis (PromQL)](#8-consultas-úteis-promql)
+9. [Segurança](#9-segurança)
+10. [Operação](#10-operação)
+11. [Problemas comuns](#11-problemas-comuns)
 
 
 ## 1. Visão geral
@@ -94,15 +95,18 @@ Testes: `backend/tests/test_metricas.py`.
 
 ## 5. O painel do Grafana
 
-O JSON do painel é **gerado** por `docker/grafana/gerar_painel.py`: consultas, cores e unidades ficam em poucas
+Os dois painéis ("Support Nexus · API" e "Support Nexus · Cobertura da wiki", ligados pelos links do topo)
+são **gerados** por `docker/grafana/gerar_painel.py`: consultas, cores e unidades ficam em poucas
 linhas de Python em vez de centenas de linhas de JSON. O Grafana relê o arquivo a cada 30 s.
 
 ```powershell
 python docker\grafana\gerar_painel.py                                   # gera o JSON
 python docker\grafana\gerar_painel.py --conferir http://localhost:9090  # e confere cada consulta no Prometheus
 ```
-O painel provisionado não pode ser salvo pela tela (`allowUiUpdates: false`): a fonte da verdade é o arquivo.
+Os painéis provisionados não podem ser salvos pela tela (`allowUiUpdates: false`): a fonte da verdade é o arquivo.
 Para experimentar, use **Salvar como** e crie uma cópia sua.
+
+Painel "Support Nexus · API":
 
 | Linha | Painéis | Para responder |
 |---|---|---|
@@ -122,7 +126,67 @@ Escolhas de visualização:
 - Cada painel tem uma descrição (o ícone ⓘ) explicando o que mede e qual é o limite.
 
 
-## 6. Alertas
+## 6. Cobertura da wiki
+
+O segundo painel, **"Support Nexus · Cobertura da wiki"**, responde: quanto do sistema já está documentado, onde
+falta, e quem está contribuindo.
+
+**Como os números chegam ao Grafana.** A API tem um *coletor personalizado* (`CoberturaWiki` em
+`backend/app/metricas.py`): a cada visita do Prometheus ele consulta o banco (`backend/app/servicos/cobertura.py`)
+e publica o resultado como métricas *gauge*. Por que assim, e não o Grafana lendo o SQLite direto:
+
+- não precisa de plugin de terceiros no Grafana (baixado da internet a cada instalação);
+- o banco continua sendo só da API: o Grafana não ganha acesso ao arquivo;
+- o Prometheus guarda cada leitura, então dá para ver **a cobertura evoluindo** ao longo das semanas, coisa que
+  uma consulta ao banco (que só sabe o estado de agora) não mostra.
+
+**Definições**
+
+| Termo | Significa |
+|---|---|
+| tela | item de menu sem subitens (menus e submenus só agrupam telas) |
+| com manual | tela com pelo menos um manual vinculado |
+| vínculos confirmados | tela com tabelas, todas confirmadas pela equipe (nenhum vínculo só sugerido) |
+| relação decidida | confirmada (FK), documentada ou descartada; *sugerida* ainda espera alguém |
+| contribuição | relação validada ou descartada, vínculo confirmado ou manual salvo pela interface, nos últimos 7 dias |
+
+**Métricas** (rótulos `module` e `menu` = menu principal: poucos valores fixos, sem explosão de séries)
+
+| Métrica | O que conta |
+|---|---|
+| `nexus_wiki_screens{module, menu}` | telas |
+| `nexus_wiki_screens_with_manual{module, menu}` | telas com manual |
+| `nexus_wiki_screens_with_tables{module, menu}` | telas com alguma tabela vinculada |
+| `nexus_wiki_screens_tables_confirmed{module, menu}` | telas com os vínculos confirmados |
+| `nexus_wiki_screens_to_detail{module, menu}` | telas com submenu ainda não mapeado |
+| `nexus_wiki_manuals{module}` | manuais |
+| `nexus_wiki_relations{module, state}` | relações por estado |
+| `nexus_wiki_contributions_7d{author, kind}` | contribuições da semana por pessoa e tipo (`relacao`, `vinculo`, `manual`) |
+| `nexus_wiki_up` | 1 se a cobertura foi calculada; 0 se o banco falhou (o `/metrics` continua respondendo) |
+
+**O painel**
+
+| Linha | Painéis |
+|---|---|
+| 1 | Telas com manual (%) · Telas sem manual · Vínculos confirmados (%) · Relações a validar · Contribuições (7 dias) |
+| 2 | Cobertura de manuais por menu · Telas sem manual, por menu ("onde começar") |
+| 3 | Cobertura ao longo do tempo · Relações por estado |
+| 4 | Contribuições por pessoa · Contribuições por tipo |
+
+Escolhas: barras horizontais de **uma cor só** quando é a mesma medida por menu (cores diferentes sugeririam
+categorias com significado próprio); relações e tipos em **ordem fixa** (o ciclo de vida da relação), não na ordem
+que a consulta devolve; a evolução no tempo com as três frações no mesmo eixo, porque todas são porcentagens.
+
+**Sobre os nomes.** O autor é o nome informado no campo "Seu nome" do topo da interface (vazio vira
+`(sem nome)`). Esses nomes ficam guardados no Prometheus por até 15 dias. É um uso interno, mas vale saber: quando
+houver login, o autor passa a ser o usuário autenticado.
+
+**Histórico.** Com a retenção padrão (15 dias), o gráfico "ao longo do tempo" cobre duas semanas. Para comparar
+meses, aumente `--storage.tsdb.retention.time` no compose (cada mês a mais custa poucos MB com este volume de
+séries).
+
+
+## 7. Alertas
 
 Regras em `docker/prometheus/alertas.yml`, avaliadas a cada 15 s. Estados: *inactive* (tudo bem) → *pending* (a
 condição é verdadeira, esperando o `for`) → *firing* (disparado) → volta a *inactive* quando a condição some.
@@ -156,7 +220,7 @@ docker compose run --rm -w /etc/prometheus --entrypoint promtool prometheus test
 alertas ficam visíveis no Prometheus.
 
 
-## 7. Consultas úteis (PromQL)
+## 8. Consultas úteis (PromQL)
 
 Para colar em <http://localhost:9090/query> ou no Explorar do Grafana:
 
@@ -169,6 +233,13 @@ sum(rate(nexus_http_requests_total{status=~"5.."}[5m])) / sum(rate(nexus_http_re
 
 # p95 do tempo de resposta por rota
 histogram_quantile(0.95, sum by (le, route) (rate(nexus_http_request_duration_seconds_bucket[5m])))
+
+# cobertura de manuais por menu principal
+sum by (menu) (nexus_wiki_screens_with_manual) / sum by (menu) (nexus_wiki_screens)
+
+# quanto a cobertura cresceu nos últimos 7 dias (em pontos percentuais)
+(sum(nexus_wiki_screens_with_manual) / sum(nexus_wiki_screens))
+  - (sum(nexus_wiki_screens_with_manual offset 7d) / sum(nexus_wiki_screens offset 7d))
 
 # quantos PDFs foram gerados na última hora
 increase(nexus_pdf_generation_duration_seconds_count[1h])
@@ -183,7 +254,7 @@ aparece nas taxas; da segunda em diante, sim. Para eventos raros, prefira olhar 
 janelas longas.
 
 
-## 8. Segurança
+## 9. Segurança
 
 - As três portas ficam só em `127.0.0.1`. Abrir para a rede exige login na API (ainda pendente) e é uma decisão
   consciente.
@@ -196,7 +267,7 @@ janelas longas.
   (`nobody` e `grafana`), travadas por versão e digest como as da aplicação.
 
 
-## 9. Operação
+## 10. Operação
 
 | Para… | Como |
 |---|---|
@@ -210,7 +281,7 @@ janelas longas.
 > depois não troca a senha: use o `reset-admin-password` acima.
 
 
-## 10. Problemas comuns
+## 11. Problemas comuns
 
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
@@ -219,4 +290,4 @@ janelas longas.
 | Alvo `nexus` com `down` em `/targets` | API parada ou reiniciando | `docker compose ps`, `docker compose logs nexus` |
 | Painel com triângulo vermelho | Consulta PromQL inválida | `gerar_painel.py --conferir http://localhost:9090` mostra qual e por quê |
 | CPU e memória vazias | `process_*` só existem no Linux | Normal fora do Docker (`iniciar.ps1` no Windows) |
-| Senha do `.env` não funciona | O Grafana já tinha sido criado com outra | [Operação](#9-operação): `reset-admin-password` |
+| Senha do `.env` não funciona | O Grafana já tinha sido criado com outra | [Operação](#10-operação): `reset-admin-password` |

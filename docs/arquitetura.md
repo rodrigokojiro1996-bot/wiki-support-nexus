@@ -337,7 +337,12 @@ O botão chama `GET /api/manuais/{código}/pdf`. O backend abre a rota `/manuais
 headless (no endereço de `NEXUS_FRONTEND`) e gera um A4 com cabeçalho, marca e rodapé com número de página. Em
 desenvolvimento o endereço é o Vite (5173); em produção, a própria API (8010).
 
-### 7.7 Diagrama
+### 7.7 Métricas e cobertura
+A API publica em `/metrics` as métricas técnicas (requisições, tempo de resposta, PDF) e as de cobertura da wiki
+(`nexus_wiki_*`, calculadas no banco a cada coleta por `servicos/cobertura.py`). O Prometheus coleta e o Grafana
+mostra dois painéis. Detalhes em [monitoramento.md](monitoramento.md).
+
+### 7.8 Diagrama
 `servicos/diagrama.py` recebe as relações (sem as descartadas) e o foco, e devolve as tabelas incluídas, as
 ligações entre elas e as tabelas de apoio ocultas. Um índice `{tabela: vizinhas}` é montado uma vez, e a rota
 busca tabelas e colunas em duas consultas. Com 500 tabelas e 2000 relações a resposta fica abaixo de 50 ms.

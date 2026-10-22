@@ -23,7 +23,14 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   Grafana com o painel "Support Nexus · API" provisionado por arquivo. Senha do Grafana no `.env`. Guia em
   `docs/monitoramento.md`.
 
+- Painel "Support Nexus · Cobertura da wiki" no Grafana: telas com e sem manual (total e por menu), vínculos
+  confirmados, relações por estado, evolução no tempo e contribuições dos últimos 7 dias por pessoa e tipo. Os
+  números vêm de métricas `nexus_wiki_*`, calculadas no banco a cada coleta do Prometheus.
+
 ### Corrigido
+- O seed regravava a data `atualizado_em` de todos os manuais a cada execução (e o contêiner roda o seed a cada
+  subida): um manual parado há meses aparecia como "atualizado hoje". Agora a data só muda quando o conteúdo muda,
+  e o editor grava a data real no JSON.
 - Fontes da interface (Manrope, JetBrains Mono) empacotadas no build em vez de baixadas do Google Fonts a cada
   acesso: funcionam sem internet e atrás de antivírus/proxy.
 - PDF no Linux/Docker: alternativas abertas Liberation Sans/Mono para Segoe UI/Consolas (o SQL saía numa fonte

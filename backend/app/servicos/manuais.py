@@ -21,14 +21,23 @@ def manual_completo(con: sqlite3.Connection, codigo: str) -> dict | None:
 
 
 def gravar_no_banco(con: sqlite3.Connection, m: dict, menu: str | None) -> None:
-    """Upsert de um manual no formato dos arquivos JSON (seed e editor usam o mesmo caminho)."""
-    con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes, por) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                   ON CONFLICT(codigo) DO UPDATE SET titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
-                   modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
-                   fontes = excluded.fontes, por = excluded.por, atualizado_em = datetime('now', 'localtime')""",
+    """Upsert de um manual no formato dos arquivos JSON (seed e editor usam o mesmo caminho).
+
+    atualizado_em: a data gravada no JSON pelo editor, quando houver; senão, agora. Num manual que já existe, a data
+    só muda se o conteúdo mudou: o seed roda a cada subida e não pode "atualizar" manuais que ninguém mexeu.
+    """
+    con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes, por, atualizado_em)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', 'localtime')))
+                   ON CONFLICT(codigo) DO UPDATE SET
+                     atualizado_em = CASE WHEN manuais.titulo = excluded.titulo AND manuais.subtitulo = excluded.subtitulo
+                                           AND manuais.conteudo = excluded.conteudo AND manuais.versao = excluded.versao
+                                          THEN manuais.atualizado_em ELSE excluded.atualizado_em END,
+                     titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
+                     modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
+                     fontes = excluded.fontes, por = excluded.por""",
                 (m["codigo"], m["titulo"], m.get("subtitulo", ""), m.get("versao", "1.0"), m["modulo"], menu,
                  json.dumps(m["secoes"], ensure_ascii=False), json.dumps(m.get("tabelas", [])),
-                 json.dumps(m.get("fontes", []), ensure_ascii=False), m.get("por", "")))
+                 json.dumps(m.get("fontes", []), ensure_ascii=False), m.get("por", ""), m.get("atualizado_em")))
 
 
 # ---------------- editor ----------------
@@ -144,7 +153,7 @@ def salvar(con: sqlite3.Connection, dados: dict, por: str, codigo: str | None = 
         "modulo": dados["modulo"], "menu": dados.get("menu"),
         "fontes": anterior["fontes"] if anterior else [],
         "tabelas": tabelas_citadas(textos, sqls, nomes),
-        "por": por, "secoes": secoes,
+        "por": por, "atualizado_em": con.execute("SELECT datetime('now', 'localtime')").fetchone()[0], "secoes": secoes,
     }
     pasta = config.DADOS / "manuais"
     pasta.mkdir(parents=True, exist_ok=True)
