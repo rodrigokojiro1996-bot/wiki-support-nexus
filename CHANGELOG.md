@@ -13,6 +13,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Dependabot (`.github/dependabot.yml`): PRs semanais de atualização para pip (backend e coletor), npm, imagens do
   Dockerfile e do docker-compose e GitHub Actions, com os patches agrupados. Alertas de dependência, secret scanning
   e push protection ligados no repositório.
+- Licença MIT (`LICENSE`), `SECURITY.md` (como avisar uma falha pelo aviso privado do GitHub), `CONTRIBUTING.md`
+  (como rodar, testar, padrão de branch, commit e PR, e a regra de nunca commitar conteúdo real) e `CODEOWNERS`.
 - Editor de manuais na interface: "Criar manual para esta tela" na Visão geral, "+ Novo manual" e "Editar".
   Blocos iguais aos dos manuais existentes, prévia ao vivo e prints com Ctrl+V ou arrastando.
 - `POST /api/manuais`, `PUT /api/manuais/{código}` e `POST /api/imagens`.
