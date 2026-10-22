@@ -147,11 +147,41 @@ class Montador:
     def titulo(self, texto: str):
         texto = texto.rstrip(" .:")
         if self.unica:
-            self._atual().append({"tipo": "subtitulo", "texto": texto})
+            self.subtitulo(texto)
         else:
             self.secoes.append({"titulo": texto, "blocos": []})
 
-    def paragrafo(self, p: str):
+    def subtitulo(self, texto: str):
+        self._atual().append({"tipo": "subtitulo", "texto": limpar_emoji(texto).rstrip(" .:")})
+
+    def passo(self, rotulo: str, texto: str):
+        """Item de lista numerada do Word: o número não está no texto, vem da numeração do documento."""
+        if t := limpar_emoji(mascarar(texto.strip())):
+            self._atual().append({"tipo": "passo", "rotulo": rotulo, "texto": t})
+
+    def codigo(self, linha: str):
+        """Parágrafo em fonte monoespaçada (Word): linhas seguidas viram um bloco sql só."""
+        linha = mascarar(linha.rstrip())
+        blocos = self._atual()
+        if blocos and blocos[-1]["tipo"] == "sql":
+            blocos[-1]["texto"] += "\n" + linha
+        else:
+            blocos.append({"tipo": "sql", "texto": linha})
+
+    def _item_de_lista(self, item: str, nivel: int):
+        """Itens seguidos (e a linha terminada em ":" que os apresenta) ficam num bloco de texto só, com Tab antes do
+        marcador nos subitens: é assim que o editor guarda uma lista colada, e o textoRico.tsx a mostra igual."""
+        blocos = self._atual()
+        linha = "\t" * nivel + "• " + item
+        if blocos and blocos[-1]["tipo"] == "texto":
+            ultima = blocos[-1]["texto"].rsplit("\n", 1)[-1].lstrip("\t")
+            if ultima.startswith("• ") or ultima.endswith(":"):
+                blocos[-1]["texto"] += "\n" + linha
+                return
+        blocos.append({"tipo": "texto", "texto": linha})
+
+    def paragrafo(self, p: str, nivel: int = 0):
+        """`nivel`: recuo do item de lista (0 = primeiro nível); só vale para linhas com marcador."""
         p = limpar_emoji(mascarar(p.strip()))
         if not p or RUIDO.search(p) or norm(p) in Montador.autores:
             return
@@ -198,7 +228,8 @@ class Montador:
         if set(p) <= set("-—_ "):
             return
         if m := BULLET.match(p):
-            p = "• " + m.group(1)
+            self._item_de_lista(m.group(1), nivel)
+            return
         blocos.append({"tipo": "texto", "texto": p})
 
     def imagem(self, arquivo: str):
@@ -336,6 +367,58 @@ def ler_pdf(dados: bytes, m: Montador, imgs: Imagens, avisos: list[str]) -> str:
     return "\n".join(texto_total)
 
 
+W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+ESTILO_TITULO = re.compile(r"^(heading|t[ií]?tulo|title)\s*(\d)?$", re.I)  # o Word em português grava "Ttulo1"
+MONOESPACADAS = {"consolas", "courier new", "courier", "lucida console", "cascadia code", "cascadia mono",
+                 "jetbrains mono", "source code pro", "menlo", "monaco", "dejavu sans mono", "liberation mono"}
+
+
+def formatos_de_lista(d) -> dict[tuple[str, int], str]:
+    """(numId, nível) -> formato da numeração do Word ("bullet", "decimal", "lowerLetter"...)."""
+    try:
+        numeracao = d.part.numbering_part.element
+    except (KeyError, NotImplementedError):
+        return {}
+    abstratos = {}
+    for a in numeracao.findall(W + "abstractNum"):
+        niveis = {}
+        for lvl in a.findall(W + "lvl"):
+            fmt = lvl.find(W + "numFmt")
+            niveis[int(lvl.get(W + "ilvl"))] = fmt.get(W + "val") if fmt is not None else "decimal"
+        abstratos[a.get(W + "abstractNumId")] = niveis
+    mapa = {}
+    for n in numeracao.findall(W + "num"):
+        ref = n.find(W + "abstractNumId")
+        for nivel, fmt in abstratos.get(ref.get(W + "val") if ref is not None else None, {}).items():
+            mapa[(n.get(W + "numId"), nivel)] = fmt
+    return mapa
+
+
+def lista_do_paragrafo(el, d, estilo: str) -> tuple[str, int] | None:
+    """(numId, nível) da lista do parágrafo: no próprio parágrafo ou no estilo dele ("List Number", "Lista")."""
+    num = el.xpath("string(./w:pPr/w:numPr/w:numId/@w:val)")
+    nivel = el.xpath("string(./w:pPr/w:numPr/w:ilvl/@w:val)")
+    if not num and estilo:
+        st = d.styles.element.xpath(f'./w:style[@w:styleId="{estilo}"]')
+        if st:
+            num = st[0].xpath("string(./w:pPr/w:numPr/w:numId/@w:val)")
+            nivel = nivel or st[0].xpath("string(./w:pPr/w:numPr/w:ilvl/@w:val)")
+            # "List Bullet 2", "Lista com marcadores 3": o recuo vem do estilo, não do nível da numeração
+            if not nivel and (n := re.search(r"(\d)$", estilo)):
+                nivel = str(int(n.group(1)) - 1)
+    return (num, int(nivel or 0)) if num and num != "0" else None
+
+
+def monoespacado(el, d, estilo: str) -> bool:
+    """Todo o texto do parágrafo numa fonte de código (Consolas, Courier...): candidato a bloco sql."""
+    fonte_estilo = ""
+    if estilo:
+        fonte_estilo = d.styles.element.xpath(f'string(./w:style[@w:styleId="{estilo}"]/w:rPr/w:rFonts/@w:ascii)')
+    runs = [r for r in el.xpath("./w:r") if "".join(t.text or "" for t in r.iter(W + "t")).strip()]
+    return bool(runs) and all(
+        (r.xpath("string(./w:rPr/w:rFonts/@w:ascii)") or fonte_estilo).lower() in MONOESPACADAS for r in runs)
+
+
 AVISO_TABELA = "Tabela do Word convertida em texto com ' | ' entre as colunas: confira o alinhamento."
 
 
@@ -345,6 +428,8 @@ def ler_docx(dados: bytes, m: Montador, imgs: Imagens, avisos: list[str]) -> str
     # o Word guarda uma imagem repetida uma vez só e a referencia várias: conta as referências, não os arquivos
     todas = [partes[rid].blob for rid in d.element.body.xpath(".//a:blip/@r:embed") if rid in partes]
     ignorar = imgs.preparar(todas)
+    formatos = formatos_de_lista(d)
+    contagem: dict[str, list[int]] = {}  # numeração de cada lista numerada, por nível (1, 1.1, 1.2, 2...)
     texto = []
     for el in d.element.body.iterchildren():
         tag = el.tag.split("}")[-1]
@@ -353,8 +438,24 @@ def ler_docx(dados: bytes, m: Montador, imgs: Imagens, avisos: list[str]) -> str
             estilo = el.xpath("string(./w:pPr/w:pStyle/@w:val)") or ""
             if t:
                 texto.append(t)
-                if re.match(r"(heading|t[ií]tulo)\s*[12]?$", estilo, re.I) and len(t) < 90:
-                    m.titulo(limpar_emoji(t))
+                titulo = ESTILO_TITULO.match(estilo)
+                lista = lista_do_paragrafo(el, d, estilo)
+                # o nível pode vir do estilo ("List Bullet 2") e não existir na numeração: vale o formato do nível 0
+                fmt = (formatos.get(lista) or formatos.get((lista[0], 0)) or "decimal") if lista else None
+                if titulo and len(t) < 90:
+                    # Título 1 (ou sem número) abre seção; Título 2 em diante vira subtítulo dentro dela
+                    (m.titulo if (titulo.group(2) or "1") == "1" else m.subtitulo)(limpar_emoji(t))
+                elif fmt == "bullet":
+                    m.paragrafo("• " + t, lista[1])
+                elif fmt and fmt != "none":
+                    num, nivel = lista
+                    c = contagem.setdefault(num, [])
+                    del c[nivel + 1:]
+                    c.extend([0] * (nivel + 1 - len(c)))
+                    c[nivel] += 1
+                    m.passo(".".join(str(x or 1) for x in c), t)
+                elif monoespacado(el, d, estilo):
+                    m.codigo(t)
                 else:
                     m.paragrafo(t)
             for rid in el.xpath(".//a:blip/@r:embed"):
@@ -373,14 +474,20 @@ def ler_docx(dados: bytes, m: Montador, imgs: Imagens, avisos: list[str]) -> str
 
 def ler_txt(t: str, nome_arquivo: str, m: Montador) -> str:
     stem = Path(nome_arquivo).stem
-    linhas = [l.strip() for l in t.splitlines() if l.strip()]
+    linhas = [l.rstrip() for l in t.splitlines() if l.strip()]
     # a primeira linha costuma repetir o nome do arquivo: ela vira o título, não um parágrafo
     if linhas and norm(stem)[:12] and norm(linhas[0]).startswith(norm(stem)[:12]):
-        resto = linhas[0][len(stem):].strip(" :-")
+        resto = linhas[0].strip()[len(stem):].strip(" :-")
         linhas = ([resto] if len(resto) > 3 and norm(resto) != norm(stem) else []) + linhas[1:]
     for p in linhas:
-        m.paragrafo(p)
+        m.paragrafo(p, nivel_do_recuo(p))
     return t
+
+
+def nivel_do_recuo(linha: str) -> int:
+    """Mesma regra do textoRico.tsx (nivelDe): Tab vale 2 espaços, cada 2 espaços é um nível."""
+    recuo = linha[:len(linha) - len(linha.lstrip(" \t"))]
+    return sum(2 if c == "\t" else 1 for c in recuo) >> 1
 
 
 def titulo_do_arquivo(nome_arquivo: str) -> str:

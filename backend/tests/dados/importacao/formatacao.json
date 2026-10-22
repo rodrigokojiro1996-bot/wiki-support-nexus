@@ -1,0 +1,52 @@
+{
+  "_sobre": "Exemplos de formatação usados pelos DOIS lados: o conversor de documentos (backend/tests/test_formatacao.py: 'texto' num .txt gera exatamente 'blocos') e o texto colado no editor (frontend/src/componentes/textoRico.test.tsx: com 'mesma_aparencia', os 'blocos' do importador aparecem na tela igual ao 'texto' colado num bloco de texto). Mudou uma regra de um lado? Este arquivo mostra o que muda no outro.",
+  "casos": [
+    {
+      "nome": "lista com subitens (Tab antes do marcador)",
+      "texto": "Antes de reenviar, confira:\n• Fila parada\n\t• há mais de 30 minutos\n• Terminal sem internet",
+      "blocos": [{ "tipo": "texto", "texto": "Antes de reenviar, confira:\n• Fila parada\n\t• há mais de 30 minutos\n• Terminal sem internet" }],
+      "mesma_aparencia": true
+    },
+    {
+      "nome": "lista com hífen e subitem com 2 espaços",
+      "texto": "- Caixa aberto\n  - com operador logado\n- Impressora ligada",
+      "blocos": [{ "tipo": "texto", "texto": "• Caixa aberto\n\t• com operador logado\n• Impressora ligada" }],
+      "mesma_aparencia": true
+    },
+    {
+      "nome": "[ Botão ], seta e negrito",
+      "texto": "Clique em [ Salvar ] -> **Confirmar**.",
+      "blocos": [{ "tipo": "texto", "texto": "Clique em [ Salvar ] -> **Confirmar**." }],
+      "mesma_aparencia": true
+    },
+    {
+      "nome": "linha terminada em ':' apresentando a lista",
+      "texto": "Formas aceitas:\n• Dinheiro\n• Cartão",
+      "blocos": [{ "tipo": "texto", "texto": "Formas aceitas:\n• Dinheiro\n• Cartão" }],
+      "mesma_aparencia": true
+    },
+    {
+      "nome": "'1.' no documento abre uma seção; '1.1' é passo",
+      "texto": "1. Abrir o caixa\n1.1 Acesse Caixa > Abertura de Caixa.",
+      "secoes": [{ "titulo": "Abrir o caixa", "blocos": [{ "tipo": "passo", "rotulo": "1.1", "texto": "Acesse Caixa > Abertura de Caixa." }] }]
+    },
+    {
+      "nome": "OBS: vira bloco de observação",
+      "texto": "OBS: só a loja de origem libera a transferência.",
+      "blocos": [{ "tipo": "obs", "texto": "só a loja de origem libera a transferência." }]
+    },
+    {
+      "nome": "Importante: vira nota",
+      "texto": "Importante: confira as sangrias antes de fechar.",
+      "blocos": [{ "tipo": "nota", "texto": "confira as sangrias antes de fechar." }]
+    },
+    {
+      "nome": "bloco ```sql",
+      "texto": "Consulta do dia:\n```sql\nSELECT id_caixa, total\nFROM caixa_mov;\n```",
+      "blocos": [
+        { "tipo": "texto", "texto": "Consulta do dia:" },
+        { "tipo": "sql", "texto": "SELECT id_caixa, total\nFROM caixa_mov;" }
+      ]
+    }
+  ]
+}

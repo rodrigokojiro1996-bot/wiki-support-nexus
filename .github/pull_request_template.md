@@ -9,7 +9,7 @@
 ## Como testei
 
 - [ ] `pytest -q` verde
-- [ ] `npm run build` verde (em `frontend/`)
+- [ ] `npm test` e `npm run build` verdes (em `frontend/`)
 - [ ] CHANGELOG atualizado (seção Não publicado)
 - [ ] nada de conteúdo real (manuais, prints, banco, `.env`, nomes de servidores ou clientes) no diff
 

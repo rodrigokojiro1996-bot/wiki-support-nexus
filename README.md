@@ -59,7 +59,7 @@ backend\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
 backend\.venv\Scripts\python.exe -m pytest -q     # na raiz do projeto
 ```
 
-`pytest -q` e `npm run build` (em `frontend/`) verdes antes de cada commit.
+`pytest -q`, `npm test` e `npm run build` (em `frontend/`) verdes antes de cada commit.
 
 ## Usar com um banco real
 

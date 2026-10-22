@@ -28,7 +28,7 @@ Com Docker: veja [docs/docker.md](docs/docker.md).
 
 ```powershell
 backend\.venv\Scripts\python.exe -m pytest -q     # na raiz do projeto
-cd frontend; npm run build                        # inclui a checagem de tipos
+cd frontend; npm test; npm run build              # Vitest e build (com checagem de tipos)
 ```
 
 O CI roda isso em todo PR, mais o `promtool` e o build da imagem Docker. A `main` só aceita merge com os quatro

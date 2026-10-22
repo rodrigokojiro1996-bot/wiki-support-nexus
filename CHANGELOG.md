@@ -5,6 +5,12 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Exemplos de formatação compartilhados (`backend/tests/dados/importacao/formatacao.json`) testados nos dois lados:
+  o importador gera os blocos esperados (pytest) e esses blocos aparecem na tela igual ao mesmo texto colado no
+  editor (Vitest, `npm test`, novo no CI).
+- Importação de Word pelos estilos: Título 1 abre seção, Título 2 em diante vira subtítulo, lista numerada vira
+  passo com a numeração do documento, lista com marcador vira lista (com subitens) e parágrafo em fonte
+  monoespaçada vira bloco SQL.
 - `POST /api/manuais/importar?modulo=<id>`: um documento (PDF, Word `.docx`, `.txt` ou `.md`) vira um rascunho de
   manual (título, seções, prints, tabelas citadas e avisos) para revisar no editor. Não salva nada; quem salva é o
   `POST /api/manuais`, que agora aceita `fontes` (os documentos de origem).
@@ -61,6 +67,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   chinesa monoespaçada), e o gerador espera as fontes carregarem antes de imprimir.
 
 ### Alterado
+- Itens de lista importados (e a linha terminada em ":" que os apresenta) ficam num bloco de texto só, com Tab
+  nos subitens, como o editor guarda uma lista colada: aparecem como lista, não como parágrafos soltos com "•".
 - pypdf, python-docx e pillow passaram para `requirements.txt` e para a imagem Docker (a API usa);
   `requirements-ferramentas.txt` deixou de existir.
 - Importação em lote: `.txt` com BOM não deixa mais o caractere invisível na primeira linha, logos repetidos em
