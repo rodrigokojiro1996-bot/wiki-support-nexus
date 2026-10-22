@@ -44,6 +44,11 @@ async function erroDe(r: Response): Promise<Error> {
 export const IMPORTACAO_MAXIMO_MB = 20;
 export const IMPORTACAO_ACEITA = '.pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown';
 
+/** NEXUS_AMBIENTE do servidor ("homologacao" liga a faixa no topo); lido uma vez por carga da página */
+let ambiente: Promise<string> | null = null;
+export const ambienteDoServidor = () =>
+  (ambiente ??= json<{ ambiente?: string }>('/api/saude').then(s => s.ambiente ?? '').catch(() => ''));
+
 export const api = {
   modulos: () => json<Modulo[]>('/api/modulos'),
   menus: (modulo: string) => json<MenuNo[]>(`/api/modulos/${modulo}/menus`),

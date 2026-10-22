@@ -5,7 +5,7 @@ Rodar (dentro de backend/):
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import ORIGENS_CORS, VERSAO
@@ -28,6 +28,14 @@ async def ciclo(_app):
 app = FastAPI(title="Support Nexus", version=VERSAO, lifespan=ciclo)
 app.add_middleware(CORSMiddleware, allow_origins=ORIGENS_CORS, allow_methods=["*"], allow_headers=["*"])
 app.add_middleware(MetricasHTTP)
+
+
+@app.middleware("http")
+async def fora_dos_buscadores(request: Request, chamar):
+    """Wiki interna: nenhuma página entra no Google, mesmo que o endereço vaze (junto do robots.txt do frontend)."""
+    resposta = await chamar(request)
+    resposta.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return resposta
 
 for r in (saude, metricas, modulos, menus, catalogo, manuais):
     app.include_router(r.router)

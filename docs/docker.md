@@ -89,10 +89,13 @@ imagem nova e recriar o contêiner", sem medo de perder manuais.
 |---|---|
 | `ports: "127.0.0.1:8010:8010"` | Só esta máquina acessa. Ainda não há login (ver [Segurança](#8-segurança)). |
 | `volumes: nexus-dados:/app/backend/dados` | Banco, manuais e prints sobrevivem a `down` e a uma imagem nova. |
-| `init: true` | Um processo *init* como PID 1 recolhe os processos do Chromium que terminam (evita zumbis). |
 | `shm_size: "256m"` | O Chromium usa memória compartilhada; com os 64 MB padrão do Docker, PDFs grandes falham. |
 | `mem_limit: 1g` | Um vazamento de memória não derruba a máquina inteira. |
 | `restart: unless-stopped` | Volta sozinho se cair ou se o Windows reiniciar; só não volta se você parou. |
+
+Na própria imagem: o `tini` é o PID 1 e recolhe os processos do Chromium que terminam (evita zumbis), e o
+Chromium do PDF roda com `--disable-dev-shm-usage`. Por isso a imagem funciona também num `docker run` simples,
+sem as opções do compose (seção 10).
 
 ### 2.4 `.dockerignore` e `.gitattributes`
 
@@ -270,3 +273,33 @@ digest no `Dockerfile`, rode `pytest -q` e `npm run build` localmente e depois `
 | Status `unhealthy` | A API não responde em `/api/saude` | `docker compose logs` mostra o erro (ex.: migração, permissão em `dados/`) |
 | "Não foi possível gerar o PDF" | Chromium sem memória compartilhada ou sem memória | Confira `shm_size` e `mem_limit` no compose |
 | Manual some depois de `down -v` | O `-v` apaga o volume | Restaure do backup ([seção 5](#5-dados-volume-backup-e-restauração)) |
+
+
+## 10. Homologação num servidor (sem o compose)
+
+Para a equipe testar antes de usar de verdade. **Não há login**: a homologação roda só com o sistema de exemplo
+(`demo_pdv`, manuais `DEMO.*`) e documentos de teste. Nada de catálogo real, manual interno ou `modulos.json`.
+
+```bash
+docker build -t support-nexus:0.3.0 .
+docker run -d --name support-nexus-homolog --restart unless-stopped \
+  --memory 1g --cpus 1 \
+  -e NEXUS_AMBIENTE=homologacao \
+  -v support-nexus-homolog-dados:/app/backend/dados \
+  support-nexus:0.3.0
+```
+
+| Opção | Por quê |
+|---|---|
+| `NEXUS_AMBIENTE=homologacao` | Faixa "Ambiente de homologação — dados de exemplo" no topo de todas as telas. |
+| `--memory 1g --cpus 1` | Os mesmos limites do compose: a homologação não disputa a máquina com outros sistemas. |
+| volume próprio | Banco, manuais e prints sobrevivem a um deploy; não compartilhe com nenhum outro app. |
+| sem `-p` | O proxy reverso (Traefik, nginx…) do servidor fala com a porta **8010** do contêiner e cuida do HTTPS. |
+
+- **Fora dos buscadores:** toda resposta leva `X-Robots-Tag: noindex, nofollow` e o `robots.txt` bloqueia tudo.
+- **Rede:** não ligue o contêiner na rede onde ficam os bancos de outros sistemas; uma rede só dele, que o
+  proxy alcance, basta.
+- **Zerar:** `docker rm -f support-nexus-homolog && docker volume rm support-nexus-homolog-dados` e subir de
+  novo. O seed recarrega o exemplo sozinho.
+- **Saúde:** `GET /api/saude` responde `{"ok": true, "versao": ..., "ambiente": "homologacao"}`.
+

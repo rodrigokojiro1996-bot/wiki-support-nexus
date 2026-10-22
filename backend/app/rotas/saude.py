@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from ..config import VERSAO
+from ..config import AMBIENTE, VERSAO
 from ..db import conectar, versao_atual
 
 router = APIRouter(prefix="/api")
@@ -9,7 +9,7 @@ router = APIRouter(prefix="/api")
 
 @router.get("/saude")
 def saude():
-    """Para monitoramento e HEALTHCHECK: o banco responde e em que versão está."""
+    """Para monitoramento e HEALTHCHECK: o banco responde e em que versão está; `ambiente` liga a faixa da interface."""
     try:
         con = conectar()
         try:
@@ -19,4 +19,4 @@ def saude():
             con.close()
     except Exception as e:
         return JSONResponse({"ok": False, "versao": VERSAO, "erro": str(e)}, status_code=503)
-    return {"ok": True, "versao": VERSAO, "schema": banco}
+    return {"ok": True, "versao": VERSAO, "schema": banco, "ambiente": AMBIENTE}

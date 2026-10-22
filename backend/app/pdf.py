@@ -32,7 +32,9 @@ RODAPE = f"""
 
 def gerar(codigo: str) -> bytes:
     with sync_playwright() as p:
-        nav = p.chromium.launch(channel=PDF_CANAL)
+        # --disable-dev-shm-usage: fora do docker-compose (shm_size) o /dev/shm do contêiner tem só 64 MB e o
+        # Chromium quebra em PDFs grandes; com a opção ele usa /tmp. No Windows (Edge) não muda nada.
+        nav = p.chromium.launch(channel=PDF_CANAL, args=["--disable-dev-shm-usage"])
         try:
             pag = nav.new_page()
             pag.goto(f"{FRONTEND}/manuais/{quote(codigo)}/imprimir", wait_until="networkidle")

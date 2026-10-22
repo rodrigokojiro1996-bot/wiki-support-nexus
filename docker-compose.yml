@@ -27,8 +27,6 @@ services:
       # Banco real (opcional), sempre somente leitura (:ro). Descomente depois de gerar os arquivos:
       # - ./backend/modulos.json:/app/backend/modulos.json:ro
       # - ./coletor/saida:/app/coletor/saida:ro
-    # processo "init" (tini) como PID 1: recolhe os processos do Chromium que terminam (evita zumbis)
-    init: true
     # o Chromium usa memória compartilhada; os 64 MB padrão do Docker fazem PDFs grandes falharem
     shm_size: "256m"
     mem_limit: 1g
