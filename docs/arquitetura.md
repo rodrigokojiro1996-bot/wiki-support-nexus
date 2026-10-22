@@ -497,7 +497,7 @@ backend\.venv\Scripts\python.exe -m pytest -q      # na raiz do projeto
 - Cobrem: algoritmo do diagrama (níveis, apoio, corte em 40, equivalência com a 0.1.0), relações, vínculos,
   seed idempotente, migrações (banco novo e banco da 0.1.0 terminam com a mesma estrutura), autoria, manuais e
   PDF, modo de produção, mascaramento de senhas, regras de inferência do coletor e desempenho com 500 tabelas.
-- Regra: `pytest -q` e `npm run build` verdes antes de cada commit.
+- Regra: `pytest -q`, `npm test` e `npm run build` verdes antes de cada commit.
 
 
 ## 12. Segurança e dados sensíveis

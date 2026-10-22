@@ -44,6 +44,9 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      # Vitest: regras do texto colado, com os mesmos exemplos do teste do importador
+      - run: npm test
+        working-directory: frontend
       # tsc -b confere os tipos antes do vite build
       - run: npm run build
         working-directory: frontend
