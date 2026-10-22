@@ -1,12 +1,18 @@
-"""Converte um documento de suporte (PDF, Word ou .txt) num rascunho de manual da Wiki.
+"""Converte um documento de suporte (PDF, Word, .txt ou .md) num rascunho de manual da Wiki.
 
-Usado pela importação em lote (ferramentas/importar_processos.py). Os prints vão para onde a função `guardar`
-mandar: por padrão, para o rascunho do editor (guardar_rascunho), e só viram definitivos quando o manual é salvo.
+Usado pela rota POST /api/manuais/importar e pela importação em lote (ferramentas/importar_processos.py). Os prints
+vão para onde a função `guardar` mandar: por padrão, para o rascunho do editor (guardar_rascunho), e só viram
+definitivos quando o manual é salvo.
+
+O arquivo vem de fora: o tipo é decidido pelos bytes (não pela extensão), com limites de tamanho, de páginas e de
+imagens, e nada do documento é executado (macros, scripts). Recusas levantam ImportacaoRecusada com o status HTTP.
 """
 import hashlib
 import io
+import json
 import re
 import unicodedata
+import zipfile
 from collections import Counter
 from collections.abc import Callable
 from math import ceil
@@ -16,8 +22,78 @@ import docx
 import pypdf
 from PIL import Image
 
-from .limpeza import mascarar, tabelas_citadas
+from ..config import RAIZ
+from .limpeza import contar_segredos, mascarar, tabelas_citadas
 from .manuais import guardar_rascunho
+
+# ---------------- limites e tipo do arquivo ----------------
+TAMANHO_MAXIMO = 20 * 1024 * 1024        # arquivo enviado
+DESCOMPACTADO_MAXIMO = 100 * 1024 * 1024  # soma do conteúdo de um .docx (zip)
+TAXA_MAXIMA = 100                         # descompactado / compactado; documentos normais ficam bem abaixo de 20
+PAGINAS_MAXIMO = 200
+IMAGENS_MAXIMO = 300                      # imagens lidas do documento; as demais ficam de fora (com aviso)
+FORMATOS = "PDF, Word (.docx), .txt ou .md"
+OLE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"  # Word 97-2003 (.doc) e outros arquivos antigos do Office
+
+
+class ImportacaoRecusada(Exception):
+    """Documento que não pode ser importado: `status` é o código HTTP e `mensagem` vai para quem enviou."""
+
+    def __init__(self, status: int, mensagem: str, formato: str = "desconhecido"):
+        super().__init__(mensagem)
+        self.status, self.mensagem, self.formato = status, mensagem, formato
+
+
+def _conferir_zip(dados: bytes) -> set[str]:
+    try:
+        itens = zipfile.ZipFile(io.BytesIO(dados)).infolist()
+    except (zipfile.BadZipFile, ValueError) as e:
+        raise ImportacaoRecusada(415, f"Arquivo compactado danificado. Envie {FORMATOS}.") from e
+    # zip bomb: o tamanho declarado de cada item é conferido antes de descompactar qualquer coisa
+    total = sum(i.file_size for i in itens)
+    compactado = max(1, sum(i.compress_size for i in itens))
+    if total > DESCOMPACTADO_MAXIMO or total / compactado > TAXA_MAXIMA:
+        raise ImportacaoRecusada(413, "O documento descompactado fica grande demais para importar.", "docx")
+    return {i.filename for i in itens}
+
+
+def decodificar(dados: bytes) -> tuple[str, str] | None:
+    """Texto puro em UTF-8 (com ou sem BOM) ou cp1252 (Bloco de Notas antigo). None se parecer binário."""
+    if b"\x00" in dados:
+        return None
+    for codificacao in ("utf-8-sig", "cp1252"):
+        try:
+            t = dados.decode(codificacao)
+        except UnicodeDecodeError:
+            continue
+        controles = sum(1 for c in t if ord(c) < 32 and c not in "\t\n\r\f")
+        return (t, codificacao) if controles <= len(t) * 0.01 else None
+    return None
+
+
+def identificar(dados: bytes, nome_arquivo: str) -> str:
+    """Tipo do documento pelos bytes: "pdf", "docx", "md" ou "txt". Recusa o resto com ImportacaoRecusada."""
+    ext = Path(nome_arquivo).suffix.lower()
+    if len(dados) > TAMANHO_MAXIMO:
+        raise ImportacaoRecusada(413, f"Arquivo maior que {TAMANHO_MAXIMO // 1024 // 1024} MB.")
+    if not dados.strip():
+        raise ImportacaoRecusada(422, "Arquivo vazio.")
+    if ext == ".doc" or dados.startswith(OLE):
+        raise ImportacaoRecusada(415, "Arquivo do Word antigo (.doc): abra no Word, salve como .docx e importe de novo.", "doc")
+    if ext == ".docm":
+        raise ImportacaoRecusada(415, "Documento do Word com macros (.docm): salve como .docx sem macros e importe de novo.", "docm")
+    if dados.startswith(b"%PDF-"):
+        return "pdf"
+    if dados.startswith(b"PK\x03\x04"):
+        nomes = _conferir_zip(dados)
+        if "word/vbaProject.bin" in nomes:
+            raise ImportacaoRecusada(415, "Documento do Word com macros: salve como .docx sem macros e importe de novo.", "docm")
+        if "word/document.xml" not in nomes:
+            raise ImportacaoRecusada(415, f"Arquivo compactado que não é um documento do Word. Envie {FORMATOS}.")
+        return "docx"
+    if decodificar(dados) is None:
+        raise ImportacaoRecusada(415, f"Tipo de arquivo não suportado. Envie {FORMATOS}.")
+    return "md" if ext == ".md" else "txt"
 
 # ---------------- limpeza ----------------
 # senhas mascaradas e tabelas citadas: as mesmas regras do editor de manuais (limpeza.py)
@@ -30,6 +106,7 @@ BULLET = re.compile(r"^[•▪●◦\-–*]\s*(.+)$")
 OBS = re.compile(r"^OBS\S*\s*[:.]?\s*(.+)$", re.I)
 NOTA = re.compile(r"^(importante|aten[cç][aã]o|nota)\s*[:!]\s*(.+)$", re.I)
 FIM_FRASE = (".", ":", ";", "!", "?")
+PADRAO = "Procedimento"  # título da seção quando o documento começa sem título
 VERSAO = re.compile(r"Vers[aã]o\s+(\d{4})\s+de")
 
 
@@ -45,10 +122,14 @@ def limpar_emoji(t: str) -> str:
 
 
 # ---------------- classificação de linhas em blocos ----------------
+AUTORES = RAIZ / "ferramentas" / "autores.json"  # fora do git: nomes de quem elaborou/revisou os documentos reais
+
+
 class Montador:
     """Recebe parágrafos e imagens na ordem do documento e monta seções/blocos."""
 
-    autores: set[str] = set()  # nomes de quem elaborou/revisou: nunca entram no manual
+    # nomes de quem elaborou/revisou: nunca entram no manual
+    autores: set[str] = {norm(n) for n in json.loads(AUTORES.read_text(encoding="utf-8"))} if AUTORES.exists() else set()
 
     def __init__(self, titulo_padrao: str, secao_unica: str | None):
         self.secoes: list[dict] = []
@@ -149,6 +230,9 @@ class Imagens:
     def __init__(self, guardar: Callable[[bytes], str | None]):
         self.guardar = guardar
         self.n = 0
+        self.repetidas = 0     # descartadas por aparecerem 3+ vezes (logo, rodapé)
+        self.excedeu = False   # passou de IMAGENS_MAXIMO: o resto ficou de fora
+        self.lidas = 0
         self.vistos: set[str] = set()
 
     def preparar(self, candidatos: list[bytes]) -> set[str]:
@@ -158,8 +242,15 @@ class Imagens:
 
     def salvar(self, dados: bytes, ignorar: set[str]) -> str | None:
         h = hashlib.md5(dados).hexdigest()
-        if h in ignorar or h in self.vistos or len(dados) < 2500:
+        if h in ignorar:
+            self.repetidas += 1
             return None
+        if h in self.vistos or len(dados) < 2500:
+            return None
+        if self.lidas >= IMAGENS_MAXIMO:
+            self.excedeu = True
+            return None
+        self.lidas += 1
         try:
             img = Image.open(io.BytesIO(dados))
             img.load()
@@ -201,13 +292,19 @@ def imagens_desenhadas(recursos, dados: bytes, saida: set[int], nivel: int = 0) 
             imagens_desenhadas(obj.get("/Resources"), obj.get_data(), saida, nivel + 1)
 
 
-def ler_pdf(dados: bytes, m: Montador, imgs: Imagens) -> str:
+def ler_pdf(dados: bytes, m: Montador, imgs: Imagens, avisos: list[str]) -> str:
     r = pypdf.PdfReader(io.BytesIO(dados))
+    if r.is_encrypted and not r.decrypt(""):
+        raise ImportacaoRecusada(422, "PDF protegido por senha: salve uma cópia sem senha e importe de novo.", "pdf")
+    if len(r.pages) > PAGINAS_MAXIMO:
+        raise ImportacaoRecusada(413, f"PDF com {len(r.pages)} páginas; o limite é {PAGINAS_MAXIMO}. Divida o documento.", "pdf")
     paginas = [(p.extract_text() or "").splitlines() for p in r.pages]
+    if sum(len(norm(l)) for pg in paginas for l in pg) < 20 * len(paginas):
+        avisos.append("PDF sem texto: parece escaneado. Leitura de imagem (OCR) não é suportada.")
     freq = Counter(norm(l) for pg in paginas for l in set(pg) if norm(l))
     limite = max(2, ceil(len(paginas) * 0.5))
     capa = 0 if (paginas and any(norm(l) == "sumario" for l in paginas[0])) else None
-    brutas = []
+    brutas, lidas = [], 0
     for pg in r.pages:
         # só as imagens que a página realmente desenha; alguns PDFs listam todas as imagens em todas as páginas
         try:
@@ -215,8 +312,13 @@ def ler_pdf(dados: bytes, m: Montador, imgs: Imagens) -> str:
             conteudo = pg.get_contents()
             if conteudo is not None:
                 imagens_desenhadas(pg.get("/Resources"), conteudo.get_data(), usadas)
-            lista = pg.images
-            brutas.append([i.data for i in lista if not usadas or getattr(i.indirect_reference, "idnum", None) in usadas])
+            lista = [i for i in pg.images if not usadas or getattr(i.indirect_reference, "idnum", None) in usadas]
+            # cada imagem é descompactada ao ler .data: o limite vale antes disso
+            if lidas + len(lista) > IMAGENS_MAXIMO:
+                imgs.excedeu = True
+                lista = lista[:max(0, IMAGENS_MAXIMO - lidas)]
+            lidas += len(lista)
+            brutas.append([i.data for i in lista])
         except Exception:
             brutas.append([])
     ignorar = imgs.preparar([b for pg in brutas for b in pg])
@@ -234,10 +336,14 @@ def ler_pdf(dados: bytes, m: Montador, imgs: Imagens) -> str:
     return "\n".join(texto_total)
 
 
-def ler_docx(dados: bytes, m: Montador, imgs: Imagens) -> str:
+AVISO_TABELA = "Tabela do Word convertida em texto com ' | ' entre as colunas: confira o alinhamento."
+
+
+def ler_docx(dados: bytes, m: Montador, imgs: Imagens, avisos: list[str]) -> str:
     d = docx.Document(io.BytesIO(dados))
     partes = d.part.related_parts
-    todas = [p.blob for p in partes.values() if "image" in p.content_type]
+    # o Word guarda uma imagem repetida uma vez só e a referencia várias: conta as referências, não os arquivos
+    todas = [partes[rid].blob for rid in d.element.body.xpath(".//a:blip/@r:embed") if rid in partes]
     ignorar = imgs.preparar(todas)
     texto = []
     for el in d.element.body.iterchildren():
@@ -255,6 +361,8 @@ def ler_docx(dados: bytes, m: Montador, imgs: Imagens) -> str:
                 if rid in partes and (nome := imgs.salvar(partes[rid].blob, ignorar)):
                     m.imagem(nome)
         elif tag == "tbl":
+            if AVISO_TABELA not in avisos:
+                avisos.append(AVISO_TABELA)
             for linha in el.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tr"):
                 cel = [("".join(n.text or "" for n in c.iter() if n.tag.endswith("}t"))).strip() for c in linha.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tc")]
                 if any(cel):
@@ -263,11 +371,7 @@ def ler_docx(dados: bytes, m: Montador, imgs: Imagens) -> str:
     return "\n".join(texto)
 
 
-def ler_txt(dados: bytes, nome_arquivo: str, m: Montador) -> str:
-    try:
-        t = dados.decode("utf-8")
-    except UnicodeDecodeError:
-        t = dados.decode("cp1252", "replace")
+def ler_txt(t: str, nome_arquivo: str, m: Montador) -> str:
     stem = Path(nome_arquivo).stem
     linhas = [l.strip() for l in t.splitlines() if l.strip()]
     # a primeira linha costuma repetir o nome do arquivo: ela vira o título, não um parágrafo
@@ -284,6 +388,10 @@ def titulo_do_arquivo(nome_arquivo: str) -> str:
     return t[:1].upper() + t[1:]
 
 
+def plural(n: int, um: str, varios: str) -> str:
+    return f"{n} {um if n == 1 else varios}"
+
+
 def converter(dados: bytes, nome_arquivo: str, nomes_tabelas: set[str], secao_unica: str | None = None, *,
               guardar: Callable[[bytes], str | None] = guardar_rascunho, imagens: Imagens | None = None) -> dict:
     """Documento -> rascunho de manual (não grava nada além dos prints).
@@ -291,22 +399,44 @@ def converter(dados: bytes, nome_arquivo: str, nomes_tabelas: set[str], secao_un
     nomes_tabelas: tabelas do banco do módulo, para achar as citadas no texto. secao_unica: o documento inteiro vira
     uma seção com esse título (manuais de perguntas frequentes). `imagens` permite que vários documentos de um mesmo
     manual compartilhem a numeração e o descarte de prints repetidos.
+    Levanta ImportacaoRecusada se o arquivo não puder ser importado.
     """
+    formato = identificar(dados, nome_arquivo)
     imgs = imagens or Imagens(guardar)
-    m = Montador("Procedimento", secao_unica)
-    ext = Path(nome_arquivo).suffix.lower()
-    if ext == ".pdf":
-        texto = ler_pdf(dados, m, imgs)
-    elif ext == ".docx":
-        texto = ler_docx(dados, m, imgs)
-    else:
-        texto = ler_txt(dados, nome_arquivo, m)
+    repetidas_antes = imgs.repetidas
+    m = Montador(PADRAO, secao_unica)
+    avisos: list[str] = []
+    try:
+        if formato == "pdf":
+            texto = ler_pdf(dados, m, imgs, avisos)
+        elif formato == "docx":
+            texto = ler_docx(dados, m, imgs, avisos)
+        else:
+            texto, codificacao = decodificar(dados)
+            if codificacao == "cp1252":
+                avisos.append(f"Arquivo {Path(nome_arquivo).suffix or 'de texto'} em cp1252 (não UTF-8): confira os acentos.")
+            ler_txt(texto, nome_arquivo, m)
+    except ImportacaoRecusada:
+        raise
+    except Exception as e:  # PDF/Word danificado: a biblioteca levanta tipos variados
+        raise ImportacaoRecusada(422, f"Não foi possível ler o documento ({formato}): o arquivo parece danificado.", formato) from e
     secoes = m.resultado()
+    titulos = [s["titulo"] for s in secoes if s["titulo"] != PADRAO]
+    if secao_unica is None and not titulos and secoes:
+        avisos.append("Nenhum título encontrado: todo o conteúdo ficou em uma seção.")
+    if n := imgs.repetidas - repetidas_antes:
+        avisos.append(f"{plural(n, 'imagem ignorada', 'imagens ignoradas')} por se repetir no documento (logo, rodapé).")
+    if imgs.excedeu:
+        avisos.append(f"O documento tem mais de {IMAGENS_MAXIMO} imagens: só as primeiras foram importadas.")
+    if n := contar_segredos(texto):
+        avisos.append(f"{plural(n, 'senha mascarada', 'senhas mascaradas')} (******): confira se o texto continua claro.")
     sqls = "\n".join(b["texto"] for s in secoes for b in s["blocos"] if b["tipo"] == "sql")
     v = VERSAO.search(texto)
     return {
-        "titulo": titulo_do_arquivo(nome_arquivo), "subtitulo": "", "versao": v.group(1) if v else None,
+        # título sugerido: o primeiro título do documento; senão, o nome do arquivo
+        "titulo": titulos[0] if titulos and secao_unica is None else titulo_do_arquivo(nome_arquivo),
+        "subtitulo": "", "versao": v.group(1) if v else None, "formato": formato,
         "secoes": secoes, "fontes": [nome_arquivo],
         "tabelas": tabelas_citadas(mascarar(texto), sqls, nomes_tabelas),
-        "avisos": [],
+        "avisos": avisos,
     }

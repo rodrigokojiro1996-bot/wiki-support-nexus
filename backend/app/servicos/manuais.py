@@ -135,7 +135,8 @@ def _limpar(secoes: list[dict]) -> list[dict]:
 def salvar(con: sqlite3.Connection, dados: dict, por: str, codigo: str | None = None) -> dict:
     """Cria (codigo=None) ou atualiza um manual vindo do editor. Grava o JSON em dados/manuais/ e o banco.
 
-    `dados`: {titulo, subtitulo, modulo, menu, secoes} já validados pelo modelo da rota.
+    `dados`: {titulo, subtitulo, modulo, menu, secoes, fontes} já validados pelo modelo da rota. Sem `fontes`
+    (o editor comum), o manual mantém as que já tinha.
     """
     anterior = manual_completo(con, codigo) if codigo else None
     codigo = codigo or proximo_codigo(con, dados["modulo"])
@@ -151,7 +152,7 @@ def salvar(con: sqlite3.Connection, dados: dict, por: str, codigo: str | None = 
         "codigo": codigo, "titulo": mascarar(dados["titulo"].strip()), "subtitulo": mascarar(dados.get("subtitulo", "").strip()),
         "versao": proxima_versao(anterior["versao"]) if anterior else "1.0",
         "modulo": dados["modulo"], "menu": dados.get("menu"),
-        "fontes": anterior["fontes"] if anterior else [],
+        "fontes": dados.get("fontes") or (anterior["fontes"] if anterior else []),
         "tabelas": tabelas_citadas(textos, sqls, nomes),
         "por": por, "atualizado_em": con.execute("SELECT datetime('now', 'localtime')").fetchone()[0], "secoes": secoes,
     }

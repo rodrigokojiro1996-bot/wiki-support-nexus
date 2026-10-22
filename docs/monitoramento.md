@@ -83,6 +83,8 @@ consultas e painéis prontos da comunidade funcionam sem adaptação.
 | `nexus_http_request_duration_seconds` | histograma | `method`, `route` | tempo de resposta (faixas de 5 ms a 10 s) |
 | `nexus_pdf_generation_duration_seconds` | histograma | — | tempo para gerar um PDF (faixas de 0,5 s a 30 s) |
 | `nexus_pdf_generation_failures_total` | contador | — | PDFs que falharam (o 503 da API) |
+| `nexus_importacoes_total` | contador | `formato`, `resultado` | documentos enviados para virar manual: `formato` pdf, docx, txt, md (ou doc, docm, desconhecido nas recusas); `resultado` ok ou recusado |
+| `nexus_importacao_duration_seconds` | histograma | `formato` | tempo para converter um documento em rascunho (faixas de 50 ms a 30 s) |
 | `nexus_info` | info | `version` | versão em execução |
 | `process_resident_memory_bytes`, `process_cpu_seconds_total`, … | gauge/contador | — | do próprio `prometheus-client` (só no Linux) |
 

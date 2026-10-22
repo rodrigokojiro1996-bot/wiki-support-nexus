@@ -1,13 +1,14 @@
-from typing import Literal
+import time
+from typing import Annotated, Literal
+from urllib.parse import unquote
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-import time
-
 from .. import pdf
-from ..metricas import PDF_DURACAO, PDF_FALHAS
+from ..metricas import IMPORTACAO_DURACAO, IMPORTACOES, PDF_DURACAO, PDF_FALHAS
+from ..servicos import importacao
 from ..servicos import manuais as servico
 from ..servicos.manuais import manual_completo
 from . import db, usuario
@@ -88,6 +89,8 @@ class ManualEntrada(BaseModel):
     modulo: str
     menu: str | None = None
     secoes: list[SecaoEntrada] = Field(min_length=1, max_length=100)
+    # documentos de origem (importação); vazio mantém os que o manual já tinha
+    fontes: list[Annotated[str, Field(max_length=200)]] = Field(default_factory=list, max_length=20)
 
     @field_validator("titulo")
     @classmethod
@@ -117,6 +120,51 @@ def editar_manual(codigo: str, corpo: ManualEntrada, con=Depends(db), por: str =
     _conferir_destino(con, corpo)
     m = servico.salvar(con, corpo.model_dump(), por, codigo)
     return {"codigo": m["codigo"], "versao": m["versao"]}
+
+
+async def _documento(request: Request) -> bytes:
+    """Corpo da importação lido em partes: passou do limite, para na hora (não carrega 1 GB na memória)."""
+    limite = importacao.TAMANHO_MAXIMO
+    mensagem = f"Arquivo maior que {limite // 1024 // 1024} MB"
+    total = int(request.headers.get("content-length") or 0)
+    partes = []
+    if total <= limite:
+        total = 0
+        async for parte in request.stream():
+            total += len(parte)
+            if total > limite:
+                break
+            partes.append(parte)
+    if total > limite:
+        IMPORTACOES.labels("desconhecido", "recusado").inc()
+        raise HTTPException(413, mensagem)
+    return b"".join(partes)
+
+
+@router.post("/manuais/importar")
+def importar_manual(modulo: str, dados: bytes = Depends(_documento), x_arquivo: str = Header("documento.txt"),
+                    con=Depends(db)):
+    """Corpo = bytes do documento; cabeçalho X-Arquivo = nome do arquivo (URL-encoded).
+
+    Devolve o rascunho {titulo, subtitulo, secoes, fontes, tabelas, avisos} para revisar no editor. NÃO salva o
+    manual: quem salva é o POST /api/manuais. Rota síncrona: o FastAPI roda numa thread e a conversão de um PDF
+    grande não trava as outras requisições.
+    """
+    linha = con.execute("SELECT banco FROM modulos WHERE id = ?", (modulo,)).fetchone()
+    if not linha:
+        raise HTTPException(404, f"Módulo {modulo} não existe")
+    nomes = {r[0].lower() for r in con.execute("SELECT nome FROM tabelas WHERE banco = ?", (linha["banco"],))}
+    # só o nome, sem pastas: o valor vem do navegador e vai para o manual como fonte
+    nome = unquote(x_arquivo).replace("\\", "/").rsplit("/", 1)[-1].strip()[:200] or "documento.txt"
+    inicio = time.perf_counter()
+    try:
+        rascunho = importacao.converter(dados, nome, nomes)
+    except importacao.ImportacaoRecusada as e:
+        IMPORTACOES.labels(e.formato, "recusado").inc()
+        raise HTTPException(e.status, e.mensagem) from e
+    IMPORTACAO_DURACAO.labels(rascunho["formato"]).observe(time.perf_counter() - inicio)
+    IMPORTACOES.labels(rascunho["formato"], "ok").inc()
+    return rascunho
 
 
 @router.post("/imagens", status_code=201)

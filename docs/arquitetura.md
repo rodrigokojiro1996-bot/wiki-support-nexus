@@ -169,7 +169,7 @@ backend/
   ferramentas/curadoria.exemplo.json
                            modelo de curadoria (qual documento vai para qual tela)
   tests/                   pytest com banco temporário
-  requirements*.txt        API / ferramentas / testes, com versões travadas
+  requirements*.txt        API / testes, com versões travadas
 
 frontend/
   src/paginas/             MapaSistema, ManualPagina, ManualImpressao
@@ -311,8 +311,14 @@ Pode ser executado quantas vezes for preciso: preserva `relacao_status` e os ví
 (importados e feitos no editor); com o mesmo código, vale o de `dados/`.
 
 ### 7.4 Importação de manuais (`app/servicos/importacao.py`)
-A conversão de um documento em manual fica em `converter()`, usada pela importação em lote
+A conversão de um documento em manual fica em `converter()`, usada pela rota `POST /api/manuais/importar`
+(um documento por vez, revisado no editor antes de salvar) e pela importação em lote
 (`ferramentas/importar_processos.py`, que percorre o `curadoria.json`). Para cada documento:
+- Confere o tipo pelos bytes, não pela extensão: PDF (`%PDF-`), Word `.docx` (zip com `word/document.xml`) e
+  texto (`.txt`/`.md` em UTF-8, UTF-8 com BOM ou cp1252). Recusa `.doc` (salvar como `.docx`), `.docm` e
+  qualquer `.docx` com macro, arquivos acima de 20 MB, `.docx` que descompactado passe de 100 MB ou de uma taxa
+  de 100:1 (zip bomb, conferido antes de descompactar), PDF acima de 200 páginas e PDF com senha. No máximo 300
+  imagens por documento. Nada do documento é executado.
 - Lê as fontes. Nos PDFs, só entram as imagens que cada página realmente desenha; nos documentos Word, texto e
   imagens seguem a ordem do documento.
 - Remove ruído: cabeçalhos repetidos, sumário antigo, "Elaborado por" e autores (`autores.json`).
@@ -320,6 +326,8 @@ A conversão de um documento em manual fica em `converter()`, usada pela importa
 - Entrega os prints para quem chamou, ignorando logos repetidos e imagens muito pequenas: o lote salva em
   `backend/dados/imagens/<código>/`; o padrão é o rascunho do editor (`dados/imagens/_rascunho/`).
 - Detecta as tabelas citadas (nomes técnicos e blocos SQL).
+- Gera avisos para quem revisa: PDF sem texto (escaneado), nenhum título encontrado, imagens repetidas
+  ignoradas, senhas mascaradas, tabela do Word virando texto, `.txt` em cp1252.
 - No lote, grava o manual em `backend/dados/manuais/<código>.json`. Manuais com `"editado": true` não são
   sobrescritos.
 
@@ -327,7 +335,11 @@ A conversão de um documento em manual fica em `converter()`, usada pela importa
 1. O print colado vai para `POST /api/imagens`. O backend confere pelo conteúdo que é PNG, JPG, GIF ou WebP (até
    8 MB) e guarda em `dados/imagens/_rascunho/`. A prévia já mostra a imagem. Rascunhos abandonados somem depois de
    um dia.
-2. `POST /api/manuais` (novo) ou `PUT /api/manuais/{código}` (edição) recebe título, subtítulo, tela e seções.
+   Para começar de um documento, `POST /api/manuais/importar?modulo=<id>` recebe os bytes do arquivo (nome no
+   cabeçalho `X-Arquivo`) e devolve o rascunho com título, seções, prints em rascunho, tabelas e avisos, sem
+   salvar nada (seção 7.4).
+2. `POST /api/manuais` (novo) ou `PUT /api/manuais/{código}` (edição) recebe título, subtítulo, tela e seções
+   (e `fontes`, os documentos de origem, quando o manual veio de uma importação).
    A API valida (título, seções com título, blocos com texto, imagem existente, tela do mesmo módulo).
 3. Ao salvar: código novo no padrão do módulo (`PDV.001`, `PDV.002`…), ou versão +0.1 na edição; senhas
    mascaradas e tabelas citadas detectadas com as mesmas regras do importador (`app/servicos/limpeza.py`); os
@@ -433,8 +445,7 @@ Requisitos: Windows com Microsoft Edge, Python 3.12 ou superior e Node.js 20 ou 
 cd backend
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
-.venv\Scripts\python.exe -m pip install -r requirements-ferramentas.txt   # só para importar manuais
-.venv\Scripts\python.exe -m app.seed                                       # carrega o sistema de exemplo
+.venv\Scripts\python.exe -m app.seed   # carrega o sistema de exemplo
 ```
 
 **Frontend**

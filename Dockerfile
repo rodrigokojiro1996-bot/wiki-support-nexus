@@ -43,8 +43,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app/backend
 
-# dependências antes do código (mesmo motivo do cache da etapa 1). Só a API: o importador de documentos
-# (requirements-ferramentas.txt) e os testes (requirements-dev.txt) não fazem parte da imagem.
+# dependências antes do código (mesmo motivo do cache da etapa 1). Só a API (que inclui a importação de
+# documentos); os testes (requirements-dev.txt) não fazem parte da imagem.
 COPY backend/requirements.txt ./
 # --with-deps instala também as bibliotecas do sistema que o Chromium precisa (fontes, libnss, ...);
 # --no-shell: só o Chromium completo, que é o que NEXUS_PDF_CANAL=chromium usa (o "headless shell" seria +273 MB);

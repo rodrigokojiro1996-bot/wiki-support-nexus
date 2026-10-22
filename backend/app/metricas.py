@@ -20,6 +20,10 @@ DURACAO = Histogram("nexus_http_request_duration_seconds", "Tempo de resposta da
 PDF_DURACAO = Histogram("nexus_pdf_generation_duration_seconds", "Tempo para gerar o PDF de um manual",
                         buckets=(0.5, 1, 2, 3, 5, 8, 13, 20, 30))
 PDF_FALHAS = Counter("nexus_pdf_generation_failures_total", "Falhas ao gerar o PDF de um manual")
+# formato: pdf, docx, txt, md (ou doc, docm, desconhecido nas recusas); resultado: ok, recusado
+IMPORTACOES = Counter("nexus_importacoes_total", "Documentos enviados para virar manual", ["formato", "resultado"])
+IMPORTACAO_DURACAO = Histogram("nexus_importacao_duration_seconds", "Tempo para converter um documento em rascunho de manual",
+                               ["formato"], buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 30))
 Info("nexus", "Versão do Support Nexus").info({"version": VERSAO})
 
 SEM_ROTA = "(sem rota)"

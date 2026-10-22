@@ -5,6 +5,14 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- `POST /api/manuais/importar?modulo=<id>`: um documento (PDF, Word `.docx`, `.txt` ou `.md`) vira um rascunho de
+  manual (título, seções, prints, tabelas citadas e avisos) para revisar no editor. Não salva nada; quem salva é o
+  `POST /api/manuais`, que agora aceita `fontes` (os documentos de origem).
+- Segurança da importação: tipo conferido pelos bytes, limite de 20 MB, recusa explicada de `.doc` e `.docm`,
+  proteção contra zip bomb, limites de 200 páginas e 300 imagens, PDF com senha recusado.
+- Avisos no rascunho: PDF escaneado, documento sem títulos, imagens repetidas ignoradas, senhas mascaradas, tabela
+  do Word em texto e `.txt` em cp1252.
+- Métricas `nexus_importacoes_total{formato,resultado}` e `nexus_importacao_duration_seconds{formato}`.
 - CI no GitHub Actions (`.github/workflows/ci.yml`) em todo PR e push na main: pytest, build do frontend
   (com checagem de tipos), `promtool` (configuração e testes das regras de alerta) e build da imagem Docker.
   Actions travadas por SHA, permissão só de leitura e execução antiga cancelada a cada push novo.
@@ -53,6 +61,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   chinesa monoespaçada), e o gerador espera as fontes carregarem antes de imprimir.
 
 ### Alterado
+- pypdf, python-docx e pillow passaram para `requirements.txt` e para a imagem Docker (a API usa);
+  `requirements-ferramentas.txt` deixou de existir.
+- Importação em lote: `.txt` com BOM não deixa mais o caractere invisível na primeira linha, logos repetidos em
+  documentos Word são descartados (contando as referências, não os arquivos), e documento recusado vira um
+  problema na lista em vez de interromper o lote. A curadoria real de teste gerou o mesmo resultado de antes.
 - A conversão de documentos em manuais saiu do script de lote para `app/servicos/importacao.py` (`converter()`),
   base da importação pela interface. O lote ficou só com a curadoria e gera o mesmo JSON e os mesmos prints de
   antes. Documentos fictícios de teste em `backend/tests/dados/importacao/`.
