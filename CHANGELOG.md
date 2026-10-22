@@ -15,6 +15,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   e push protection ligados no repositório.
 - Licença MIT (`LICENSE`), `SECURITY.md` (como avisar uma falha pelo aviso privado do GitHub), `CONTRIBUTING.md`
   (como rodar, testar, padrão de branch, commit e PR, e a regra de nunca commitar conteúdo real) e `CODEOWNERS`.
+- Release automática (`.github/workflows/release.yml`): o push de uma tag `v*` cria a Release do GitHub com a seção
+  daquela versão do CHANGELOG, e falha se a versão não tiver seção. Releases das tags v0.1.0 e v0.2.0 publicadas.
 - Editor de manuais na interface: "Criar manual para esta tela" na Visão geral, "+ Novo manual" e "Editar".
   Blocos iguais aos dos manuais existentes, prévia ao vivo e prints com Ctrl+V ou arrastando.
 - `POST /api/manuais`, `PUT /api/manuais/{código}` e `POST /api/imagens`.

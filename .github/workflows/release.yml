@@ -1,0 +1,42 @@
+# Release automática: um push de tag v* (ex.: v0.3.0) cria a Release do GitHub com a seção
+# correspondente do CHANGELOG. Falha se a versão da tag não tiver seção no CHANGELOG.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# precisa escrever para criar a Release
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Texto da versão a partir do CHANGELOG
+        env:
+          TAG: ${{ github.ref_name }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+          tag = os.environ["TAG"]
+          versao = tag.removeprefix("v")
+          texto = open("CHANGELOG.md", encoding="utf-8").read()
+          m = re.search(rf"^## \[{re.escape(versao)}\][^\n]*\n(.*?)(?=^## \[|\Z)", texto, re.S | re.M)
+          if not m:
+              sys.exit(f"A versão {versao} não tem seção no CHANGELOG.md. Mova 'Não publicado' para '[{versao}] - data' antes da tag.")
+          corpo = m.group(1).strip()
+          # links relativos (docs/..., CHANGELOG.md) apontam para os arquivos desta tag
+          corpo = re.sub(r"\]\((?!https?://|#)([^)]+)\)", rf"]({os.environ['REPO_URL']}/blob/{tag}/\1)", corpo)
+          open("notas.md", "w", encoding="utf-8").write(corpo + "\n")
+          PY
+
+      - name: Criar a Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: gh release create "$TAG" --title "Support Nexus ${TAG#v}" --notes-file notas.md --verify-tag
