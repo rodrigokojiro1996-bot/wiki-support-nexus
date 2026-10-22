@@ -5,6 +5,10 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- "Importar documento" na interface: no mapa (ao lado de "+ Novo manual" e de "Criar manual para esta tela") e
+  no editor de um manual novo. Escolher ou arrastar o arquivo abre o editor preenchido, com a prévia e os avisos da
+  conversão no topo. Nada é salvo até clicar em Salvar manual; erros (tamanho, tipo, `.doc`, `.docm`) aparecem
+  como texto claro.
 - Exemplos de formatação compartilhados (`backend/tests/dados/importacao/formatacao.json`) testados nos dois lados:
   o importador gera os blocos esperados (pytest) e esses blocos aparecem na tela igual ao mesmo texto colado no
   editor (Vitest, `npm test`, novo no CI).
@@ -54,6 +58,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   números vêm de métricas `nexus_wiki_*`, calculadas no banco a cada coleta do Prometheus.
 
 ### Corrigido
+- O importador apagava o `*` de comandos SQL (`SELECT * FROM` virava `SELECT  FROM`): a linha de SQL agora é
+  reconhecida antes da limpeza de asteriscos soltos.
 - O importador em lote (`ferramentas/importar_processos.py`) gravava todo manual no módulo PDV. Agora o módulo vem
   do item da curadoria (campo `modulo` ou o prefixo do id do menu) e as tabelas citadas são procuradas no banco desse
   módulo; o campo solto `banco` do `curadoria.json` deixou de ser usado. Módulo inexistente é avisado e o manual não

@@ -100,9 +100,10 @@ def test_pdf_json_esperado(banco):
         {"tipo": "obs", "texto": "o caixa só abre com o operador logado."},
         {"tipo": "imagem", "arquivo": "IMG", "legenda": ""},
     ]
-    assert r["secoes"][1]["blocos"][:2] == [
+    assert r["secoes"][1]["blocos"][:3] == [
         {"tipo": "passo", "rotulo": "2.1", "texto": "Acesse Caixa > Fechamento de Caixa."},
         {"tipo": "nota", "texto": "confira as sangrias antes de fechar."},
+        {"tipo": "sql", "texto": "SELECT * FROM caixa_mov WHERE id_caixa = 10;"},  # o "*" fica
     ]
     assert r["tabelas"] == ["caixa_mov"]
     assert "3 imagens ignoradas por se repetir no documento (logo, rodapé)." in r["avisos"]

@@ -195,8 +195,7 @@ class Montador:
         if self.em_codigo:
             blocos[-1]["texto"] = (blocos[-1]["texto"] + "\n" + p).strip("\n")
             return
-        if p.count("*") % 2 == 1:
-            p = p.replace("*", "") if "**" not in p else re.sub(r"(?<!\*)\*(?!\*)", "", p)
+        # SQL antes da limpeza de asteriscos: o "*" de "SELECT * FROM" faz parte do comando
         if SQL.match(p):
             linha = re.sub(r"^(-|//)\s*", "", p)
             if blocos and blocos[-1]["tipo"] == "sql":
@@ -204,6 +203,8 @@ class Montador:
             else:
                 blocos.append({"tipo": "sql", "texto": linha})
             return
+        if p.count("*") % 2 == 1:
+            p = p.replace("*", "") if "**" not in p else re.sub(r"(?<!\*)\*(?!\*)", "", p)
         if m := PASSO.match(p):
             blocos.append({"tipo": "passo", "rotulo": m.group(1), "texto": m.group(2)})
             return
