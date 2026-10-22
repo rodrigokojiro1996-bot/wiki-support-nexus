@@ -1,0 +1,41 @@
+name: Bug
+description: Algo não funciona como deveria.
+labels: ["fix"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Não cole manuais reais, prints de clientes, nomes de servidores, senhas nem dados do banco: o repositório é público.
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir
+      placeholder: |
+        1. Abrir a tela ...
+        2. Clicar em ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que era esperado
+    validations:
+      required: true
+  - type: textarea
+    id: obtido
+    attributes:
+      label: O que aconteceu
+      description: Mensagem de erro, código HTTP, print da tela (sem dados reais).
+    validations:
+      required: true
+  - type: input
+    id: versao
+    attributes:
+      label: Versão ou commit
+      placeholder: v0.2.0 ou 2091637
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options: [backend, frontend, coletor, docker, monitoramento]
