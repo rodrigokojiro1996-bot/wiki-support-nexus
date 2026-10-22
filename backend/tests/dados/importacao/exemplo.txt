@@ -1,0 +1,11 @@
+Transferência entre lojas
+1. Transferência presa como em uso
+1.1 Abra Estoque > Transferência entre Lojas > Saída de Transferência.
+1.2 Confirme se a transferência ficou marcada como em uso por outro computador.
+OBS: só a loja de origem consegue liberar a transferência.
+SELECT id_transf, em_uso FROM transferencias WHERE id_transf = 42;
+2. Transferência não aparece no destino
+Importante: confira a fila de sincronização antes de reenviar.
+• Fila parada há mais de 30 minutos
+• Terminal sem internet
+Senha do banco de teste: password=segredo123
