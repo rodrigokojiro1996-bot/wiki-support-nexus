@@ -81,3 +81,9 @@ versionados.
 
 A documentação técnica completa (arquitetura, decisões, validações e API) está em
 [docs/arquitetura.md](docs/arquitetura.md). As mudanças de cada versão estão no [CHANGELOG](CHANGELOG.md).
+
+Para contribuir: [CONTRIBUTING.md](CONTRIBUTING.md). Falhas de segurança: [SECURITY.md](SECURITY.md).
+
+## Licença
+
+[MIT](LICENSE).
