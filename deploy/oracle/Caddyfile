@@ -1,0 +1,38 @@
+# Caddy na frente do Support Nexus no servidor (Oracle Cloud): HTTPS automático, senha na entrada e bloqueios.
+# Valores vêm do .env (via deploy/oracle/docker-compose.oracle.yml). Guia: docs/oracle-cloud.md
+{
+	email {$NEXUS_EMAIL}   # aviso do Let's Encrypt se o certificado tiver problema
+	admin off              # sem API de administração do Caddy
+}
+
+{$NEXUS_DOMINIO} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# nunca vão para a internet: métricas (têm os nomes de quem contribuiu) e a documentação interativa da API
+	@interno path /metrics /metrics/* /docs /docs/* /redoc /openapi.json
+	respond @interno 404
+
+	# Senha única da equipe (janela do navegador). Não é o login do sistema: é um portão contra robôs e curiosos
+	# enquanto a versão de homologação com login não chega. Ficam abertos: /api/saude (monitores de disponibilidade)
+	# e /robots.txt (para os buscadores lerem o "não indexe" em vez de esbarrar na senha).
+	# Para desligar a senha (não recomendado): comente as 3 linhas do basic_auth.
+	@protegido not path /api/saude /robots.txt
+	basic_auth @protegido {
+		{$NEXUS_ACESSO_USUARIO} {$NEXUS_ACESSO_SENHA_HASH}
+	}
+
+	# prints de até 8 MB (limite da API) com folga; acima disso o Caddy recusa antes de chegar na aplicação
+	request_body {
+		max_size 10MB
+	}
+
+	reverse_proxy nexus:8010
+}

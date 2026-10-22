@@ -1,0 +1,38 @@
+# Complemento do docker-compose.yml para o servidor (Oracle Cloud). Não é uma cópia: só o que muda.
+#   - o Caddy entra na frente, com HTTPS e senha, nas portas 80 e 443
+#   - a API deixa de ter porta própria: só o Caddy fala com ela, pela rede interna do compose
+#   - Grafana e Prometheus continuam presos a 127.0.0.1 do servidor (acesso só por túnel SSH)
+#
+# No servidor, o .env tem COMPOSE_FILE apontando para os dois arquivos, então basta "docker compose up -d --build".
+# Guia completo: docs/oracle-cloud.md
+services:
+  nexus:
+    ports: !reset []
+    environment:
+      # faixa "Ambiente de homologação — dados de exemplo" no topo de todas as telas (o PDF não leva)
+      NEXUS_AMBIENTE: homologacao
+
+  caddy:
+    image: caddy:2.11.7-alpine@sha256:eb4d35b7452d1ab6171fbdbe8d9275b2301dad6dad92115d91e19fb9b24d510f
+    depends_on:
+      nexus:
+        condition: service_healthy
+    ports:
+      - "${NEXUS_PORTA_HTTP:-80}:80"          # o Let's Encrypt valida o domínio por aqui; depois só redireciona
+      - "${NEXUS_PORTA_HTTPS:-443}:443"
+      - "${NEXUS_PORTA_HTTPS:-443}:443/udp"   # HTTP/3
+    environment:
+      NEXUS_DOMINIO: "${NEXUS_DOMINIO:?Defina NEXUS_DOMINIO no .env, por exemplo nexus-suporte.duckdns.org}"
+      NEXUS_EMAIL: "${NEXUS_EMAIL:?Defina NEXUS_EMAIL no .env (avisos do certificado)}"
+      NEXUS_ACESSO_USUARIO: "${NEXUS_ACESSO_USUARIO:-equipe}"
+      NEXUS_ACESSO_SENHA_HASH: "${NEXUS_ACESSO_SENHA_HASH:?Rode bash deploy/oracle/configurar.sh para criar a senha da entrada}"
+    volumes:
+      - ./deploy/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-dados:/data       # certificados HTTPS (guardar para não pedir de novo a cada recriação)
+      - caddy-config:/config
+    mem_limit: 256m
+    restart: unless-stopped
+
+volumes:
+  caddy-dados:
+  caddy-config:

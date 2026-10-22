@@ -5,3 +5,4 @@ Dockerfile      text eol=lf
 .dockerignore   text eol=lf
 docker-compose.yml text eol=lf
 docker/**/*.yml   text eol=lf
+deploy/**        text eol=lf

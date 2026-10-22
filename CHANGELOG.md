@@ -8,6 +8,15 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Homologação: `NEXUS_AMBIENTE=homologacao` mostra a faixa "Ambiente de homologação" em todas as telas, e
   `/api/saude` informa o ambiente. Guia de `docker run` sem o compose em `docs/docker.md` (seção 10).
 - Fora dos buscadores: `robots.txt` e o cabeçalho `X-Robots-Tag: noindex, nofollow` em toda resposta.
+- Servidor de testes na Oracle Cloud (`deploy/oracle/`, guia em `docs/oracle-cloud.md`): Caddy na frente com HTTPS
+  automático, senha única na entrada (bcrypt), `/metrics` e `/docs` bloqueados, cabeçalhos de segurança e limite de
+  10 MB por envio; API sem porta própria para fora; scripts para preparar o servidor (Docker, fuso, atualizações
+  automáticas, firewall da imagem da Oracle, swap), configurar o `.env` e fazer backup com rotação. Liga a faixa de homologação.
+  Imagem testada em ARM (processador do plano gratuito).
+
+### Corrigido
+- O contêiner gravava as datas em UTC (3 h adiantado em relação a Brasília): o compose agora define o fuso
+  (`NEXUS_FUSO`, padrão `America/Sao_Paulo`).
 
 ### Alterado
 - A imagem tem o `tini` como PID 1 e o Chromium do PDF roda com `--disable-dev-shm-usage`: funciona num
