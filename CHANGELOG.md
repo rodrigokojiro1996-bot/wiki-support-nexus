@@ -4,6 +4,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+## [0.3.0] - 2026-10-22
+
 ### Adicionado
 - "Importar documento" na interface: no mapa (ao lado de "+ Novo manual" e de "Criar manual para esta tela") e
   no editor de um manual novo. Escolher ou arrastar o arquivo abre o editor preenchido, com a prévia e os avisos da
@@ -126,5 +128,7 @@ Estrutura e boas práticas a partir do plano em [docs/ideias-melhorias.txt](docs
 Primeira versão: mapa do sistema, diagrama ER por tela, catálogo do banco com relações inferidas, manuais com
 exportação para PDF, importador de documentos e sistema de exemplo (demo_pdv).
 
+[Não publicado]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/releases/tag/v0.1.0
