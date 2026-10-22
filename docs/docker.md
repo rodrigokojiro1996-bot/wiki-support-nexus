@@ -61,7 +61,13 @@ imagem nova e recriar o contêiner", sem medo de perder manuais.
   desatualizado: o build nunca "escolhe" versões sozinho.
 - **Só `requirements.txt`.** A imagem leva só a API. O importador de documentos e os testes ficam de fora.
 - **Chromium do Playwright no lugar do Edge.** No Linux não há Edge; `NEXUS_PDF_CANAL=chromium` faz o PDF usar o
-  Chromium que `playwright install --with-deps chromium` instala com as bibliotecas de sistema necessárias.
+  Chromium que `playwright install --with-deps --no-shell chromium` instala com as bibliotecas de sistema
+  necessárias (inclusive a fonte de emoji). O `--no-shell` pula o "headless shell", um segundo navegador que o
+  canal `chromium` não usa: 273 MB a menos (imagem de 1,9 GB para 1,5 GB).
+- **Fontes.** A interface leva Manrope e JetBrains Mono no próprio build (pacotes `@fontsource-variable`), sem
+  depender do Google Fonts. O manual usa Segoe UI e Consolas, que são da Microsoft e não existem no Linux: no
+  contêiner o PDF sai com as equivalentes abertas Liberation Sans e Liberation Mono (mesmas medidas). O gerador
+  espera `document.fonts.ready` antes de imprimir.
 - **Limpeza do `apt` no mesmo `RUN`.** Cada `RUN` vira uma camada; apagar a lista de pacotes num `RUN` seguinte não
   diminui a imagem, porque ela já ficou gravada na camada anterior.
 - **Usuário sem privilégios (`nexus`, uid 10001).** Se alguém explorar uma falha da aplicação, não é root dentro
@@ -131,6 +137,9 @@ docker compose ps                # STATUS deve chegar a "Up … (healthy)" em at
 
 Abra <http://localhost:8010>.
 
+Números desta máquina (i5-9600KF, 16 GB): primeiro build ~2,5 min (a camada do pip + Chromium leva ~90 s);
+build depois de mudar só o código ~40 s (essa camada sai do cache); contêiner saudável ~7 s depois de subir.
+
 | Para… | Comando |
 |---|---|
 | ver o log ao vivo | `docker compose logs -f` |
@@ -142,6 +151,40 @@ Abra <http://localhost:8010>.
 | ver o tamanho da imagem | `docker image ls support-nexus` |
 
 > Não rode o `iniciar.ps1`/`iniciar-producao.ps1` e o contêiner ao mesmo tempo: todos usam a porta 8010.
+
+### 4.1 Build atrás de antivírus ou proxy que inspeciona HTTPS
+
+Alguns antivírus (Avast, AVG, Kaspersky, ESET…) e proxies corporativos abrem as conexões HTTPS para examiná-las e
+as assinam com um certificado próprio. O Windows confia nesse certificado (o antivírus o instalou nele), mas o
+Linux do build não, e recusa a conexão, corretamente:
+
+```
+SSLError(SSLCertVerificationError(... certificate verify failed: unable to get local issuer certificate))
+ERROR: No matching distribution found for fastapi==0.159.1
+```
+
+Para saber se é isso, veja quem assina o certificado de um site, no PowerShell:
+```powershell
+$t = New-Object Net.Sockets.TcpClient('pypi.org', 443); $s = New-Object Net.Security.SslStream($t.GetStream(), $false, { $true })
+$s.AuthenticateAsClient('pypi.org'); $c = New-Object Security.Cryptography.X509Certificates.X509Chain
+[void]$c.Build($s.RemoteCertificate); $c.ChainElements | ForEach-Object { $_.Certificate.Subject }
+```
+Se a última linha for o antivírus (ex.: `Avast Web/Mail Shield Root`) em vez de uma autoridade pública
+(GlobalSign, DigiCert, ISRG…), adicione exceções no antivírus para os sites que o build usa:
+
+| Site | Usado por |
+|---|---|
+| `pypi.org`, `files.pythonhosted.org` | pip |
+| `registry.npmjs.org` | npm |
+| `deb.debian.org` | apt (bibliotecas do Chromium) |
+| `cdn.playwright.dev`, `playwright.download.prss.microsoft.com` | download do Chromium |
+
+No Avast: Menu → Configurações → Geral → Exceções → Adicionar exceção, no formato `https://pypi.org/*`. Rode o
+teste acima de novo: a raiz tem que ser a autoridade pública antes de tentar o build. **Não** desligue a
+verificação de certificado no build (`--trusted-host`, `strict-ssl false`): isso esconde o problema e abre a porta
+para pacotes adulterados.
+
+O contêiner em execução não precisa de internet (fontes e interface vão na imagem), então isso só afeta o build.
 
 
 ## 5. Dados: volume, backup e restauração
@@ -159,6 +202,14 @@ docker compose cp nexus:/app/backend/dados .\backup-dados
 ```powershell
 docker compose cp .\backup-dados\. nexus:/app/backend/dados
 docker compose exec -u root nexus chown -R nexus:nexus /app/backend/dados   # arquivos copiados chegam como root
+docker compose restart
+```
+
+**Levar o que você fez no modo local** (`iniciar.ps1`) para o contêiner: o volume é independente da pasta
+`backend\dados` do Windows. Com o contêiner rodando:
+```powershell
+docker compose cp backend\dados\. nexus:/app/backend/dados
+docker compose exec -u root nexus chown -R nexus:nexus /app/backend/dados
 docker compose restart
 ```
 
@@ -210,6 +261,8 @@ digest no `Dockerfile`, rode `pytest -q` e `npm run build` localmente e depois `
 | Sintoma | Causa provável | O que fazer |
 |---|---|---|
 | `docker: command not found` / `error during connect` | Docker Desktop fechado ou não instalado | Abra o Docker Desktop e espere a baleia ficar verde |
+| `CERTIFICATE_VERIFY_FAILED` / `No matching distribution found` no build | Antivírus ou proxy inspecionando HTTPS | [Seção 4.1](#41-build-atrás-de-antivírus-ou-proxy-que-inspeciona-https) |
+| PDF do contêiner com fonte diferente do Windows | Segoe UI e Consolas não existem no Linux | Esperado: sai com Liberation Sans e Liberation Mono ([2.1](#21-dockerfile-duas-etapas-multi-stage-build)) |
 | `WSL 2 is not installed` / "Não há suporte para WSL2" | WSL2 ou "Plataforma de Máquina Virtual" desligados | [Seção 3](#3-instalar-o-docker-no-windows), passo 1, e reinicie |
 | `Bind for 127.0.0.1:8010 failed: port is already allocated` | `iniciar.ps1` ou outro processo na 8010 | Feche o outro, ou troque o lado esquerdo da porta: `"127.0.0.1:8020:8010"` |
 | `exec /usr/local/bin/nexus-entrypoint: no such file or directory` | `entrypoint.sh` com CRLF (Windows) | `git add --renormalize .` e build de novo; confira o `.gitattributes` |

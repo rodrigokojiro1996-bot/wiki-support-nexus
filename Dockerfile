@@ -47,9 +47,10 @@ WORKDIR /app/backend
 # (requirements-ferramentas.txt) e os testes (requirements-dev.txt) não fazem parte da imagem.
 COPY backend/requirements.txt ./
 # --with-deps instala também as bibliotecas do sistema que o Chromium precisa (fontes, libnss, ...);
+# --no-shell: só o Chromium completo, que é o que NEXUS_PDF_CANAL=chromium usa (o "headless shell" seria +273 MB);
 # a limpeza do apt no mesmo RUN evita que a lista de pacotes fique gravada numa camada da imagem
 RUN pip install -r requirements.txt \
- && python -m playwright install --with-deps chromium \
+ && python -m playwright install --with-deps --no-shell chromium \
  && rm -rf /var/lib/apt/lists/*
 
 # usuário sem privilégios: se alguém explorar uma falha da aplicação, não é root dentro do contêiner

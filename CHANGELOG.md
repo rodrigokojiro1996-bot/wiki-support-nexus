@@ -15,7 +15,14 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   (migração 004).
 - Docker: `Dockerfile` em duas etapas (imagens base travadas por versão e digest, usuário sem privilégios,
   `HEALTHCHECK` em `/api/saude`, Chromium para o PDF), `docker-compose.yml` (porta só local, volume `nexus-dados`,
-  `init`, `shm_size`, limite de memória) e guia em `docs/docker.md`.
+  `init`, `shm_size`, limite de memória) e guia em `docs/docker.md`. Imagem de 1,5 GB (Chromium sem o
+  "headless shell").
+
+### Corrigido
+- Fontes da interface (Manrope, JetBrains Mono) empacotadas no build em vez de baixadas do Google Fonts a cada
+  acesso: funcionam sem internet e atrás de antivírus/proxy.
+- PDF no Linux/Docker: alternativas abertas Liberation Sans/Mono para Segoe UI/Consolas (o SQL saía numa fonte
+  chinesa monoespaçada), e o gerador espera as fontes carregarem antes de imprimir.
 
 ### Alterado
 - Mascaramento de senhas e detecção de tabelas citadas em `app/servicos/limpeza.py`, usados pelo editor e pelo

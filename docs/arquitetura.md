@@ -244,6 +244,8 @@ pytest.ini                 configuração dos testes (rodar na raiz)
 **CSS próprio (sem framework de UI)**
 - O manual precisa de um layout fiel na tela e na impressão (regras `@page` e `@media print`). CSS escrito à mão
   dá esse controle.
+- Fontes empacotadas no build (`@fontsource-variable/manrope` e `jetbrains-mono`): sem depender do Google Fonts.
+  O manual usa Segoe UI/Consolas (Windows), com Liberation Sans/Mono como alternativa no Linux.
 - Cores definidas como variáveis: índigo `#4F5BD5` e ciano `#22B8CF` (marca), roxo `#7C3AED` (destaque no
   diagrama).
 
