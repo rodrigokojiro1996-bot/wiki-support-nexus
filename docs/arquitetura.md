@@ -158,14 +158,14 @@ backend/
   app/db.py                conexão SQLite, migrações e caminho do menu
   app/migrations/          NNN_nome.sql, aplicadas em ordem (tabela schema_version)
   app/rotas/               modulos, menus, catalogo, manuais, saude, frontend
-  app/servicos/            diagrama (algoritmo puro), relacoes, manuais
+  app/servicos/            diagrama (algoritmo puro), relacoes, manuais, importacao (documento -> manual)
   app/seed.py              carrega catálogo, menus e manuais no SQLite
   app/pdf.py               geração do PDF dos manuais (Playwright + Edge)
   modulos.exemplo.json     módulos e o banco de cada um (o real fica em modulos.json, fora do git)
   seed/menus_pdv.json      menus e telas do sistema e vínculos sugeridos
   seed/manuais/DEMO.*.json manuais de exemplo (um arquivo por código)
   ferramentas/importar_processos.py
-                           conversão de PDF/Word/.txt em manuais
+                           importação em lote de PDF/Word/.txt (usa servicos/importacao.py)
   ferramentas/curadoria.exemplo.json
                            modelo de curadoria (qual documento vai para qual tela)
   tests/                   pytest com banco temporário
@@ -310,15 +310,18 @@ Pode ser executado quantas vezes for preciso: preserva `relacao_status` e os ví
 "equipe". Os manuais vêm dos exemplos em `backend/seed/manuais/` e do conteúdo real em `backend/dados/manuais/`
 (importados e feitos no editor); com o mesmo código, vale o de `dados/`.
 
-### 7.4 Importação de manuais (`ferramentas/importar_processos.py`)
-Para cada manual definido em `curadoria.json`:
+### 7.4 Importação de manuais (`app/servicos/importacao.py`)
+A conversão de um documento em manual fica em `converter()`, usada pela importação em lote
+(`ferramentas/importar_processos.py`, que percorre o `curadoria.json`). Para cada documento:
 - Lê as fontes. Nos PDFs, só entram as imagens que cada página realmente desenha; nos documentos Word, texto e
   imagens seguem a ordem do documento.
 - Remove ruído: cabeçalhos repetidos, sumário antigo, "Elaborado por" e autores (`autores.json`).
 - Classifica cada parágrafo em seção, passo (mantém a numeração original), OBS, nota, SQL, subtítulo ou texto.
-- Salva os prints em `backend/dados/imagens/<código>/`, ignorando logos repetidos e imagens muito pequenas.
+- Entrega os prints para quem chamou, ignorando logos repetidos e imagens muito pequenas: o lote salva em
+  `backend/dados/imagens/<código>/`; o padrão é o rascunho do editor (`dados/imagens/_rascunho/`).
 - Detecta as tabelas citadas (nomes técnicos e blocos SQL).
-- Grava o manual em `backend/dados/manuais/<código>.json`. Manuais com `"editado": true` não são sobrescritos.
+- No lote, grava o manual em `backend/dados/manuais/<código>.json`. Manuais com `"editado": true` não são
+  sobrescritos.
 
 ### 7.5 Criação e edição de manuais pela interface
 1. O print colado vai para `POST /api/imagens`. O backend confere pelo conteúdo que é PNG, JPG, GIF ou WebP (até

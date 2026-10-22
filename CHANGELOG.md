@@ -53,6 +53,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   chinesa monoespaçada), e o gerador espera as fontes carregarem antes de imprimir.
 
 ### Alterado
+- A conversão de documentos em manuais saiu do script de lote para `app/servicos/importacao.py` (`converter()`),
+  base da importação pela interface. O lote ficou só com a curadoria e gera o mesmo JSON e os mesmos prints de
+  antes. Documentos fictícios de teste em `backend/tests/dados/importacao/`.
 - Mascaramento de senhas e detecção de tabelas citadas em `app/servicos/limpeza.py`, usados pelo editor e pelo
   importador.
 - O seed lê os manuais de `seed/manuais` e de `dados/manuais` juntos (antes, uma pasta ou a outra).
