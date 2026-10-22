@@ -30,6 +30,21 @@ def mascarar(t: str) -> str:
     return t
 
 
+def contar_segredos(t: str) -> int:
+    """Quantas senhas mascarar() troca no texto (o aviso da importação mostra o número)."""
+    n = 0
+
+    def trocar(m: re.Match, sub: str) -> str:
+        nonlocal n
+        novo = m.expand(sub)
+        n += novo != m.group(0)  # "--password=******" casa de novo na regra seguinte: não conta duas vezes
+        return novo
+
+    for rx, sub in SEGREDOS:
+        t = rx.sub(lambda m: trocar(m, sub), t)
+    return n
+
+
 # nomes de tabela sem "_" que também valem como citação técnica no texto (ajuste para o seu banco)
 TECNICAS = {"vendas", "produtos", "clientes", "caixas", "estoque"}
 

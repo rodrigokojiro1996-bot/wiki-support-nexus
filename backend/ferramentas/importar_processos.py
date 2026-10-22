@@ -7,19 +7,19 @@ A conversão de cada documento é a mesma da importação pela interface (app/se
 Uso (dentro de backend/):
     .venv\Scripts\python.exe -m ferramentas.importar_processos
 
-Manuais com "editado": true no JSON não são sobrescritos (proteção para ajustes feitos à mão).
+Manuais com "editado": true no JSON não são sobrescritos (proteção para ajustes feitos à mão). Os nomes de
+ferramentas/autores.json (fora do git) são removidos dos documentos.
 """
 import json
 import shutil
 from pathlib import Path
 
 from app import config, db
-from app.servicos.importacao import Imagens, Montador, converter, norm
+from app.servicos.importacao import Imagens, ImportacaoRecusada, converter
 from app.servicos.manuais import extensao_imagem
 
 # conteúdo real fica em backend/dados/ (no .gitignore); backend/seed/ guarda só o exemplo DEMO.*
 CURADORIA = Path(__file__).with_name("curadoria.json")
-AUTORES = Path(__file__).with_name("autores.json")
 
 
 def pasta_manuais() -> Path:
@@ -63,8 +63,6 @@ def main(curadoria: Path = CURADORIA) -> list[str]:
     pasta_manuais().mkdir(parents=True, exist_ok=True)
     pasta_imagens().mkdir(parents=True, exist_ok=True)
     problemas = []
-    # autores citados nos documentos ("Elaborado por: …"): removidos de qualquer linha solta
-    Montador.autores = {norm(n) for n in json.loads(AUTORES.read_text(encoding="utf-8"))} if AUTORES.exists() else set()
     for spec in cur["manuais"]:
         modulo = modulo_do_item(spec)
         if modulo not in bancos:
@@ -89,7 +87,11 @@ def main(curadoria: Path = CURADORIA) -> list[str]:
             if not arq.exists():
                 problemas.append(f"{spec['codigo']}: arquivo não encontrado: {f['arquivo']}")
                 continue
-            r = converter(arq.read_bytes(), arq.name, nomes_por_banco.get(bancos[modulo], set()), f.get("secao"), imagens=imgs)
+            try:
+                r = converter(arq.read_bytes(), arq.name, nomes_por_banco.get(bancos[modulo], set()), f.get("secao"), imagens=imgs)
+            except ImportacaoRecusada as e:
+                problemas.append(f"{spec['codigo']}: {f['arquivo']}: {e.mensagem}")
+                continue
             versao = r["versao"] or versao
             secoes += r["secoes"]
             tabelas.update(r["tabelas"])

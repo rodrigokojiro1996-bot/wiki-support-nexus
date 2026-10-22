@@ -1,4 +1,0 @@
-# ferramentas/importar_processos.py (conversão de PDF/Word em manuais); não é preciso para a API
-pypdf==6.21.2
-python-docx==1.2.0
-pillow==13.0.0
