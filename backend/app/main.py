@@ -10,7 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import ORIGENS_CORS, VERSAO
 from .db import conectar, migrar
-from .rotas import catalogo, frontend, manuais, menus, modulos, saude
+from .metricas import MetricasHTTP
+from .rotas import catalogo, frontend, manuais, menus, metricas, modulos, saude
 
 
 @asynccontextmanager
@@ -26,8 +27,9 @@ async def ciclo(_app):
 
 app = FastAPI(title="Support Nexus", version=VERSAO, lifespan=ciclo)
 app.add_middleware(CORSMiddleware, allow_origins=ORIGENS_CORS, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(MetricasHTTP)
 
-for r in (saude, modulos, menus, catalogo, manuais):
+for r in (saude, metricas, modulos, menus, catalogo, manuais):
     app.include_router(r.router)
 
 # por último: o build do frontend (modo de produção) responde o que não for da API

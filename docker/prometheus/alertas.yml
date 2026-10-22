@@ -1,0 +1,48 @@
+# Regras de alerta: condições avaliadas a cada 15 s. Aparecem em http://localhost:9090/alerts.
+# "for": quanto tempo a condição precisa durar antes de disparar (evita alarme por um pico isolado).
+# Para avisar por e-mail/Teams/Slack seria preciso um Alertmanager; aqui elas ficam visíveis no Prometheus e no Grafana.
+# Testar: docker compose run --rm --entrypoint promtool prometheus check rules /etc/prometheus/alertas.yml
+groups:
+  - name: support-nexus
+    rules:
+      - alert: NexusForaDoAr
+        expr: up{job="nexus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "A API do Support Nexus não responde ao Prometheus há 1 minuto"
+          description: "Veja docker compose ps e docker compose logs nexus."
+
+      - alert: NexusErros5xx
+        # fração das respostas com status 5xx nos últimos 5 minutos
+        expr: |
+          sum(rate(nexus_http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(nexus_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Mais de 5% das respostas da API são erro do servidor (5xx)"
+          description: "Fração atual: {{ $value | humanizePercentage }}."
+
+      - alert: NexusLento
+        # p95 do tempo de resposta, sem o PDF (que é lento por natureza e tem métrica própria)
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(nexus_http_request_duration_seconds_bucket{route!="/api/manuais/{codigo}/pdf"}[5m]))
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "95% das requisições levam mais de 1 s há 10 minutos"
+          description: "p95 atual: {{ $value | humanizeDuration }}."
+
+      - alert: NexusPdfFalhando
+        expr: increase(nexus_pdf_generation_failures_total[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "A geração de PDF falhou nos últimos 15 minutos"
+          description: "Veja docker compose logs nexus (Chromium, memória compartilhada, shm_size)."

@@ -18,6 +18,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   `init`, `shm_size`, limite de memória) e guia em `docs/docker.md`. Imagem de 1,5 GB (Chromium sem o
   "headless shell").
 
+- Monitoramento: a API publica métricas em `/metrics` (requisições, tempo de resposta por rota, tempo e falhas do
+  PDF, memória e CPU); Prometheus coleta a cada 15 s e avalia 4 regras de alerta (com testes do `promtool`);
+  Grafana com o painel "Support Nexus · API" provisionado por arquivo. Senha do Grafana no `.env`. Guia em
+  `docs/monitoramento.md`.
+
 ### Corrigido
 - Fontes da interface (Manrope, JetBrains Mono) empacotadas no build em vez de baixadas do Google Fonts a cada
   acesso: funcionam sem internet e atrás de antivírus/proxy.

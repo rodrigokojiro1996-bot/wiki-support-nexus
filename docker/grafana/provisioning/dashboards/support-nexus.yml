@@ -1,0 +1,13 @@
+# Painéis carregados dos arquivos JSON de /etc/grafana/dashboards (docker/grafana/dashboards no projeto).
+# allowUiUpdates: false -> o painel é definido pelo arquivo; para mudar, edite gerar_painel.py e gere de novo.
+# (Para experimentar na tela, use "Save as" para criar uma cópia sua.)
+apiVersion: 1
+providers:
+  - name: support-nexus
+    folder: Support Nexus
+    type: file
+    disableDeletion: true
+    allowUiUpdates: false
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

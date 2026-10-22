@@ -394,6 +394,7 @@ Prefixo `/api`. Documentação interativa em http://localhost:8010/docs.
 
 | Método | Rota | O que faz |
 |---|---|---|
+| GET | `/metrics` (fora de `/api`) | métricas no formato do Prometheus ([monitoramento.md](monitoramento.md)) |
 | GET | `/saude` | `{"ok": true, "versao": "…", "schema": N}`; 503 se o banco não responder |
 | GET | `/modulos` | módulos e data da última coleta |
 | GET | `/modulos/{m}/menus` | árvore de menus com contagens |

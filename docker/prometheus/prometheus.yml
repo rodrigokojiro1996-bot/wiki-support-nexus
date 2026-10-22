@@ -1,0 +1,20 @@
+# Prometheus do Support Nexus: de onde coletar as métricas e de quanto em quanto tempo.
+# Validar: docker compose run --rm --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+global:
+  scrape_interval: 15s       # visita cada alvo a cada 15 s ("pull": quem busca é o Prometheus)
+  evaluation_interval: 15s   # reavalia as regras de alerta no mesmo ritmo
+
+rule_files:
+  - /etc/prometheus/alertas.yml
+
+scrape_configs:
+  # a API: "nexus" é o nome do serviço no docker-compose.yml, resolvido pela rede interna do compose
+  - job_name: nexus
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["nexus:8010"]
+
+  # o próprio Prometheus (útil para ver se a coleta está saudável)
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

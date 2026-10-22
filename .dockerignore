@@ -20,6 +20,8 @@ frontend/*.tsbuildinfo
 backend/dados
 backend/modulos.json
 coletor/.env
+.env
+.env.*
 coletor/saida
 backend/ferramentas/segredos.txt
 backend/ferramentas/curadoria.json
@@ -34,5 +36,7 @@ coletor/tests
 coletor/*.py
 coletor/requirements.txt
 docs
+docker/prometheus
+docker/grafana
 *.ps1
 pytest.ini

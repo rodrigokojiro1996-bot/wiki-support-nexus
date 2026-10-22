@@ -1,0 +1,12 @@
+# Fonte de dados criada pelo próprio Grafana ao subir (provisionamento): nada a cadastrar na tela.
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus            # o painel aponta para este uid
+    type: prometheus
+    access: proxy              # quem consulta é o servidor do Grafana (pela rede interna), não o seu navegador
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false            # mudanças vêm deste arquivo, não da tela
+    jsonData:
+      timeInterval: 15s        # igual ao scrape_interval do Prometheus

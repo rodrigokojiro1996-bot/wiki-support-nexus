@@ -1,7 +1,8 @@
 # Support Nexus com Docker
 
 Como rodar o Support Nexus em um contêiner, e o porquê de cada escolha. Para a arquitetura da aplicação em si,
-veja [arquitetura.md](arquitetura.md).
+veja [arquitetura.md](arquitetura.md); para o Prometheus e o Grafana, que sobem no mesmo compose,
+[monitoramento.md](monitoramento.md).
 
 1. [Conceitos em 1 minuto](#1-conceitos-em-1-minuto)
 2. [Arquivos](#2-arquivos)
