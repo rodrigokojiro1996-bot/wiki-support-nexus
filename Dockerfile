@@ -11,7 +11,7 @@
 # ---------------------------------------------------------------------------------------------------------------
 # Etapa 1 · frontend: compila o React. Nada desta etapa vai para a imagem final além de frontend/dist.
 # ---------------------------------------------------------------------------------------------------------------
-FROM node:22.23.0-bookworm-slim@sha256:d9f850096136edbc402debdd8729579a288aac64574ada0ff4db26b6ae58b0b2 AS frontend
+FROM node:26.11.1-bookworm-slim@sha256:86f07bc9c5dce4578cf37e5a418b7bfc7f817cda25cde66e2b66e95ed86c4567 AS frontend
 
 WORKDIR /src
 
