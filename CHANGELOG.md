@@ -5,6 +5,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- CI no GitHub Actions (`.github/workflows/ci.yml`) em todo PR e push na main: pytest, build do frontend
+  (com checagem de tipos), `promtool` (configuração e testes das regras de alerta) e build da imagem Docker.
+  Actions travadas por SHA, permissão só de leitura e execução antiga cancelada a cada push novo.
 - Editor de manuais na interface: "Criar manual para esta tela" na Visão geral, "+ Novo manual" e "Editar".
   Blocos iguais aos dos manuais existentes, prévia ao vivo e prints com Ctrl+V ou arrastando.
 - `POST /api/manuais`, `PUT /api/manuais/{código}` e `POST /api/imagens`.

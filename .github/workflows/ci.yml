@@ -1,0 +1,70 @@
+# CI do Support Nexus: roda em todo pull request e em todo push na main.
+# Os nomes dos jobs são os "status checks" exigidos pela regra de proteção da main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# só leitura do repositório: o CI não publica nada
+permissions:
+  contents: read
+
+# um push novo no mesmo branch cancela a execução antiga
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: backend (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14.9" # a mesma do Dockerfile
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements*.txt
+            coletor/requirements.txt
+      - run: python -m pip install -r backend/requirements-dev.txt -r coletor/requirements.txt
+      - run: python -m pytest -q
+
+  frontend:
+    name: frontend (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22.23.0" # a mesma do Dockerfile
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      # tsc -b confere os tipos antes do vite build
+      - run: npm run build
+        working-directory: frontend
+
+  prometheus:
+    name: prometheus (promtool)
+    runs-on: ubuntu-latest
+    env:
+      # a mesma imagem do docker-compose.yml
+      PROMETHEUS: prom/prometheus:v3.15.1@sha256:fa3302279710be2f21a8301ec17a8b4f2301fd829bd113839b3b6b02b6f191a2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: promtool check config
+        run: docker run --rm -v "$PWD/docker/prometheus:/etc/prometheus:ro" --entrypoint promtool "$PROMETHEUS" check config /etc/prometheus/prometheus.yml
+      - name: promtool test rules
+        run: docker run --rm -v "$PWD/docker/prometheus:/etc/prometheus:ro" -w /etc/prometheus --entrypoint promtool "$PROMETHEUS" test rules alertas.test.yml
+
+  docker:
+    name: docker (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # só monta a imagem (sem push): garante que o Dockerfile continua funcionando
+      - run: docker build --tag support-nexus:ci .
