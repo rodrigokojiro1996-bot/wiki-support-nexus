@@ -73,8 +73,7 @@ Tempo estimado: 40 a 60 minutos na primeira vez (a maior parte é esperar a Orac
 
 - Uma conta na Oracle Cloud (pede cartão de crédito só para verificar a identidade; o plano gratuito não cobra).
 - Um e-mail para os avisos do certificado HTTPS.
-- O código no GitHub, no `main`. Os arquivos deste guia chegam ao `main` pelo pull request do branch
-  `feat/deploy-oracle`; enquanto ele não for aceito, clone esse branch (`-b feat/deploy-oracle`).
+- O código no GitHub, no `main` (os arquivos deste guia já estão nele).
 
 > **Região de origem.** Na criação da conta a Oracle pede a "home region", e ela **não pode ser trocada depois**.
 > As máquinas gratuitas ficam nela. Escolha uma perto (São Paulo ou Vinhedo); se a máquina ARM gratuita estiver
@@ -90,15 +89,15 @@ vez em quando; o que importa são as escolhas:
 |---|---|---|
 | Name | `support-nexus` | |
 | Image | **Canonical Ubuntu 24.04** | os scripts foram feitos para ele |
-| Shape | **Ampere → VM.Standard.A1.Flex**, **2 OCPUs e 12 GB** | máquina ARM do plano gratuito; deixa metade da cota livre. O projeto usa bem menos (API ~70 MB parada, PDF ~300 MB por alguns segundos) |
+| Shape | **Ampere → VM.Standard.A1.Flex**, **1 OCPU e 4 GB** | máquina ARM do plano gratuito, que hoje vai até 2 OCPUs e 12 GB no total. O projeto usa bem menos (API ~70 MB parada, PDF ~300 MB por alguns segundos), e uma máquina menor fica longe do critério de "ociosa" da seção 12 |
 | Networking | criar uma VCN nova com **sub-rede pública** e **atribuir IPv4 público** | o servidor precisa de endereço na internet |
 | SSH keys | **Generate a key pair** e **baixe a chave privada** (`.key`) | é a "senha" de acesso ao servidor; guarde bem e nunca mande para ninguém |
 | Boot volume | padrão (~47 GB) | a imagem tem 1,5 GB; sobra muito |
 
 Clique em **Create** e espere o estado **Running**. Anote o **Public IP address**.
 
-> **"Out of capacity"** é comum nas máquinas ARM gratuitas. Tente outro *Availability Domain*, menos recursos
-> (1 OCPU e 6 GB também servem) ou outro horário. Plano B: a máquina AMD gratuita (`VM.Standard.E2.1.Micro`,
+> **"Out of capacity"** é comum nas máquinas ARM gratuitas. Tente outro *Availability Domain*, outro tamanho
+> (1 OCPU e 2 GB ainda roda tudo) ou outro horário. Plano B: a máquina AMD gratuita (`VM.Standard.E2.1.Micro`,
 > 1 GB de memória) roda o Support Nexus sem o monitoramento; veja [Problemas comuns](#13-problemas-comuns).
 
 
@@ -297,10 +296,13 @@ Boas práticas para os testes:
 Confira as regras atuais na página "Always Free" da Oracle antes de criar; elas já mudaram no passado. Até a data
 deste guia:
 
-- Máquinas ARM (Ampere A1) até **4 OCPUs e 24 GB** no total, 200 GB de disco e tráfego de saída generoso: o
-  Support Nexus usa uma fração disso.
-- **Máquinas ociosas podem ser recuperadas** pela Oracle nas contas gratuitas (uso de processador muito baixo por
-  vários dias). Uma wiki de testes pouco usada pode cair nesse critério. Converter a conta para *Pay As You Go*
+- Máquinas ARM (Ampere A1) até **2 OCPUs e 12 GB** no total (era 4 e 24 até agosto de 2026, quando a Oracle
+  cortou pela metade sem anúncio), 200 GB de disco e tráfego de saída generoso: o Support Nexus usa uma fração.
+- **Máquinas ociosas podem ser recuperadas** pela Oracle nas contas gratuitas. É ociosa a máquina que, em 7 dias,
+  fica com processador, rede **e** memória (esta só nas ARM) abaixo de 20%. Uma wiki de testes pouco usada fica com
+  processador e rede baixos; o que a salva é a memória passar de 20%. Por isso a máquina pequena do passo 3: com
+  4 GB, a aplicação, o Caddy, o Prometheus e o Grafana juntos ficam perto ou acima disso (confira em
+  *Instance → Metrics → Memory utilization* na primeira semana). Converter a conta para *Pay As You Go*
   (pagamento conforme o uso), usando só recursos Always Free, costuma evitar isso; nesse caso, crie um
   **alerta de orçamento** (Billing → Budgets) de poucos reais, para ser avisado de qualquer cobrança.
 - Enquanto a conta for só gratuita, nada é cobrado: o que não é Always Free simplesmente não pode ser criado.
