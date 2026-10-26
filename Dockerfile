@@ -27,7 +27,7 @@ RUN npm run build
 # ---------------------------------------------------------------------------------------------------------------
 # Etapa 2 · aplicação: Python + dependências da API + Chromium do Playwright + o build da etapa 1.
 # ---------------------------------------------------------------------------------------------------------------
-FROM python:3.14.9-slim-bookworm@sha256:7e0522950230cad1ec100ada6e3898c22c6bc82851289b4bdf0bf77c1c829cd5 AS app
+FROM python:3.15.0-slim-bookworm@sha256:0e019bbdfb5d9874cb2389f1c2884b64aa2ac97c99960b5bc521cef978c0617d AS app
 
 # PYTHONDONTWRITEBYTECODE / PYTHONUNBUFFERED: sem .pyc soltos e com log aparecendo na hora no "docker logs"
 # PLAYWRIGHT_BROWSERS_PATH: o Chromium fica numa pasta fixa, legível pelo usuário sem privilégios
