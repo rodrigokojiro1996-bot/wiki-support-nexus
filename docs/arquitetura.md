@@ -351,7 +351,9 @@ A conversão de um documento em manual fica em `converter()`, usada pela rota `P
 3. Ao salvar: código novo no padrão do módulo (`PDV.001`, `PDV.002`…), ou versão +0.1 na edição; senhas
    mascaradas e tabelas citadas detectadas com as mesmas regras do importador (`app/servicos/limpeza.py`); os
    prints do rascunho vão para `dados/imagens/<código>/NN.ext`.
-4. O manual é gravado em `dados/manuais/<código>.json` com `"editado": true` (o importador não sobrescreve) e no
+4. A hora da gravação, em Brasília, vai para `alterado_em` e aparece no rodapé do manual e do PDF como
+   "Manual alterado em DD/MM/AAAA às HH:MM".
+5. O manual é gravado em `dados/manuais/<código>.json` com `"editado": true` (o importador não sobrescreve) e no
    banco na mesma hora. Editar um manual de exemplo grava a cópia em `dados/manuais/`, que passa a valer.
 
 ### 7.6 Exportação de PDF

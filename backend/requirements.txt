@@ -7,3 +7,5 @@ prometheus-client==0.26.0
 pypdf==6.21.2
 python-docx==1.2.0
 pillow==13.0.0
+# fuso de Brasília (America/Sao_Paulo) nas datas dos manuais: o Windows não traz a base de fusos do sistema
+tzdata==2026.5

@@ -21,7 +21,7 @@ def test_manual_inexistente_404(cliente):
 
 
 def test_pdf_indisponivel_503(cliente, monkeypatch):
-    def falha(codigo):
+    def falha(codigo, *_):
         raise RuntimeError("sem navegador")
     monkeypatch.setattr(pdf, "gerar", falha)
     r = cliente.get("/api/manuais/DEMO.001/pdf")
@@ -29,7 +29,7 @@ def test_pdf_indisponivel_503(cliente, monkeypatch):
 
 
 def test_pdf_ok(cliente, monkeypatch):
-    monkeypatch.setattr(pdf, "gerar", lambda codigo: b"%PDF-1.7 teste")
+    monkeypatch.setattr(pdf, "gerar", lambda codigo, *_: b"%PDF-1.7 teste")
     r = cliente.get("/api/manuais/DEMO.001/pdf")
     assert r.status_code == 200
     assert r.headers["content-type"] == "application/pdf"

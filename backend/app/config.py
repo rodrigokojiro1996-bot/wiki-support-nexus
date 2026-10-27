@@ -1,7 +1,9 @@
 """Configuração do Support Nexus: caminhos, portas e limites num só lugar."""
 import json
 import os
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 VERSAO = "0.3.0"
 
@@ -18,6 +20,14 @@ ORIGENS_CORS = ["http://localhost:5173", "http://127.0.0.1:5173"]
 # Em produção NEXUS_FRONTEND aponta para a própria API (http://127.0.0.1:8010), que serve o build.
 FRONTEND = os.environ.get("NEXUS_FRONTEND", "http://localhost:5173")
 PDF_CANAL = os.environ.get("NEXUS_PDF_CANAL", "msedge")
+
+# datas que a equipe vê (ex.: "Manual alterado em") são sempre de Brasília, qualquer que seja o fuso do servidor
+FUSO = ZoneInfo("America/Sao_Paulo")
+
+
+def agora_brasilia() -> str:
+    """Agora em Brasília, no formato das datas do banco: "AAAA-MM-DD HH:MM:SS"."""
+    return datetime.now(FUSO).strftime("%Y-%m-%d %H:%M:%S")
 
 # "homologacao" mostra a faixa "Ambiente de homologação" na interface (GET /api/saude informa o valor)
 AMBIENTE = os.environ.get("NEXUS_AMBIENTE", "").strip().lower()

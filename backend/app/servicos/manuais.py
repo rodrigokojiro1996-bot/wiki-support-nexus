@@ -26,18 +26,20 @@ def gravar_no_banco(con: sqlite3.Connection, m: dict, menu: str | None) -> None:
     atualizado_em: a data gravada no JSON pelo editor, quando houver; senão, agora. Num manual que já existe, a data
     só muda se o conteúdo mudou: o seed roda a cada subida e não pode "atualizar" manuais que ninguém mexeu.
     """
-    con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes, por, atualizado_em)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', 'localtime')))
+    con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes, por, alterado_em, atualizado_em)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', 'localtime')))
                    ON CONFLICT(codigo) DO UPDATE SET
                      atualizado_em = CASE WHEN manuais.titulo = excluded.titulo AND manuais.subtitulo = excluded.subtitulo
                                            AND manuais.conteudo = excluded.conteudo AND manuais.versao = excluded.versao
                                           THEN manuais.atualizado_em ELSE excluded.atualizado_em END,
                      titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
                      modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
-                     fontes = excluded.fontes, por = excluded.por""",
+                     fontes = excluded.fontes, por = excluded.por, alterado_em = excluded.alterado_em""",
                 (m["codigo"], m["titulo"], m.get("subtitulo", ""), m.get("versao", "1.0"), m["modulo"], menu,
                  json.dumps(m["secoes"], ensure_ascii=False), json.dumps(m.get("tabelas", [])),
-                 json.dumps(m.get("fontes", []), ensure_ascii=False), m.get("por", ""), m.get("atualizado_em")))
+                 json.dumps(m.get("fontes", []), ensure_ascii=False), m.get("por", ""),
+                 # manual salvo pelo editor antes de existir alterado_em: a data dele é a da última gravação
+                 m.get("alterado_em") or (m.get("atualizado_em") if m.get("editado") else None), m.get("atualizado_em")))
 
 
 # ---------------- editor ----------------
@@ -139,6 +141,7 @@ def salvar(con: sqlite3.Connection, dados: dict, por: str, codigo: str | None = 
     (o editor comum), o manual mantém as que já tinha.
     """
     anterior = manual_completo(con, codigo) if codigo else None
+    agora = config.agora_brasilia()
     codigo = codigo or proximo_codigo(con, dados["modulo"])
     secoes = _limpar(dados["secoes"])
     _promover_imagens(codigo, secoes)
@@ -154,7 +157,8 @@ def salvar(con: sqlite3.Connection, dados: dict, por: str, codigo: str | None = 
         "modulo": dados["modulo"], "menu": dados.get("menu"),
         "fontes": dados.get("fontes") or (anterior["fontes"] if anterior else []),
         "tabelas": tabelas_citadas(textos, sqls, nomes),
-        "por": por, "atualizado_em": con.execute("SELECT datetime('now', 'localtime')").fetchone()[0], "secoes": secoes,
+        # alterado_em: hora de Brasília em que alguém salvou pelo editor; vai no rodapé do manual e do PDF
+        "por": por, "atualizado_em": agora, "alterado_em": agora, "secoes": secoes,
     }
     pasta = config.DADOS / "manuais"
     pasta.mkdir(parents=True, exist_ok=True)

@@ -4,6 +4,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Adicionado
+- Rodapé "Manual alterado em DD/MM/AAAA às HH:MM" na tela e no PDF sempre que alguém salva o manual pelo editor,
+  na hora de Brasília (`America/Sao_Paulo`, qualquer que seja o fuso do servidor). Manuais nunca alterados pela
+  interface mantêm "Documento gerado pelo Support Nexus". Migração 005 (`manuais.alterado_em`) e `tzdata`.
+
 ### Alterado
 - Identidade visual da rede Farmácias Associadas: turquesa `#00B2A9` e laranja `#F36F21` (a cor do logo),
   botões principais em laranja com letra branca, links e foco em turquesa escuro, fonte Inter, logo da rede no
