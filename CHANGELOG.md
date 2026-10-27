@@ -5,6 +5,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Estrutura real do sistema no lugar do exemplo, sem nada no git: menus reais em `dados/menus_<módulo>.json`
+  (preferidos ao exemplo de `seed/`), catálogo do coletor e `modulos.json`. Na troca, os menus que saíram do
+  arquivo são removidos, os manuais de exemplo saem e os da equipe ficam (sem tela, se a tela não existir mais).
+  Tela inicial: selo "Sistema de exemplo" só com o exemplo, "Começar por" a primeira tela com tabelas e a
+  lista "Manuais sem tela". No servidor da Oracle, `deploy/oracle/docker-compose.dados-reais.yml`.
 - Rodapé "Manual alterado em DD/MM/AAAA às HH:MM" na tela e no PDF sempre que alguém salva o manual pelo editor,
   na hora de Brasília (`America/Sao_Paulo`, qualquer que seja o fuso do servidor). Manuais nunca alterados pela
   interface mantêm "Documento gerado pelo Support Nexus". Migração 005 (`manuais.alterado_em`) e `tzdata`.

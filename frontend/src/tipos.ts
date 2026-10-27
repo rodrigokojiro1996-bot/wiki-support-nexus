@@ -1,4 +1,10 @@
-export type Modulo = { id: string; nome: string; banco: string | null; catalogo_em: string | null; catalogo_resumo: string | null };
+export type Modulo = {
+  id: string; nome: string; banco: string | null; catalogo_em: string | null; catalogo_resumo: string | null;
+  exemplo: boolean; // mostra o sistema fictício versionado, e não o banco real coletado
+};
+
+/** GET /api/manuais: a lista, sem o conteúdo */
+export type ManualResumo = { codigo: string; titulo: string; subtitulo: string; versao: string; modulo: string; menu: string | null; atualizado_em: string };
 
 export type MenuNo = {
   id: string; titulo: string; atalho: string | null; tela_codigo: string | null;

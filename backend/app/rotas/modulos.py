@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 
+from ..seed import catalogo_de_exemplo
 from . import db
 
 router = APIRouter(prefix="/api/modulos")
@@ -7,8 +8,10 @@ router = APIRouter(prefix="/api/modulos")
 
 @router.get("")
 def modulos(con=Depends(db)):
-    return [dict(r) for r in con.execute("""SELECT m.*, i.em AS catalogo_em, i.resumo AS catalogo_resumo
-                                           FROM modulos m LEFT JOIN importacoes i ON i.banco = m.banco ORDER BY m.rowid""")]
+    # exemplo: o módulo mostra o sistema fictício versionado (a tela avisa "Sistema de exemplo")
+    return [{**dict(r), "exemplo": catalogo_de_exemplo(r["banco"])}
+            for r in con.execute("""SELECT m.*, i.em AS catalogo_em, i.resumo AS catalogo_resumo
+                                    FROM modulos m LEFT JOIN importacoes i ON i.banco = m.banco ORDER BY m.rowid""")]
 
 
 @router.get("/{modulo}/menus")

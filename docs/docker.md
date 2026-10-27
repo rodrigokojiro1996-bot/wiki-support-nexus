@@ -233,6 +233,10 @@ O catálogo real e a lista de módulos ficam fora da imagem e entram por volume,
    e `backend/modulos.json`.
 2. No `docker-compose.yml`, descomente as duas linhas de volume do banco real.
 3. `docker compose up -d`: o seed da subida importa o catálogo real.
+4. Menus reais: grave-os em `dados/menus_<módulo>.json` (no volume de dados), no formato de
+   `backend/seed/menus_<módulo>.json`; o seed prefere esse arquivo ao exemplo. No servidor da Oracle, o
+   complemento `deploy/oracle/docker-compose.dados-reais.yml` faz tudo isso ([oracle-cloud.md](oracle-cloud.md),
+   seção 14).
 
 
 ## 7. Atualizar para uma versão nova

@@ -18,6 +18,7 @@ com HTTPS (um servidor da empresa, por exemplo), o caminho mais curto é o `dock
 11. [Segurança desta versão de testes](#11-segurança-desta-versão-de-testes)
 12. [Custos e regras do plano gratuito](#12-custos-e-regras-do-plano-gratuito)
 13. [Problemas comuns](#13-problemas-comuns)
+14. [Usar a estrutura real do sistema](#14-usar-a-estrutura-real-do-sistema)
 
 
 ## 1. O que vai ficar no ar
@@ -38,7 +39,7 @@ com HTTPS (um servidor da empresa, por exemplo), o caminho mais curto é o `dock
 - **Uma senha única na entrada** (usuário `equipe`). Não é o login do sistema, que fica para a versão de
   homologação: é um portão para que robôs e curiosos da internet não apaguem manuais, encham o disco de imagens
   ou ocupem o servidor gerando PDFs. O campo "Seu nome" continua registrando quem fez cada alteração.
-- **Faixa "Ambiente de homologação — dados de exemplo"** no topo de todas as telas (`NEXUS_AMBIENTE=homologacao`,
+- **Faixa "Ambiente de homologação"** no topo de todas as telas (`NEXUS_AMBIENTE=homologacao`,
   ligado no `docker-compose.oracle.yml`), e o site **fora dos buscadores** (`robots.txt` e `X-Robots-Tag`).
 - **Só o sistema de exemplo** (o PDV fictício). Para os testes, não coloque manuais reais nem dados de clientes:
   a senha é compartilhada e a autoria é só um nome digitado.
@@ -323,3 +324,43 @@ deste guia:
 | Máquina AMD de 1 GB (plano B) lenta ou travando | memória | suba só o essencial: `docker compose up -d --build nexus caddy` (sem Prometheus e Grafana); o `preparar-servidor.sh` já cria 2 GB de swap |
 | "Não foi possível gerar o PDF" no servidor | Chromium sem memória ou travado | `docker compose logs nexus`; confira `shm_size` e `mem_limit` no compose; `docker compose restart nexus` |
 | O IP do servidor mudou | IP público efêmero | atualize no DuckDNS; para não mudar mais, reserve um IP público no console |
+
+
+## 14. Usar a estrutura real do sistema
+
+Por padrão o servidor mostra o sistema de exemplo (um PDV fictício). Para a equipe trabalhar com as tabelas e os
+menus de verdade, os arquivos do sistema real vão para uma pasta **fora do repositório**, no servidor:
+
+| Arquivo no servidor | De onde vem |
+|---|---|
+| `~/nexus-real/modulos.json` | módulos e o banco de cada um (`"banco": "<nome do schema>"`), no formato de `backend/modulos.exemplo.json` |
+| `~/nexus-real/saida/<banco>/catalogo.json` | o coletor (`coletor/`), rodado numa máquina que alcança o banco |
+| `~/nexus-real/menus_pdv.json` | os menus do sistema, no formato de `backend/seed/menus_pdv.json` |
+
+Do seu computador (troque `IP`):
+
+```powershell
+ssh -i $chave ubuntu@IP "mkdir -p ~/nexus-real/saida/<banco>"
+scp -i $chave backend\modulos.json ubuntu@IP:nexus-real/
+scp -i $chave coletor\saida\<banco>\catalogo.json ubuntu@IP:nexus-real/saida/<banco>/
+scp -i $chave menus_pdv.json ubuntu@IP:nexus-real/
+```
+
+No servidor, acrescente o complemento ao `COMPOSE_FILE` do `.env` e suba de novo:
+
+```bash
+cd ~/wiki-support-nexus
+bash deploy/oracle/backup.sh
+sed -i 's#^COMPOSE_FILE=.*#COMPOSE_FILE=docker-compose.yml:deploy/oracle/docker-compose.oracle.yml:deploy/oracle/docker-compose.dados-reais.yml#' .env
+docker compose up -d nexus caddy        # o seed da subida importa o catálogo e os menus reais
+```
+
+O que muda na troca:
+- os menus e o catálogo de exemplo dão lugar aos reais; o selo "Sistema de exemplo" some;
+- os manuais de exemplo (`DEMO.*`) saem, porque descrevem tabelas que não existem no sistema real;
+- os manuais da equipe ficam. O que estava numa tela que não existe no menu real fica **sem tela**, listado na
+  tela inicial do mapa em "Manuais sem tela", até alguém escolher a tela;
+- validações de relação e vínculos feitos sobre o exemplo deixam de aparecer (eram de tabelas fictícias).
+
+> A estrutura do banco é interna da empresa: o servidor só a mostra para quem tem a senha da entrada. Para fechar
+> mais, restrinja a porta 443 ao IP da empresa (passo 4).

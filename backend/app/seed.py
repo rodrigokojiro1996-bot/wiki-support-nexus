@@ -5,6 +5,10 @@ Uso (dentro de backend/):
 
 Pode rodar de novo a qualquer momento: atualiza catálogo, menus e manuais sem apagar
 as validações de relação nem os vínculos menu ↔ tabela feitos pela equipe.
+
+Sistema real x exemplo: o versionado é só o exemplo (coletor/exemplo, seed/menus_*.json, seed/manuais). Para o
+sistema real, fora do git: modulos.json, coletor/saida/<banco>/catalogo.json e dados/menus_<módulo>.json (este
+substitui o seed/menus_<módulo>.json de mesmo nome). Com o catálogo real, os manuais de exemplo do módulo saem.
 """
 import json
 import re
@@ -28,6 +32,18 @@ def arquivo_catalogo(banco: str) -> Path:
     if not arq.exists():  # sem coleta real, usa o banco de exemplo versionado
         arq = PROJETO / "coletor" / "exemplo" / banco / "catalogo.json"
     return arq
+
+
+def catalogo_de_exemplo(banco: str | None) -> bool:
+    """O módulo mostra o sistema de exemplo versionado (e não um banco real coletado)?"""
+    return bool(banco) and arquivo_catalogo(banco).resolve().is_relative_to((PROJETO / "coletor" / "exemplo").resolve())
+
+
+def arquivos_de_menus() -> list[Path]:
+    """seed/menus_<módulo>.json (exemplo) ou, se existir, dados/menus_<módulo>.json (menus do sistema real)."""
+    por_nome = {arq.name: arq for arq in SEED.glob("menus_*.json")}
+    por_nome.update({arq.name: arq for arq in config.DADOS.glob("menus_*.json")})
+    return [por_nome[n] for n in sorted(por_nome)]
 
 
 def importar_catalogo(con, banco: str) -> None:
@@ -72,6 +88,14 @@ def importar_menus(con, arquivo: Path) -> None:
 
     for i, m in enumerate(dados["menus"]):
         gravar(m, None, i)
+    # itens que saíram do arquivo (ex.: troca do exemplo pelo sistema real): manuais ficam sem tela, vínculos saem
+    sobra = [r["id"] for r in con.execute("SELECT id FROM menus WHERE modulo = ?", (modulo,)) if r["id"] not in set(vistos)]
+    if sobra:
+        marcas = ",".join("?" * len(sobra))
+        con.execute(f"UPDATE manuais SET menu = NULL WHERE menu IN ({marcas})", sobra)
+        for mid in sorted(sobra, key=lambda x: x.count("."), reverse=True):  # filhos antes dos pais
+            con.execute("DELETE FROM menus WHERE id = ?", (mid,))  # menu_tabelas sai junto (ON DELETE CASCADE)
+        print(f"  menus {modulo}: {len(sobra)} itens que não estão mais no arquivo foram removidos")
     print(f"  menus {modulo}: {len(vistos)} itens")
 
 
@@ -86,9 +110,14 @@ def arquivos_de_manuais() -> list[Path]:
 
 def importar_manuais(con) -> None:
     menus = {r["id"] for r in con.execute("SELECT id FROM menus")}
+    # manuais de exemplo (seed/manuais) descrevem o sistema fictício: só entram nos módulos que ainda o mostram
+    exemplo = {r["id"] for r in con.execute("SELECT id, banco FROM modulos") if catalogo_de_exemplo(r["banco"])}
     n = 0
     for arq in arquivos_de_manuais():
         m = json.loads(arq.read_text(encoding="utf-8"))
+        if arq.parent == SEED / "manuais" and m["modulo"] not in exemplo:
+            con.execute("DELETE FROM manuais WHERE codigo = ?", (m["codigo"],))
+            continue
         menu = m.get("menu") if m.get("menu") in menus else None
         if m.get("menu") and not menu:
             print(f"  aviso: {m['codigo']} aponta para o menu inexistente {m['menu']}")
@@ -106,7 +135,7 @@ def main():
     for _, _, banco in mods:
         if banco:
             importar_catalogo(con, banco)
-    for arq in sorted(SEED.glob("menus_*.json")):
+    for arq in arquivos_de_menus():
         importar_menus(con, arq)
     importar_manuais(con)
     con.commit()
