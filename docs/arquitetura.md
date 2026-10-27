@@ -244,10 +244,13 @@ pytest.ini                 configuração dos testes (rodar na raiz)
 **CSS próprio (sem framework de UI)**
 - O manual precisa de um layout fiel na tela e na impressão (regras `@page` e `@media print`). CSS escrito à mão
   dá esse controle.
-- Fontes empacotadas no build (`@fontsource-variable/manrope` e `jetbrains-mono`): sem depender do Google Fonts.
+- Fontes empacotadas no build (`@fontsource-variable/inter` e `jetbrains-mono`): sem depender do Google Fonts.
   O manual usa Segoe UI/Consolas (Windows), com Liberation Sans/Mono como alternativa no Linux.
-- Cores definidas como variáveis: índigo `#4F5BD5` e ciano `#22B8CF` (marca), roxo `#7C3AED` (destaque no
-  diagrama).
+- Identidade visual da rede Farmácias Associadas, em variáveis (`app.css` e `documento.css`): turquesa
+  `#00B2A9` (Pantone 326C) e laranja `#F36F21` (a cor exata do logo). Botões principais em laranja com letra
+  branca, mesmo abaixo do contraste AA: regra da marca, a pedido do marketing. Texto, links e foco em turquesa
+  escuro `#007A73`; destaque do diagrama em laranja. Fonte Inter, a mesma dos outros sistemas da rede. Logo,
+  favicon e ícones dos módulos em `frontend/public/marca/`; o PDF embute o logo no cabeçalho.
 
 
 ## 6. Modelo de dados

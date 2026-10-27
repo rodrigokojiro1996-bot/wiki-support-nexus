@@ -1,31 +1,41 @@
 """Gera o PDF do manual abrindo a versão de impressão do frontend num navegador headless.
 
 Usa o Microsoft Edge já instalado (channel="msedge"), então não é preciso baixar o Chromium.
-Cabeçalho e rodapé (com número de página) seguem o modelo visual dos manuais do Support Nexus.
+Cabeçalho e rodapé (com número de página) seguem a identidade visual da rede Farmácias Associadas.
 """
+import base64
 from urllib.parse import quote  # noqa: F401  (reexportado para as rotas)
 
 from playwright.sync_api import sync_playwright
 
-from .config import FRONTEND, PDF_CANAL
+from .config import DIST, FRONTEND, PDF_CANAL, PROJETO
 
-AZUL, AZUL_ESCURO, CIANO = "#4f5bd5", "#2f3a9e", "#22b8cf"
+# turquesa (Pantone 326C), turquesa escuro (texto) e laranja do logo da rede
+TURQUESA, TURQUESA_ESCURO, LARANJA = "#00b2a9", "#007a73", "#f36f21"
 
-# marca do Support Nexus (mesmo desenho de frontend/public/marca/nexus.svg)
-MARCA = f"""<svg width="22" height="22" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="{AZUL_ESCURO}"/>
-<path d="M9 10 L23 10 L16 23 Z" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1.6"/>
-<circle cx="9" cy="10" r="3.2" fill="{CIANO}"/><circle cx="23" cy="10" r="3.2" fill="#fff"/><circle cx="16" cy="23" r="3.2" fill="#ffb84d"/></svg>"""
+
+def _logo() -> str:
+    """O cabeçalho do PDF não carrega arquivos externos: o logo vai embutido. No contêiner ele está no build
+    (frontend/dist), em desenvolvimento em frontend/public; sem nenhum dos dois, o nome em texto."""
+    for pasta in (DIST, PROJETO / "frontend" / "public"):
+        arq = pasta / "marca" / "logo-associadas.png"
+        if arq.exists():
+            return f'<img src="data:image/png;base64,{base64.b64encode(arq.read_bytes()).decode()}" style="height:8mm">'
+    return f'<span style="font-weight:800;color:{TURQUESA_ESCURO}">Farmácias Associadas</span>'
+
+
+MARCA = _logo()
 
 CABECALHO = f"""
 <div style="width:100%;font-family:Segoe UI,Arial,Liberation Sans,sans-serif;font-size:8.5pt;padding:0 14mm 0 30mm;display:flex;justify-content:space-between;align-items:center;-webkit-print-color-adjust:exact">
   <b style="color:#222">Support Nexus – Base de conhecimento</b>
-  <span style="display:flex;align-items:center;gap:6px;font-weight:800;color:{AZUL_ESCURO};font-size:10pt">{MARCA} Support Nexus</span>
+  <span style="display:flex;align-items:center">{MARCA}</span>
 </div>"""
 
 RODAPE = f"""
 <div style="width:100%;font-family:Segoe UI,Arial,Liberation Sans,sans-serif;font-size:9pt;padding:0 14mm 0 12mm;display:flex;justify-content:space-between;align-items:center;-webkit-print-color-adjust:exact">
   <span style="font-weight:700;color:#333"><span class="pageNumber"></span></span>
-  <span style="flex:1;height:2px;margin:0 6mm;background:linear-gradient(90deg,{AZUL},{CIANO})"></span>
+  <span style="flex:1;height:2px;margin:0 6mm;background:linear-gradient(90deg,{TURQUESA},{LARANJA})"></span>
   <span style="color:#666;font-size:8pt">Documento gerado pelo Support Nexus</span>
 </div>"""
 

@@ -4,6 +4,12 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Alterado
+- Identidade visual da rede Farmácias Associadas: turquesa `#00B2A9` e laranja `#F36F21` (a cor do logo),
+  botões principais em laranja com letra branca, links e foco em turquesa escuro, fonte Inter, logo da rede no
+  topo e no cabeçalho do manual e do PDF, favicon com a cruz da rede e ícones dos módulos. As funcionalidades
+  não mudam.
+
 ### Adicionado
 - Homologação: `NEXUS_AMBIENTE=homologacao` mostra a faixa "Ambiente de homologação" em todas as telas, e
   `/api/saude` informa o ambiente. Guia de `docker run` sem o compose em `docs/docker.md` (seção 10).
