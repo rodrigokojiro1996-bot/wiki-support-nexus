@@ -5,6 +5,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Nomes dos módulos no topo e no mapa vêm do `modulos.json` do servidor (ex.: "SPA PDV"), em vez de fixos no código;
+  módulo com banco mapeado fica ativo, os outros aparecem como "em breve".
 - Estrutura real do sistema no lugar do exemplo, sem nada no git: menus reais em `dados/menus_<módulo>.json`
   (preferidos ao exemplo de `seed/`), catálogo do coletor e `modulos.json`. Na troca, os menus que saíram do
   arquivo são removidos, os manuais de exemplo saem e os da equipe ficam (sem tela, se a tela não existir mais).
