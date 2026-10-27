@@ -1,24 +1,28 @@
-/* Support Nexus · interface.
-   Marca: índigo #4F5BD5 e ciano #22B8CF. Para texto sobre branco usamos um índigo mais escuro,
-   para manter o contraste de leitura; o roxo destaca o que está selecionado no diagrama. */
+/* Support Nexus · interface, na identidade visual da rede Farmácias Associadas.
+   Marca: turquesa #00B2A9 (Pantone 326C) e laranja #F36F21 (a cor exata do logo).
+   Regra da marca: botões em laranja com letra branca, mesmo abaixo do contraste AA (decisão consciente, a
+   pedido do marketing: não escurecer as cores do logo). Texto, links e foco usam o turquesa escuro #007A73,
+   o mesmo da Nossa Rede, para ficarem legíveis sobre o branco. */
 :root {
-  --marca: #4f5bd5;
-  --marca-2: #22b8cf;
+  --marca: #00b2a9;
+  --marca-2: #f36f21;
   --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #f6f7fc;
-  --line: #dfe2ef;
-  --line-strong: #b7bdd6;
-  --fg: #1a1d33;
-  --muted: #5b6080;
-  --accent: #3f48c4;
+  --surface-2: #f6f7f9;
+  --line: #e4e7ec;
+  --line-strong: #c3c9d2;
+  --fg: #1f2328;
+  --muted: #5a6472;
+  --accent: #007a73;
   --sobre-accent: #ffffff;
-  --accent-soft: #eceefe;
-  --laranja: #d9480f;
+  --accent-soft: #e6f8f7;
+  --botao: #f36f21;
+  --laranja: #f36f21;
+  --laranja-claro: #fdf0e7;
   --doc: #1f8a4c;
   --warn: #a8701a;
   --crit: #c2412d;
-  --font: "Manrope Variable", "Segoe UI", system-ui, sans-serif;
+  --font: "Inter Variable", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono Variable", "Cascadia Mono", Consolas, monospace;
   --raio: 10px;
   --topo-h: 58px;
@@ -41,10 +45,10 @@ a { color: var(--accent); }
 /* faixa da homologação: laranja de atenção, com texto (não só cor) */
 .faixa-ambiente { padding: 6px 20px; font-size: 13px; text-align: center; color: #5c3a00; background: #ffe2a8; border-bottom: 1px solid var(--warn); }
 .topo { position: sticky; top: 0; z-index: 20; height: var(--topo-h); display: flex; align-items: center; gap: 22px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
-/* faixa da marca: índigo que termina em ciano */
+/* faixa da marca: turquesa que termina no laranja da rede */
 .topo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: linear-gradient(90deg, var(--marca), var(--marca-2)); }
 .topo-marca { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--fg); }
-.topo-logo { height: 32px; width: 32px; display: block; }
+.topo-logo { height: 30px; width: auto; display: block; }
 .topo-div { width: 1px; height: 30px; background: var(--line-strong); }
 .topo-marca b { display: block; font-size: 16px; font-weight: 800; line-height: 1.1; }
 .topo-marca small { display: block; font-size: 11.5px; color: var(--muted); }
@@ -68,7 +72,7 @@ a { color: var(--accent); }
 .btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-weight: 700; font-size: 13px; white-space: nowrap; }
 .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .btn:disabled { opacity: .6; cursor: progress; }
-.btn-primario { background: var(--accent); border-color: var(--accent); color: var(--sobre-accent); }
+.btn-primario { background: var(--botao); border-color: var(--botao); color: var(--sobre-accent); }
 .btn-primario:hover:not(:disabled) { color: var(--sobre-accent); filter: brightness(1.08); }
 .btn-p { height: 26px; padding: 0 10px; font-size: 12px; }
 .link { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 700; cursor: pointer; text-decoration: none; text-align: left; }
@@ -174,8 +178,8 @@ a { color: var(--accent); }
 .ficha-diagrama { flex: 1; min-height: 420px; position: relative; }
 
 /* ---------- diagrama ER ---------- */
-/* destaque do diagrama em roxo (contrasta com o índigo da interface) */
-:root { --destaque: #7c3aed; --destaque-suave: rgba(124, 58, 237, .13); --diag-bg: #ffffff; }
+/* destaque do diagrama no laranja da marca (contrasta com o turquesa da interface) */
+:root { --destaque: #f36f21; --destaque-suave: rgba(243, 111, 33, .14); --diag-bg: #ffffff; }
 .ficha-diagrama .react-flow { background: var(--diag-bg); }
 .ficha-diagrama .react-flow__background { color: var(--line-strong); }
 .diag-vazio { padding: 32px; color: var(--muted); }
@@ -198,7 +202,7 @@ a { color: var(--accent); }
 /* coluna na ponta de uma ligação acesa: faixa na cor da linha dos dois lados do cartão */
 .tb-col.ligada { background: var(--destaque-suave); box-shadow: inset 3px 0 0 var(--destaque), inset -3px 0 0 var(--destaque); }
 .tb-col.ligada b, .tb-col.ligada .tb-ic { color: var(--destaque); }
-.tb-col.achou, .tb-cab .achou { outline: 2px solid var(--laranja); outline-offset: -2px; }
+.tb-col.achou, .tb-cab .achou { outline: 2px solid var(--marca); outline-offset: -2px; }
 .tb-mais { display: flex; align-items: center; height: 24px; padding: 0 12px; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--line); }
 .tb-alca { width: 6px !important; height: 6px !important; min-width: 0 !important; min-height: 0 !important; background: transparent !important; border: 0 !important; }
 /* todas as ligações na cor do destaque; confirmada/documentada contínua, sugerida tracejada */

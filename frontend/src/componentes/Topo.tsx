@@ -32,14 +32,15 @@ export default function Topo({ children }: { children?: React.ReactNode }) {
     <>
     <header className="topo">
       <Link to="/" className="topo-marca" aria-label="Support Nexus – início">
-        <img className="topo-logo" src="/marca/nexus.svg" alt="" />
+        <img className="topo-logo" src="/marca/logo-associadas.png" alt="Farmácias Associadas" />
+        <span className="topo-div" aria-hidden="true" />
         <span><b>Support Nexus</b><small>Mapa vivo do sistema</small></span>
       </Link>
       <nav className="topo-modulos" aria-label="Módulos do sistema">
         {MODULOS.map(m => (
           <span key={m.id} className="topo-mod" aria-current={m.ativo ? 'page' : undefined} aria-disabled={!m.ativo || undefined}
             title={m.ativo ? undefined : 'Em breve'}>
-            <img src={`/marca/modulo-${m.id}.svg`} alt="" />
+            <img src={`/marca/modulo-${m.id}.png`} alt="" />
             {m.nome}
             {!m.ativo && <small>em breve</small>}
           </span>

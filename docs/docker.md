@@ -65,7 +65,7 @@ imagem nova e recriar o contêiner", sem medo de perder manuais.
   Chromium que `playwright install --with-deps --no-shell chromium` instala com as bibliotecas de sistema
   necessárias (inclusive a fonte de emoji). O `--no-shell` pula o "headless shell", um segundo navegador que o
   canal `chromium` não usa: 273 MB a menos (imagem de 1,9 GB para 1,5 GB).
-- **Fontes.** A interface leva Manrope e JetBrains Mono no próprio build (pacotes `@fontsource-variable`), sem
+- **Fontes.** A interface leva Inter e JetBrains Mono no próprio build (pacotes `@fontsource-variable`), sem
   depender do Google Fonts. O manual usa Segoe UI e Consolas, que são da Microsoft e não existem no Linux: no
   contêiner o PDF sai com as equivalentes abertas Liberation Sans e Liberation Mono (mesmas medidas). O gerador
   espera `document.fonts.ready` antes de imprimir.

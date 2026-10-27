@@ -1,10 +1,10 @@
-/* Manual no modelo visual do Support Nexus. É sempre "papel branco", em qualquer tema. */
+/* Manual na identidade visual das Farmácias Associadas. É sempre "papel branco", em qualquer tema. */
 .doc {
-  --d-azul: #4f5bd5;
-  --d-azul-esc: #2f3a9e;
-  --d-ciano: #22b8cf;
-  --d-ciano-esc: #0e7490;
-  --d-cinza: #eef0f6;
+  --d-turquesa: #00b2a9;
+  --d-turquesa-esc: #007a73;
+  --d-laranja: #f36f21;
+  --d-laranja-esc: #c4520f;
+  --d-cinza: #eef1f3;
   --d-texto: #1d1f2b;
   position: relative;
   width: 210mm;
@@ -21,52 +21,52 @@
   color-scheme: light;
 }
 
-/* faixa lateral: índigo, um toque ciano e o restante cinza-claro */
+/* faixa lateral: turquesa, um toque laranja e o restante cinza-claro */
 .doc-faixa { position: absolute; left: 0; top: 0; bottom: 0; width: 13mm; display: flex; flex-direction: column; }
-.doc-faixa i:nth-child(1) { height: 40mm; background: var(--d-azul); }
-.doc-faixa i:nth-child(2) { height: 4mm; background: var(--d-ciano); }
+.doc-faixa i:nth-child(1) { height: 40mm; background: var(--d-turquesa); }
+.doc-faixa i:nth-child(2) { height: 4mm; background: var(--d-laranja); }
 .doc-faixa i:nth-child(3) { flex: 1; background: var(--d-cinza); max-height: 80mm; }
 
 .doc-cab { display: flex; justify-content: space-between; align-items: center; padding: 12mm 14mm 0 30mm; font-size: 9pt; }
 .doc-cab b { display: block; }
 .doc-cab div span { display: block; color: #555; font-size: 8.5pt; }
-.marca-nexus { display: inline-flex; align-items: center; gap: 2mm; color: var(--d-azul-esc); font-size: 11pt; }
-.marca-nexus img { width: 7mm; height: 7mm; display: block; }
+.marca-nexus { display: inline-flex; align-items: center; gap: 2mm; color: var(--d-turquesa-esc); font-size: 11pt; }
+.marca-nexus img { height: 9mm; width: auto; display: block; }
 
 .doc-corpo { flex: 1; padding: 10mm 18mm 14mm 30mm; }
-.doc-traco { width: 72mm; height: 1.6mm; margin: 0 auto 7mm; background: linear-gradient(90deg, var(--d-azul), var(--d-ciano)); border-radius: 1px; }
-.doc-titulo { font-size: 22pt; font-weight: 700; color: var(--d-azul-esc); line-height: 1.15; margin: 0 0 2mm; }
+.doc-traco { width: 72mm; height: 1.6mm; margin: 0 auto 7mm; background: linear-gradient(90deg, var(--d-turquesa), var(--d-laranja)); border-radius: 1px; }
+.doc-titulo { font-size: 22pt; font-weight: 700; color: var(--d-turquesa-esc); line-height: 1.15; margin: 0 0 2mm; }
 .doc-sub { margin: 0 0 9mm; color: #444; letter-spacing: .06em; text-align: justify; font-size: 10.5pt; }
 .doc-versao { margin: 0 0 2mm; }
-.doc-caminho { margin: 0 0 8mm; padding: 2mm 3mm; border-left: 1mm solid var(--d-azul); background: #f0f2ff; font-size: 10.5pt; }
-.doc-caminho-rot { font-weight: 700; color: var(--d-azul-esc); }
+.doc-caminho { margin: 0 0 8mm; padding: 2mm 3mm; border-left: 1mm solid var(--d-turquesa); background: #e6f8f7; font-size: 10.5pt; }
+.doc-caminho-rot { font-weight: 700; color: var(--d-turquesa-esc); }
 
 .doc-sumario-tit { font-size: 15pt; font-weight: 700; margin: 0 0 4mm; color: #111; }
 .doc-sumario { list-style: none; margin: 0 0 10mm; padding: 0; }
-.doc-sumario a { display: flex; align-items: baseline; gap: 2mm; color: var(--d-azul); font-weight: 700; text-decoration: none; padding: 1.2mm 0; }
+.doc-sumario a { display: flex; align-items: baseline; gap: 2mm; color: var(--d-turquesa); font-weight: 700; text-decoration: none; padding: 1.2mm 0; }
 .doc-sumario a i { flex: 1; border-bottom: 1.5px dotted #999; transform: translateY(-1mm); }
 
 .doc-secao { margin-top: 4mm; }
-.doc-secao-tit { font-size: 16pt; font-weight: 700; color: var(--d-ciano-esc); margin: 0 0 6mm; break-after: avoid; }
-.doc-obs { margin: 0 0 4mm; color: var(--d-ciano-esc); font-style: italic; }
+.doc-secao-tit { font-size: 16pt; font-weight: 700; color: var(--d-laranja-esc); margin: 0 0 6mm; break-after: avoid; }
+.doc-obs { margin: 0 0 4mm; color: var(--d-laranja-esc); font-style: italic; }
 .doc-passo { display: grid; grid-template-columns: 11mm minmax(0, 1fr); margin: 0 0 3mm 5mm; }
 .doc-passo-n { font-weight: 400; }
 .doc-texto { margin: 0 0 3mm; }
 /* texto colado com várias linhas: parágrafos, listas, títulos de trecho e botões da tela */
 .doc-rico > :last-child { margin-bottom: 0; }
 .doc-rico-p { margin: 0 0 2.5mm; }
-.doc-rico-tit { margin: 4mm 0 1.5mm; font-weight: 700; color: var(--d-azul-esc); break-after: avoid; }
+.doc-rico-tit { margin: 4mm 0 1.5mm; font-weight: 700; color: var(--d-turquesa-esc); break-after: avoid; }
 .doc-rico > .doc-rico-tit:first-child { margin-top: 0; }
 .doc-lista { margin: 0 0 2.5mm; padding-left: 6mm; }
 .doc-lista .doc-lista { margin: 1mm 0 0; padding-left: 5.5mm; list-style-type: circle; }
 .doc-lista li { margin: 0 0 1mm; padding-left: 1mm; }
-.doc-lista li::marker { color: var(--d-azul); }
+.doc-lista li::marker { color: var(--d-turquesa); }
 .doc-botao { display: inline-block; padding: 0 2mm; margin: 0 .5mm; border: 1px solid #b7bdd6; border-bottom-width: 2px; border-radius: 1.2mm; background: #f6f7fc; font-size: .92em; font-weight: 600; line-height: 1.45; white-space: nowrap; }
 .doc-nota-corpo { margin: 0; }
 .doc-nota .doc-rico-tit { color: inherit; }
-.doc-subtitulo { font-size: 12.5pt; font-weight: 700; color: var(--d-azul-esc); margin: 5mm 0 2.5mm; break-after: avoid; }
-.doc-sql { margin: 1mm 0 4mm 5mm; padding: 3mm 4mm; border-left: 1mm solid var(--d-azul); background: #f5f6fb; font-family: Consolas, "Cascadia Mono", "Liberation Mono", monospace; font-size: 9pt; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #1d1f2b; break-inside: avoid; }
-.doc-nota { margin: 2mm 0 5mm 16mm; padding: 3mm 4mm; border: 1.5px solid var(--d-azul); border-radius: 3mm; background: #f5f6ff; color: var(--d-azul-esc); font-size: 10.5pt; max-width: 120mm; }
+.doc-subtitulo { font-size: 12.5pt; font-weight: 700; color: var(--d-turquesa-esc); margin: 5mm 0 2.5mm; break-after: avoid; }
+.doc-sql { margin: 1mm 0 4mm 5mm; padding: 3mm 4mm; border-left: 1mm solid var(--d-turquesa); background: #f4f6f7; font-family: Consolas, "Cascadia Mono", "Liberation Mono", monospace; font-size: 9pt; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #1d1f2b; break-inside: avoid; }
+.doc-nota { margin: 2mm 0 5mm 16mm; padding: 3mm 4mm; border: 1.5px solid var(--d-turquesa); border-radius: 3mm; background: #e6f8f7; color: var(--d-turquesa-esc); font-size: 10.5pt; max-width: 120mm; }
 .doc-figura { margin: 3mm 0 6mm 16mm; break-inside: avoid; }
 .doc-figura img { max-width: 100%; border: 1px solid #ccc; }
 .doc-figura figcaption { font-size: 9pt; color: #666; margin-top: 1.5mm; }
@@ -75,7 +75,7 @@
 
 .doc-rod { display: flex; align-items: center; gap: 6mm; padding: 0 14mm 8mm 12mm; font-size: 9pt; }
 .doc-rod-n { font-weight: 700; }
-.doc-rod-linha { flex: 1; height: 2px; background: linear-gradient(90deg, var(--d-azul), var(--d-ciano)); }
+.doc-rod-linha { flex: 1; height: 2px; background: linear-gradient(90deg, var(--d-turquesa), var(--d-laranja)); }
 .doc-rod-txt { color: #666; font-size: 8pt; }
 
 /* ---------- impressão / PDF ---------- */
