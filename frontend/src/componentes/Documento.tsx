@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { caminhoTexto } from '../api';
 import type { Bloco, Manual } from '../tipos';
 import Marca from './Marca';
+import { textoRodape } from '../dataHora';
 import { blocoRico, inline, linhas } from './textoRico';
 
 const SOBRESCRITO = ['¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
@@ -86,7 +87,7 @@ export default function Documento({ manual }: { manual: Manual }) {
       <footer className="doc-rod">
         <span className="doc-rod-n">1</span>
         <span className="doc-rod-linha" />
-        <span className="doc-rod-txt">Documento gerado pelo Support Nexus</span>
+        <span className="doc-rod-txt">{textoRodape(manual.alterado_em)}</span>
       </footer>
     </article>
   );

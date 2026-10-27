@@ -38,6 +38,7 @@ export type Manual = {
   menu: string | null; caminho: Passo[]; tabelas: string[]; fontes: string[]; atualizado_em: string;
   secoes: { titulo: string; blocos: Bloco[] }[];
   por?: string;
+  alterado_em?: string | null; // quando alguém salvou pelo editor, hora de Brasília: "AAAA-MM-DD HH:MM:SS"
 };
 
 export type ManualEntrada = Pick<Manual, 'titulo' | 'subtitulo' | 'modulo' | 'secoes'> & { menu: string | null; fontes?: string[] };

@@ -43,7 +43,7 @@ def manual_pdf(codigo: str, con=Depends(db)):
     m = _manual(con, codigo)
     inicio = time.perf_counter()
     try:
-        conteudo = pdf.gerar(codigo)
+        conteudo = pdf.gerar(codigo, m.get("alterado_em"))
     except Exception as e:  # sem Edge/Chromium ou frontend fora do ar
         PDF_FALHAS.inc()
         raise HTTPException(503, f"Não foi possível gerar o PDF: {e}") from e

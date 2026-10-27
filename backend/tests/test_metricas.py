@@ -43,10 +43,10 @@ def test_coleta_do_prometheus_nao_entra_nas_metricas(cliente):
 
 def test_pdf_ok_e_falha(cliente, monkeypatch):
     ok, falhas = valor("nexus_pdf_generation_duration_seconds_count"), valor("nexus_pdf_generation_failures_total")
-    monkeypatch.setattr(pdf, "gerar", lambda codigo: b"%PDF-1.7")
+    monkeypatch.setattr(pdf, "gerar", lambda codigo, *_: b"%PDF-1.7")
     cliente.get("/api/manuais/DEMO.001/pdf")
 
-    def quebra(codigo):
+    def quebra(codigo, *_):
         raise RuntimeError("sem navegador")
     monkeypatch.setattr(pdf, "gerar", quebra)
     cliente.get("/api/manuais/DEMO.001/pdf")
