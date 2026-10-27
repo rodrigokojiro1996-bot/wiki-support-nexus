@@ -1,4 +1,4 @@
-import type { Catalogo, Manual, ManualEntrada, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
+import type { Catalogo, Manual, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, init);
@@ -58,6 +58,7 @@ export const api = {
   statusRelacao: (modulo: string, id: string, status: 'documentada' | 'descartada' | 'sugerida') =>
     json(`/api/modulos/${modulo}/relacoes/status`, put({ id, status })),
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
+  manuais: (modulo: string) => json<ManualResumo[]>(`/api/manuais?modulo=${enc(modulo)}`),
   async salvarManual(corpo: ManualEntrada, codigo?: string): Promise<{ codigo: string; versao: string }> {
     const r = await fetch(codigo ? `/api/manuais/${enc(codigo)}` : '/api/manuais', enviar(codigo ? 'PUT' : 'POST', corpo));
     if (!r.ok) throw await erroDe(r);

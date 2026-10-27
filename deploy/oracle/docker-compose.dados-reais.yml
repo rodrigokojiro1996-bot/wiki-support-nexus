@@ -1,0 +1,13 @@
+# Complemento opcional: o servidor mostra a ESTRUTURA REAL do sistema (catálogo do banco e menus) em vez do exemplo.
+# Os arquivos ficam no servidor, numa pasta fora do repositório (padrão: ~/nexus-real), e nunca no git:
+#   ~/nexus-real/modulos.json                         módulos e o banco de cada um (modelo: backend/modulos.exemplo.json)
+#   ~/nexus-real/saida/<banco>/catalogo.json          gerado pelo coletor (coletor/coletar.py + inferir.py)
+#   ~/nexus-real/menus_pdv.json                       menus do sistema (mesmo formato de backend/seed/menus_pdv.json)
+# Para ligar, acrescente este arquivo ao COMPOSE_FILE do .env (docs/oracle-cloud.md, seção 14).
+services:
+  nexus:
+    volumes:
+      - ${NEXUS_DADOS_REAIS:-../nexus-real}/modulos.json:/app/backend/modulos.json:ro
+      - ${NEXUS_DADOS_REAIS:-../nexus-real}/saida:/app/coletor/saida:ro
+      # dentro do volume de dados: o seed prefere dados/menus_pdv.json ao exemplo de seed/
+      - ${NEXUS_DADOS_REAIS:-../nexus-real}/menus_pdv.json:/app/backend/dados/menus_pdv.json:ro

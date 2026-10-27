@@ -24,7 +24,7 @@ function FaixaAmbiente() {
   const [ambiente, setAmbiente] = useState('');
   useEffect(() => { ambienteDoServidor().then(setAmbiente); }, []);
   if (ambiente !== 'homologacao') return null;
-  return <div className="faixa-ambiente" role="note"><b>Ambiente de homologação</b> — dados de exemplo, podem ser apagados a qualquer momento.</div>;
+  return <div className="faixa-ambiente" role="note"><b>Ambiente de homologação</b> — o que for criado aqui pode ser apagado a qualquer momento.</div>;
 }
 
 export default function Topo({ children }: { children?: React.ReactNode }) {

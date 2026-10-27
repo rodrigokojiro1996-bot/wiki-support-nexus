@@ -9,7 +9,7 @@ services:
   nexus:
     ports: !reset []
     environment:
-      # faixa "Ambiente de homologação — dados de exemplo" no topo de todas as telas (o PDF não leva)
+      # faixa "Ambiente de homologação" no topo de todas as telas (o PDF não leva)
       NEXUS_AMBIENTE: homologacao
 
   caddy:
