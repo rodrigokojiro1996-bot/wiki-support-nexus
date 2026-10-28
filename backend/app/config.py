@@ -40,6 +40,8 @@ NIVEL_MAXIMO = 3      # níveis de vizinhança aceitos em ?nivel=
 # módulos do sistema e o schema de banco de cada um: modulos.json (real, fora do git) ou modulos.exemplo.json
 MODULOS_REAL = RAIZ / "modulos.json"
 MODULOS_EXEMPLO = RAIZ / "modulos.exemplo.json"
+# menus do sistema real, um arquivo por módulo (menus_pdv.json, menus_adm.json…), fora do git; no contêiner, por volume
+MENUS_REAIS = RAIZ / "menus_reais"
 
 
 def modulos() -> list[tuple[str, str, str | None]]:

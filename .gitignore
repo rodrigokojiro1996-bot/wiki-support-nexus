@@ -13,6 +13,7 @@ coletor/saida/
 prototipo/
 backend/dados/
 backend/modulos.json
+backend/menus_reais/
 
 # ambientes e dependências
 coletor/.venv/

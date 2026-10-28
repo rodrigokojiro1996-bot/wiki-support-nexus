@@ -5,6 +5,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Vários módulos no mapa: os módulos com banco mapeado viram links no topo e o mapa mostra o módulo escolhido
+  (menus, catálogo, diagrama e manuais); o da tela aberta fica destacado. Menus reais de cada módulo em
+  `menus_reais/menus_<módulo>.json` (no servidor, `~/nexus-real/menus/`).
 - Nomes dos módulos no topo e no mapa vêm do `modulos.json` do servidor (ex.: "SPA PDV"), em vez de fixos no código;
   módulo com banco mapeado fica ativo, os outros aparecem como "em breve".
 - Estrutura real do sistema no lugar do exemplo, sem nada no git: menus reais em `dados/menus_<módulo>.json`

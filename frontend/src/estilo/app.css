@@ -55,6 +55,8 @@ a { color: var(--accent); }
 .topo-modulos { display: flex; gap: 6px; }
 .topo-mod { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 9px; font-weight: 700; font-size: 13px; color: var(--muted); border: 1px solid transparent; }
 .topo-mod img { width: 24px; height: 24px; border-radius: 5px; display: block; }
+a.topo-mod { text-decoration: none; }
+.topo-mod:is(a):hover:not([aria-current]) { background: var(--surface-2); color: var(--fg); }
 .topo-mod[aria-current="page"] { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--marca) 35%, transparent); }
 .topo-mod[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 .topo-mod[aria-disabled="true"] img { filter: grayscale(.6); }

@@ -11,6 +11,7 @@ def banco(tmp_path, monkeypatch):
     # dados/ vazio: manuais, imagens e módulos caem no exemplo versionado, mesmo que exista conteúdo real na máquina
     monkeypatch.setattr(config, "DADOS", tmp_path)
     monkeypatch.setattr(config, "MODULOS_REAL", tmp_path / "modulos.json")
+    monkeypatch.setattr(config, "MENUS_REAIS", tmp_path / "menus_reais")
     monkeypatch.setattr(db, "ARQUIVO", tmp_path / "nexus.db")
     monkeypatch.setattr(seed, "arquivo_catalogo", lambda b: config.PROJETO / "coletor" / "exemplo" / b / "catalogo.json")
     seed.main()

@@ -7,8 +7,8 @@ Pode rodar de novo a qualquer momento: atualiza catálogo, menus e manuais sem a
 as validações de relação nem os vínculos menu ↔ tabela feitos pela equipe.
 
 Sistema real x exemplo: o versionado é só o exemplo (coletor/exemplo, seed/menus_*.json, seed/manuais). Para o
-sistema real, fora do git: modulos.json, coletor/saida/<banco>/catalogo.json e dados/menus_<módulo>.json (este
-substitui o seed/menus_<módulo>.json de mesmo nome). Com o catálogo real, os manuais de exemplo do módulo saem.
+sistema real, fora do git: modulos.json, coletor/saida/<banco>/catalogo.json e menus_reais/menus_<módulo>.json (ou
+dados/menus_<módulo>.json), que substitui o seed/menus_<módulo>.json de mesmo nome. Com o catálogo real, os manuais de exemplo do módulo saem.
 """
 import json
 import re
@@ -40,9 +40,10 @@ def catalogo_de_exemplo(banco: str | None) -> bool:
 
 
 def arquivos_de_menus() -> list[Path]:
-    """seed/menus_<módulo>.json (exemplo) ou, se existir, dados/menus_<módulo>.json (menus do sistema real)."""
+    """seed/menus_<módulo>.json (exemplo), substituído pelo de mesmo nome em dados/ ou em menus_reais/ (sistema real)."""
     por_nome = {arq.name: arq for arq in SEED.glob("menus_*.json")}
-    por_nome.update({arq.name: arq for arq in config.DADOS.glob("menus_*.json")})
+    for pasta in (config.DADOS, config.MENUS_REAIS):
+        por_nome.update({arq.name: arq for arq in pasta.glob("menus_*.json")})
     return [por_nome[n] for n in sorted(por_nome)]
 
 

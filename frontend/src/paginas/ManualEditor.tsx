@@ -200,7 +200,7 @@ export default function ManualEditor() {
 
   return (
     <div className="app pagina-manual">
-      <Topo />
+      <Topo modulo={contexto?.modulo} />
       <div className="manual-barra">
         <div className="manual-barra-esq">
           <button type="button" className="link" onClick={cancelar}>← {codigo ? 'Voltar ao manual' : 'Voltar ao mapa'}</button>
