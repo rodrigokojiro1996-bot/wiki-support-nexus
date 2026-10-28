@@ -16,16 +16,29 @@ type FichaTabela = {
   manuais: { codigo: string; titulo: string }[];
 };
 
+/** tela = item final do menu (sem opções depois dele); só ela tem manuais e tabelas */
+const ehTela = (n: MenuNo) => !n.itens.length && !n.submenu;
+
 const contar = (nos: MenuNo[]): { total: number; comTabela: number; aDetalhar: number } =>
   nos.reduce((a, n) => {
     const f = contar(n.itens);
-    return { total: a.total + 1 + f.total, comTabela: a.comTabela + (n.n_tabelas ? 1 : 0) + f.comTabela, aDetalhar: a.aDetalhar + (n.submenu && !n.itens.length ? 1 : 0) + f.aDetalhar };
+    return { total: a.total + (ehTela(n) ? 1 : 0) + f.total, comTabela: a.comTabela + (ehTela(n) && n.n_tabelas ? 1 : 0) + f.comTabela,
+             aDetalhar: a.aDetalhar + (n.submenu && !n.itens.length ? 1 : 0) + f.aDetalhar };
   }, { total: 0, comTabela: 0, aDetalhar: 0 });
+
+const achar = (nos: MenuNo[], id: string | null): MenuNo | null => {
+  for (const n of nos) {
+    if (n.id === id) return n;
+    const f = achar(n.itens, id);
+    if (f) return f;
+  }
+  return null;
+};
 
 /** primeira tela (na ordem do menu) que já tem tabelas vinculadas: o "por onde começar" da tela inicial */
 const primeiraComTabelas = (nos: MenuNo[]): MenuNo | null => {
   for (const n of nos) {
-    if (n.n_tabelas && !n.itens.length) return n;
+    if (n.n_tabelas && ehTela(n)) return n;
     const f = primeiraComTabelas(n.itens);
     if (f) return f;
   }
@@ -133,6 +146,8 @@ export default function MapaSistema() {
 
   const resumo = useMemo(() => contar(menus), [menus]);
   const inicio = useMemo(() => primeiraComTabelas(menus), [menus]);
+  // link direto para um menu (não uma tela): mostra as opções dele em vez da ficha
+  const menuSel = useMemo(() => { const n = achar(menus, selecionado); return n && !ehTela(n) ? n : null; }, [menus, selecionado]);
   const nomesFicha = useMemo(() => new Set(ficha?.tabelas.map(t => t.tabela) ?? []), [ficha]);
   const internas = useMemo(() => ficha?.relacoes.filter(r => nomesFicha.has(r.origem) && nomesFicha.has(r.destino)) ?? [], [ficha, nomesFicha]);
   const externas = useMemo(() => {
@@ -163,12 +178,24 @@ export default function MapaSistema() {
         </section>
 
         <section className="painel ficha" aria-label="Ficha da tela">
-          {!ficha ? (
+          {menuSel ? (
+            <div className="painel-corpo boas-vindas">
+              <h1>{menuSel.titulo}</h1>
+              <p>{menuSel.itens.length
+                ? 'Este é um menu do sistema, não uma tela. Escolha uma das opções dele:'
+                : 'Este submenu ainda não foi detalhado: as opções dele ainda não foram mapeadas.'}</p>
+              {menuSel.itens.length > 0 && (
+                <div className="chips">{menuSel.itens.map(f => (
+                  <button key={f.id} type="button" className="chip" onClick={() => escolher(f.id)}>{f.titulo}{f.atalho && <kbd>{f.atalho}</kbd>}</button>
+                ))}</div>
+              )}
+            </div>
+          ) : !ficha ? (
             <div className="painel-corpo boas-vindas">
               <h1>Escolha uma tela do {nomeModulo}</h1>
               <p>Os menus à esquerda seguem a barra do sistema. Ao escolher um item, aparecem o caminho, os manuais, as tabelas do banco que a tela usa e como essas tabelas se ligam.</p>
               <ul className="numeros">
-                <li><b>{resumo.total}</b><span>itens de menu mapeados</span></li>
+                <li><b>{resumo.total}</b><span>telas mapeadas</span></li>
                 <li><b>{resumo.comTabela}</b><span>com tabelas vinculadas</span></li>
                 <li><b>{resumo.aDetalhar}</b><span>submenus a detalhar</span></li>
               </ul>

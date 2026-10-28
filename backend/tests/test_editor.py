@@ -129,3 +129,12 @@ def test_imagens_do_exemplo_continuam_servidas(cliente, banco, monkeypatch):
     assert cliente.get("/api/imagens/DEMO.009/01.png").content == PNG
     assert cliente.get("/api/imagens/DEMO.009/02.png").status_code == 404
     assert cliente.get("/api/imagens/..%2F..%2Fnexus.db/x").status_code == 404
+
+
+def test_manual_so_em_tela_final(cliente, con):
+    # menu principal e submenu com opções são só navegação: o manual vai numa tela final
+    r = criar(cliente, novo(menu="pdv.caixa"))
+    assert r.status_code == 422 and "é um menu, não uma tela" in r.json()["detail"]
+    a_detalhar = con.execute("SELECT id FROM menus WHERE submenu = 1 AND modulo = 'pdv'").fetchone()["id"]
+    assert criar(cliente, novo(menu=a_detalhar)).status_code == 422  # tem opções no sistema, ainda não mapeadas
+    assert criar(cliente, novo(menu=MENU)).status_code == 201
