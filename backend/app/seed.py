@@ -133,9 +133,9 @@ def main():
         print(f"  migração aplicada: {m}")
     mods = modulos()
     con.executemany("INSERT INTO modulos (id, nome, banco) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET nome = excluded.nome, banco = excluded.banco", mods)
-    for _, _, banco in mods:
-        if banco:
-            importar_catalogo(con, banco)
+    # um banco pode servir a mais de um módulo (ex.: o financeiro usa o banco do administrativo): importa uma vez
+    for banco in dict.fromkeys(b for _, _, b in mods if b):
+        importar_catalogo(con, banco)
     for arq in arquivos_de_menus():
         importar_menus(con, arq)
     importar_manuais(con)

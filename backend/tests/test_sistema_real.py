@@ -75,6 +75,22 @@ def test_menus_de_varios_modulos_na_pasta_de_menus_reais(banco, monkeypatch):
     assert len(consultar("SELECT id FROM menus WHERE modulo = 'pdv'")) == 4  # o PDV continua com os menus dele
 
 
+def test_dois_modulos_no_mesmo_banco(cliente, banco, monkeypatch, capsys):
+    usar_sistema_real(banco, monkeypatch)
+    config.MODULOS_REAL.write_text(json.dumps([{"id": "adm", "nome": "SPA ADM", "banco": "erp_real"},
+                                               {"id": "fin", "nome": "SPA FIN", "banco": "erp_real"}]), encoding="utf-8")
+    config.MENUS_REAIS.mkdir()
+    for mod in ("adm", "fin"):
+        (config.MENUS_REAIS / f"menus_{mod}.json").write_text(json.dumps({"modulo": mod, "menus": [
+            {"titulo": "Cadastros", "itens": [{"titulo": "Clientes", "tabelas": ["clientes"]}]}]}), encoding="utf-8")
+    capsys.readouterr()
+    seed.main()
+    assert capsys.readouterr().out.count("catálogo erp_real") == 1   # importado uma vez só
+    for mod in ("adm", "fin"):
+        assert [t["tabela"] for t in cliente.get(f"/api/menus/{mod}.cadastros.clientes").json()["tabelas"]] == ["clientes"]
+        assert len(cliente.get(f"/api/modulos/{mod}/catalogo").json()["tabelas"]) == 2
+
+
 def test_rodar_de_novo_nao_muda_nada(banco, monkeypatch):
     usar_sistema_real(banco, monkeypatch)
     antes = consultar("SELECT id, pai, ordem FROM menus ORDER BY id")

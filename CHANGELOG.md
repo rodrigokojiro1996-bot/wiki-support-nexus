@@ -5,6 +5,7 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Corrigido
+- Módulos que usam o mesmo banco (o financeiro usa o do administrativo): o catálogo é importado uma vez só.
 - Manual e tabelas só em tela final (item do menu sem opções depois dele). Menus principais e submenus só abrem e
   fecham a árvore; submenu ainda não detalhado não abre ficha; link direto para um menu mostra as opções dele; a
   API recusa manual ligado a um menu; a tela inicial conta telas, não itens de menu.
