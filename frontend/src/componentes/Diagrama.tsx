@@ -3,6 +3,7 @@ import {
   Background, BaseEdge, EdgeLabelRenderer, Handle, Panel, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, useReactFlow,
   type Edge, type EdgeProps, type Node, type NodeProps
 } from '@xyflow/react';
+import { useTema } from '../tema';
 import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode } from 'elkjs/lib/elk-api';
@@ -114,6 +115,7 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
   const [busca, setBusca] = useState('');
   const [sel, setSel] = useState<string | null>(null);
   const { fitView, zoomIn, zoomOut } = useReactFlow();
+  const tema = useTema();
 
   const chave = tabelas.join(',');
   useEffect(() => {
@@ -287,7 +289,7 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
       <div className="diag-canvas" ref={setCanvas}>
       <ReactFlow
         nodes={nos} edges={arestas} nodeTypes={tiposNo} edgeTypes={tiposAresta}
-        nodesConnectable={false} edgesFocusable={false} minZoom={0.15} maxZoom={1.6} colorMode="light"
+        nodesConnectable={false} edgesFocusable={false} minZoom={0.15} maxZoom={1.6} colorMode={tema === 'escuro' ? 'dark' : 'light'}
         fitView fitViewOptions={{ padding: 0.12 }}
         onNodeClick={(_, n) => setSel(n.id === sel ? null : n.id)}
         onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}

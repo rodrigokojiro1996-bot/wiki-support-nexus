@@ -26,7 +26,33 @@
   --mono: "JetBrains Mono Variable", "Cascadia Mono", Consolas, monospace;
   --raio: 10px;
   --topo-h: 58px;
+  --faixa-fundo: #ffe2a8;
+  --faixa-texto: #5c3a00;
+  --sombra: rgba(10, 30, 30, .08);
   color-scheme: light;
+}
+
+/* Tema escuro (botão no topo). As cores da marca não mudam: turquesa #00B2A9 e o laranja #F36F21 nos botões, com
+   letra branca (regra da marca). O turquesa da marca é legível sobre o fundo escuro e vira a cor de links e foco.
+   O manual continua papel branco (documento.css) e o PDF sai sempre claro. */
+:root[data-tema="escuro"] {
+  --bg: #0e1416;
+  --surface: #151d20;
+  --surface-2: #1b2528;
+  --line: #29363a;
+  --line-strong: #3d4c51;
+  --fg: #e3eaec;
+  --muted: #94a3a8;
+  --accent: #00b2a9;
+  --accent-soft: rgba(0, 178, 169, .16);
+  --laranja-claro: #3a2417;
+  --doc: #3fb97a;
+  --warn: #e0a43a;
+  --crit: #f06a55;
+  --faixa-fundo: #3a2a0c;
+  --faixa-texto: #f5d38c;
+  --sombra: rgba(0, 0, 0, .45);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -43,7 +69,7 @@ a { color: var(--accent); }
 
 /* ---------- topo ---------- */
 /* faixa da homologação: laranja de atenção, com texto (não só cor) */
-.faixa-ambiente { padding: 6px 20px; font-size: 13px; text-align: center; color: #5c3a00; background: #ffe2a8; border-bottom: 1px solid var(--warn); }
+.faixa-ambiente { padding: 6px 20px; font-size: 13px; text-align: center; color: var(--faixa-texto); background: var(--faixa-fundo); border-bottom: 1px solid var(--warn); }
 .topo { position: sticky; top: 0; z-index: 20; height: var(--topo-h); display: flex; align-items: center; gap: 22px; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 /* faixa da marca: turquesa que termina no laranja da rede */
 .topo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: linear-gradient(90deg, var(--marca), var(--marca-2)); }
@@ -56,6 +82,9 @@ a { color: var(--accent); }
 .topo-mod { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 9px; font-weight: 700; font-size: 13px; color: var(--muted); border: 1px solid transparent; }
 .topo-mod img { width: 24px; height: 24px; border-radius: 5px; display: block; }
 a.topo-mod { text-decoration: none; }
+.topo-tema { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--fg); font-weight: 600; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.topo-tema span { font-size: 15px; line-height: 1; }
+.topo-tema:hover { border-color: var(--accent); color: var(--accent); }
 .topo-mod:is(a):hover:not([aria-current]) { background: var(--surface-2); color: var(--fg); }
 .topo-mod[aria-current="page"] { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--marca) 35%, transparent); }
 .topo-mod[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
@@ -187,10 +216,11 @@ a.topo-mod { text-decoration: none; }
 /* ---------- diagrama ER ---------- */
 /* destaque do diagrama no laranja da marca (contrasta com o turquesa da interface) */
 :root { --destaque: #f36f21; --destaque-suave: rgba(243, 111, 33, .14); --diag-bg: #ffffff; }
+:root[data-tema="escuro"] { --destaque-suave: rgba(243, 111, 33, .24); --diag-bg: #10181a; }
 .ficha-diagrama .react-flow { background: var(--diag-bg); }
 .ficha-diagrama .react-flow__background { color: var(--line-strong); }
 .diag-vazio { padding: 32px; color: var(--muted); }
-.tb { width: 290px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; box-shadow: 0 2px 6px rgba(10, 30, 30, .08); transition: opacity .2s; font-size: 12px; }
+.tb { width: 290px; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 9px; overflow: hidden; box-shadow: 0 2px 6px var(--sombra); transition: opacity .2s; font-size: 12px; }
 /* medidas fixas (borda 1px, cabeçalho 38px, linha 25px): o roteador de linhas usa essas alturas
    para encaixar cada ligação na coluna certa — destaque vai em anel externo, sem mudar a borda */
 .tb-foco { border-color: var(--destaque); box-shadow: 0 0 0 2px var(--destaque), 0 0 0 6px var(--destaque-suave); }

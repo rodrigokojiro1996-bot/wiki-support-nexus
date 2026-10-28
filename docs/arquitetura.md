@@ -251,6 +251,8 @@ pytest.ini                 configuração dos testes (rodar na raiz)
   branca, mesmo abaixo do contraste AA: regra da marca, a pedido do marketing. Texto, links e foco em turquesa
   escuro `#007A73`; destaque do diagrama em laranja. Fonte Inter, a mesma dos outros sistemas da rede. Logo,
   favicon e ícones dos módulos em `frontend/public/marca/`; o PDF embute o logo no cabeçalho.
+  Tema claro (padrão) e escuro (`frontend/src/tema.ts`, `:root[data-tema="escuro"]` no `app.css`): o escuro troca só
+  fundos, textos e bordas; botões, faixa da marca e o manual (papel branco) não mudam.
 
 
 ## 6. Modelo de dados
