@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ambienteDoServidor, usuario } from '../api';
+import { ambienteDoServidor, api, usuario } from '../api';
 
-const MODULOS = [
+// nomes e módulos ativos vêm do modulos.json do servidor (GET /api/modulos); esta lista só aparece enquanto carrega
+const PADRAO = [
   { id: 'pdv', nome: 'PDV', ativo: true },
   { id: 'adm', nome: 'Retaguarda', ativo: false },
   { id: 'fin', nome: 'Financeiro', ativo: false }
@@ -28,6 +29,11 @@ function FaixaAmbiente() {
 }
 
 export default function Topo({ children }: { children?: React.ReactNode }) {
+  const [modulos, setModulos] = useState(PADRAO);
+  useEffect(() => {
+    // ativo = o módulo já tem banco mapeado (os outros aparecem como "em breve")
+    api.modulos().then(ms => setModulos(ms.map(m => ({ id: m.id, nome: m.nome, ativo: !!m.banco })))).catch(() => {});
+  }, []);
   return (
     <>
     <header className="topo">
@@ -37,7 +43,7 @@ export default function Topo({ children }: { children?: React.ReactNode }) {
         <span><b>Support Nexus</b><small>Mapa vivo do sistema</small></span>
       </Link>
       <nav className="topo-modulos" aria-label="Módulos do sistema">
-        {MODULOS.map(m => (
+        {modulos.map(m => (
           <span key={m.id} className="topo-mod" aria-current={m.ativo ? 'page' : undefined} aria-disabled={!m.ativo || undefined}
             title={m.ativo ? undefined : 'Em breve'}>
             <img src={`/marca/modulo-${m.id}.png`} alt="" />

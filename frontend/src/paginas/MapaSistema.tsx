@@ -75,13 +75,18 @@ export default function MapaSistema() {
   const [aviso, setAviso] = useState('');
   const [erro, setErro] = useState('');
   const [exemplo, setExemplo] = useState(false);
+  const [nomeModulo, setNomeModulo] = useState('PDV'); // nome do módulo no modulos.json do servidor
   const [semTela, setSemTela] = useState<ManualResumo[]>([]);
 
   const recarregarMenus = useCallback(() => api.menus(MODULO).then(setMenus).catch(e => setErro(e.message)), []);
   useEffect(() => {
     recarregarMenus();
     api.catalogo(MODULO).then(c => setNomesTabelas(c.tabelas.map(t => t.nome))).catch(() => {});
-    api.modulos().then(ms => setExemplo(!!ms.find(m => m.id === MODULO)?.exemplo)).catch(() => {});
+    api.modulos().then(ms => {
+      const m = ms.find(x => x.id === MODULO);
+      setExemplo(!!m?.exemplo);
+      if (m) setNomeModulo(m.nome);
+    }).catch(() => {});
     // manuais cuja tela não existe mais no menu (ex.: depois de trocar o exemplo pelo sistema real)
     api.manuais(MODULO).then(ms => setSemTela(ms.filter(m => !m.menu))).catch(() => {});
   }, [recarregarMenus]);
@@ -142,7 +147,7 @@ export default function MapaSistema() {
     <div className="app">
       <Topo />
       <main className={`mapa ${fichaTabela ? 'com-tabela' : ''}`}>
-        <section className="painel arvore" aria-label="Menus do PDV">
+        <section className="painel arvore" aria-label={`Menus do ${nomeModulo}`}>
           <div className="painel-cab">
             <h2>Mapa do sistema</h2>
             {exemplo && <span className="rotulo">Sistema de exemplo</span>}
@@ -158,7 +163,7 @@ export default function MapaSistema() {
         <section className="painel ficha" aria-label="Ficha da tela">
           {!ficha ? (
             <div className="painel-corpo boas-vindas">
-              <h1>Escolha uma tela do PDV</h1>
+              <h1>Escolha uma tela do {nomeModulo}</h1>
               <p>Os menus à esquerda seguem a barra do sistema. Ao escolher um item, aparecem o caminho, os manuais, as tabelas do banco que a tela usa e como essas tabelas se ligam.</p>
               <ul className="numeros">
                 <li><b>{resumo.total}</b><span>itens de menu mapeados</span></li>
@@ -181,15 +186,15 @@ export default function MapaSistema() {
           ) : (<>
             <div className="ficha-topo">
               <nav className="trilha" aria-label="Caminho no sistema">
-                {['PDV', ...ficha.caminho.slice(0, -1).map(p => p.titulo)].map((t, i) => <span key={i}>{t}</span>)}
+                {[nomeModulo, ...ficha.caminho.slice(0, -1).map(p => p.titulo)].map((t, i) => <span key={i}>{t}</span>)}
               </nav>
               <h1 className="ficha-titulo">
                 {ficha.titulo}
                 {ficha.atalho && <kbd>{ficha.atalho}</kbd>}
                 {ficha.tela_codigo && <span className="tela-cod" title="Código da janela no sistema">{ficha.tela_codigo}</span>}
               </h1>
-              <p className="caminho-completo"><span>Caminho</span>{caminhoTexto('PDV', ficha.caminho)}</p>
-              {ficha.desabilitado && <p className="alerta">Este item aparece desabilitado no menu do PDV.</p>}
+              <p className="caminho-completo"><span>Caminho</span>{caminhoTexto(nomeModulo, ficha.caminho)}</p>
+              {ficha.desabilitado && <p className="alerta">Este item aparece desabilitado no menu do {nomeModulo}.</p>}
               <div className="abas" role="tablist" aria-label="Seções da ficha">
                 <button type="button" role="tab" aria-selected={aba !== 'tabelas'} onClick={() => mudarAba('geral')}>Visão geral</button>
                 <button type="button" role="tab" aria-selected={aba === 'tabelas'} onClick={() => mudarAba('tabelas')}>Tabelas <span className="qtd">{ficha.tabelas.length}</span></button>
@@ -248,7 +253,7 @@ export default function MapaSistema() {
                 <form className="vincular" onSubmit={e => {
                   e.preventDefault();
                   const v = novaTabela.trim();
-                  if (!nomesTabelas.includes(v)) { avisar('Essa tabela não existe no banco do PDV.'); return; }
+                  if (!nomesTabelas.includes(v)) { avisar(`Essa tabela não existe no banco do ${nomeModulo}.`); return; }
                   salvarVinculos([...ficha.tabelas.map(x => x.tabela), v], `${v} vinculada a esta tela.`); setNovaTabela('');
                 }}>
                   <input id="nova-tabela" list="lista-tabelas" placeholder="Vincular tabela…" value={novaTabela} onChange={e => setNovaTabela(e.target.value)} aria-label="Tabela para vincular" />
@@ -292,7 +297,7 @@ export default function MapaSistema() {
               <div className="secao">
                 <h3>Telas que usam</h3>
                 {fichaTabela.menus.length ? <ul className="lista-simples">{fichaTabela.menus.map(m => (
-                  <li key={m.id}><button type="button" className="link" onClick={() => escolher(m.id)}>{caminhoTexto('PDV', m.caminho)}</button></li>
+                  <li key={m.id}><button type="button" className="link" onClick={() => escolher(m.id)}>{caminhoTexto(nomeModulo, m.caminho)}</button></li>
                 ))}</ul> : <p className="vazio">Nenhuma tela vinculada.</p>}
               </div>
               {fichaTabela.manuais.length > 0 && (
