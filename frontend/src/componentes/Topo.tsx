@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ambienteDoServidor, api, usuario } from '../api';
+import { aplicarTema, useTema } from '../tema';
 
 // nomes e módulos ativos vêm do modulos.json do servidor (GET /api/modulos); esta lista só aparece enquanto carrega
 const PADRAO = [
@@ -17,6 +18,18 @@ function SeuNome() {
       <input value={nome} placeholder="para a autoria" maxLength={80} aria-label="Seu nome, para registrar a autoria"
         onChange={e => setNome(e.target.value)} onBlur={() => usuario.gravar(nome)} />
     </label>
+  );
+}
+
+/** Claro (padrão) ou escuro; a escolha fica guardada neste navegador */
+function BotaoTema() {
+  const tema = useTema();
+  const escuro = tema === 'escuro';
+  return (
+    <button type="button" className="topo-tema" aria-pressed={escuro} onClick={() => aplicarTema(escuro ? 'claro' : 'escuro')}
+      title={escuro ? 'Voltar ao tema claro' : 'Usar o tema escuro'}>
+      <span aria-hidden="true">{escuro ? '☀' : '☾'}</span>{escuro ? 'Tema claro' : 'Tema escuro'}
+    </button>
   );
 }
 
@@ -57,7 +70,7 @@ export default function Topo({ children, modulo }: { children?: React.ReactNode;
           </span>
         ))}
       </nav>
-      <div className="topo-extra">{children}<SeuNome /></div>
+      <div className="topo-extra">{children}<BotaoTema /><SeuNome /></div>
     </header>
     <FaixaAmbiente />
     </>
