@@ -103,8 +103,14 @@ class ManualEntrada(BaseModel):
 def _conferir_destino(con, corpo: ManualEntrada) -> None:
     if not con.execute("SELECT 1 FROM modulos WHERE id = ? AND banco IS NOT NULL", (corpo.modulo,)).fetchone():
         raise HTTPException(422, f"Módulo {corpo.modulo} não existe ou ainda não tem banco mapeado")
-    if corpo.menu and not con.execute("SELECT 1 FROM menus WHERE id = ? AND modulo = ?", (corpo.menu, corpo.modulo)).fetchone():
+    if not corpo.menu:
+        return
+    menu = con.execute("SELECT titulo, submenu FROM menus WHERE id = ? AND modulo = ?", (corpo.menu, corpo.modulo)).fetchone()
+    if not menu:
         raise HTTPException(422, f"Tela {corpo.menu} não existe no módulo {corpo.modulo}")
+    # manual só em tela final: menu principal ou submenu (com opções depois dele) é só navegação
+    if menu["submenu"] or con.execute("SELECT 1 FROM menus WHERE pai = ?", (corpo.menu,)).fetchone():
+        raise HTTPException(422, f"{menu['titulo']} é um menu, não uma tela: escolha uma das opções dentro dele")
 
 
 @router.post("/manuais", status_code=201)

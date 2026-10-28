@@ -14,6 +14,7 @@ type NoProps = {
 
 function No({ no, nivel, selecionado, filtro, onEscolher, abertoControlado, onAlternar }: NoProps) {
   const temFilhos = no.itens.length > 0;
+  const aDetalhar = no.submenu && !temFilhos; // tem opções no sistema, ainda não transcritas
   const contemSelecao = !!selecionado && selecionado.startsWith(no.id + '.');
   const [abertoLocal, setAbertoLocal] = useState(contemSelecao);
   const controlado = onAlternar !== undefined;
@@ -27,10 +28,14 @@ function No({ no, nivel, selecionado, filtro, onEscolher, abertoControlado, onAl
         {temFilhos
           ? <button type="button" className="arv-seta" aria-expanded={expandido} aria-label={expandido ? 'Recolher' : 'Expandir'} onClick={() => alternar(!expandido)}>▸</button>
           : <span className="arv-seta-vazia" />}
+        {/* só a tela final (sem opções depois dela) abre a ficha com manuais e tabelas; menu só abre e fecha */}
         <button type="button" className="arv-item" aria-current={selecionado === no.id ? 'true' : undefined}
-          data-desabilitado={no.desabilitado || undefined} onClick={() => { onEscolher(no.id); if (temFilhos) alternar(true); }}>
+          aria-expanded={temFilhos ? expandido : undefined} aria-disabled={aDetalhar || undefined}
+          title={aDetalhar ? 'Submenu ainda não detalhado: as opções dele ainda não foram mapeadas' : undefined}
+          data-desabilitado={no.desabilitado || undefined} data-menu={temFilhos || aDetalhar || undefined}
+          onClick={() => { if (temFilhos) alternar(!expandido); else if (!aDetalhar) onEscolher(no.id); }}>
           <span className="arv-titulo">{no.titulo}</span>
-          {no.submenu && !temFilhos && <span className="arv-pendente" title="Submenu ainda não detalhado">a detalhar</span>}
+          {aDetalhar && <span className="arv-pendente">a detalhar</span>}
           {no.n_manuais > 0 && <span className="arv-badge manual" title={`${no.n_manuais} manual(is)`}>{no.n_manuais}</span>}
           {no.atalho && <kbd>{no.atalho}</kbd>}
         </button>

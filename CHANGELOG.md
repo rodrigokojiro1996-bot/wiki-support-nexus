@@ -4,6 +4,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Corrigido
+- Manual e tabelas só em tela final (item do menu sem opções depois dele). Menus principais e submenus só abrem e
+  fecham a árvore; submenu ainda não detalhado não abre ficha; link direto para um menu mostra as opções dele; a
+  API recusa manual ligado a um menu; a tela inicial conta telas, não itens de menu.
+
 ### Adicionado
 - Vários módulos no mapa: os módulos com banco mapeado viram links no topo e o mapa mostra o módulo escolhido
   (menus, catálogo, diagrama e manuais); o da tela aberta fica destacado. Menus reais de cada módulo em
