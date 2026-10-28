@@ -28,7 +28,8 @@ function FaixaAmbiente() {
   return <div className="faixa-ambiente" role="note"><b>Ambiente de homologação</b> — o que for criado aqui pode ser apagado a qualquer momento.</div>;
 }
 
-export default function Topo({ children }: { children?: React.ReactNode }) {
+/** modulo: o módulo que a página mostra (fica destacado); os módulos com banco mapeado levam ao mapa deles */
+export default function Topo({ children, modulo }: { children?: React.ReactNode; modulo?: string }) {
   const [modulos, setModulos] = useState(PADRAO);
   useEffect(() => {
     // ativo = o módulo já tem banco mapeado (os outros aparecem como "em breve")
@@ -43,12 +44,16 @@ export default function Topo({ children }: { children?: React.ReactNode }) {
         <span><b>Support Nexus</b><small>Mapa vivo do sistema</small></span>
       </Link>
       <nav className="topo-modulos" aria-label="Módulos do sistema">
-        {modulos.map(m => (
-          <span key={m.id} className="topo-mod" aria-current={m.ativo ? 'page' : undefined} aria-disabled={!m.ativo || undefined}
-            title={m.ativo ? undefined : 'Em breve'}>
+        {modulos.map(m => m.ativo ? (
+          <Link key={m.id} to={`/?modulo=${encodeURIComponent(m.id)}`} className="topo-mod" aria-current={m.id === modulo ? 'page' : undefined}>
             <img src={`/marca/modulo-${m.id}.png`} alt="" />
             {m.nome}
-            {!m.ativo && <small>em breve</small>}
+          </Link>
+        ) : (
+          <span key={m.id} className="topo-mod" aria-disabled title="Em breve">
+            <img src={`/marca/modulo-${m.id}.png`} alt="" />
+            {m.nome}
+            <small>em breve</small>
           </span>
         ))}
       </nav>

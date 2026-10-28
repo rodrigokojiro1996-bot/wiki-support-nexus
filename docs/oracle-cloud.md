@@ -335,15 +335,15 @@ menus de verdade, os arquivos do sistema real vão para uma pasta **fora do repo
 |---|---|
 | `~/nexus-real/modulos.json` | módulos e o banco de cada um (`"banco": "<nome do schema>"`), no formato de `backend/modulos.exemplo.json` |
 | `~/nexus-real/saida/<banco>/catalogo.json` | o coletor (`coletor/`), rodado numa máquina que alcança o banco |
-| `~/nexus-real/menus_pdv.json` | os menus do sistema, no formato de `backend/seed/menus_pdv.json` |
+| `~/nexus-real/menus/menus_<módulo>.json` | os menus de cada módulo (`menus_pdv.json`, `menus_adm.json`…), no formato de `backend/seed/menus_pdv.json` |
 
 Do seu computador (troque `IP`):
 
 ```powershell
-ssh -i $chave ubuntu@IP "mkdir -p ~/nexus-real/saida/<banco>"
+ssh -i $chave ubuntu@IP "mkdir -p ~/nexus-real/saida/<banco> ~/nexus-real/menus"
 scp -i $chave backend\modulos.json ubuntu@IP:nexus-real/
 scp -i $chave coletor\saida\<banco>\catalogo.json ubuntu@IP:nexus-real/saida/<banco>/
-scp -i $chave menus_pdv.json ubuntu@IP:nexus-real/
+scp -i $chave menus_pdv.json ubuntu@IP:nexus-real/menus/
 ```
 
 No servidor, acrescente o complemento ao `COMPOSE_FILE` do `.env` e suba de novo:

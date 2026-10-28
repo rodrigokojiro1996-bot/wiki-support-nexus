@@ -49,7 +49,7 @@ export default function ManualPagina() {
 
   return (
     <div className="app pagina-manual">
-      <Topo />
+      <Topo modulo={manual?.modulo} />
       <div className="manual-barra">
         <div className="manual-barra-esq">
           <Link to={manual?.menu ? `/?item=${encodeURIComponent(manual.menu)}` : '/'} className="link">← Voltar ao mapa</Link>

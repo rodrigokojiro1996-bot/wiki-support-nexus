@@ -6,7 +6,7 @@ import MenuArvore from '../componentes/MenuArvore';
 import Topo from '../componentes/Topo';
 import type { EstadoRelacao, ManualResumo, MenuFicha, MenuNo, Relacao } from '../tipos';
 
-const MODULO = 'pdv';
+const MODULO_PADRAO = 'pdv';
 const ESTADO_ROTULO: Record<EstadoRelacao, string> = { confirmada: 'Confirmada', documentada: 'Documentada', sugerida: 'Sugerida', descartada: 'Descartada' };
 
 type FichaTabela = {
@@ -65,6 +65,8 @@ function RelacaoLinha({ r, onStatus }: { r: Relacao; onStatus: (r: Relacao, s: '
 export default function MapaSistema() {
   const [params, setParams] = useSearchParams();
   const selecionado = params.get('item');
+  // módulo do mapa: o da tela escolhida (prefixo do id, "adm.cadastros…") ou o do ?modulo= (vindo do topo)
+  const MODULO = selecionado?.split('.')[0] || params.get('modulo') || MODULO_PADRAO;
   const tabelaSel = params.get('tabela');
   const [menus, setMenus] = useState<MenuNo[]>([]);
   const [nomesTabelas, setNomesTabelas] = useState<string[]>([]);
@@ -78,7 +80,7 @@ export default function MapaSistema() {
   const [nomeModulo, setNomeModulo] = useState('PDV'); // nome do módulo no modulos.json do servidor
   const [semTela, setSemTela] = useState<ManualResumo[]>([]);
 
-  const recarregarMenus = useCallback(() => api.menus(MODULO).then(setMenus).catch(e => setErro(e.message)), []);
+  const recarregarMenus = useCallback(() => api.menus(MODULO).then(setMenus).catch(e => setErro(e.message)), [MODULO]);
   useEffect(() => {
     recarregarMenus();
     api.catalogo(MODULO).then(c => setNomesTabelas(c.tabelas.map(t => t.nome))).catch(() => {});
@@ -89,7 +91,7 @@ export default function MapaSistema() {
     }).catch(() => {});
     // manuais cuja tela não existe mais no menu (ex.: depois de trocar o exemplo pelo sistema real)
     api.manuais(MODULO).then(ms => setSemTela(ms.filter(m => !m.menu))).catch(() => {});
-  }, [recarregarMenus]);
+  }, [recarregarMenus, MODULO]);
 
   const recarregarFicha = useCallback(() => {
     if (!selecionado) { setFicha(null); return; }
@@ -145,7 +147,7 @@ export default function MapaSistema() {
 
   return (
     <div className="app">
-      <Topo />
+      <Topo modulo={MODULO} />
       <main className={`mapa ${fichaTabela ? 'com-tabela' : ''}`}>
         <section className="painel arvore" aria-label={`Menus do ${nomeModulo}`}>
           <div className="painel-cab">

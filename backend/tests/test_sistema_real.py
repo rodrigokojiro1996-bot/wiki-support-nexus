@@ -63,6 +63,18 @@ def test_manuais_de_exemplo_saem_e_os_da_equipe_ficam(cliente, banco, monkeypatc
     assert (banco / "manuais" / "PDV.002.json").exists()
 
 
+def test_menus_de_varios_modulos_na_pasta_de_menus_reais(banco, monkeypatch):
+    usar_sistema_real(banco, monkeypatch)
+    config.MODULOS_REAL.write_text(json.dumps([{"id": "pdv", "nome": "SPA PDV", "banco": "erp_real"},
+                                               {"id": "adm", "nome": "SPA ADM", "banco": "erp_real"}]), encoding="utf-8")
+    config.MENUS_REAIS.mkdir()
+    (config.MENUS_REAIS / "menus_adm.json").write_text(json.dumps({"modulo": "adm", "menus": [
+        {"titulo": "Cadastros", "itens": [{"titulo": "Fornecedores", "tabelas": ["clientes"]}]}]}), encoding="utf-8")
+    seed.main()
+    assert {r[0] for r in consultar("SELECT id FROM menus WHERE modulo = 'adm'")} == {"adm.cadastros", "adm.cadastros.fornecedores"}
+    assert len(consultar("SELECT id FROM menus WHERE modulo = 'pdv'")) == 4  # o PDV continua com os menus dele
+
+
 def test_rodar_de_novo_nao_muda_nada(banco, monkeypatch):
     usar_sistema_real(banco, monkeypatch)
     antes = consultar("SELECT id, pai, ordem FROM menus ORDER BY id")
