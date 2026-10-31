@@ -246,7 +246,8 @@ def numero_gh(titulo, x, w, caminho, raiz, descricao, unidade="none", **params):
 
 
 def tabela(titulo, x, y, w, h, alvos, descricao, nomes, overrides=(), ordem=None, transformacoes=()):
-    """Tabela com colunas renomeadas e na ordem de `nomes` ({campo: título}); o campo link fica escondido."""
+    """Tabela com colunas renomeadas e na ordem de `nomes` ({campo: título}); o campo link fica escondido.
+    Depois de juntar consultas (joinByField) o Grafana põe a letra da consulta no nome: "commit A", "situacao B"."""
     organizar = {"id": "organize", "options": {"renameByName": nomes, "indexByName": {c: i for i, c in enumerate(nomes)},
                                                "excludeByName": {"link": True}}}
     return painel("table", titulo, x, y, w, h, alvos, descricao, {"noValue": "—", "custom": {"align": "auto", "filterable": True}},
@@ -260,6 +261,10 @@ def situacao(campo):
         {"id": "custom.cellOptions", "value": {"type": "color-text"}},
         {"id": "mappings", "value": [{"type": "value", "options": {s: {"text": s, "color": c} for s, c in SITUACOES}},
                                      {"type": "special", "options": {"match": "null", "result": {"text": "sem PR", "color": ATENCAO}}}]}]}
+
+
+def largura(campo, px):
+    return {"matcher": {"id": "byName", "options": campo}, "properties": [{"id": "custom.width", "value": px}]}
 
 
 def data_relativa(campo):
@@ -276,9 +281,9 @@ paineis_branches = [
               '$count($[merged_at and $toMillis(merged_at) > $millis() - 2592000000])',  # 30 dias em ms
               "Pull requests com merge feito nos últimos 30 dias (entre os 100 fechados mais recentes).",
               state="closed", sort="updated", direction="desc", per_page=100),
-    numero_gh("Último push", 18, 6, "events", '$max($map($[type = "PushEvent"], function($v) {$toMillis($v.created_at)}))',
-              "Último envio de commits (git push) para qualquer branch, pelo feed de eventos do GitHub (atrasa algumas horas).",
-              "dateTimeFromNow", per_page=100),
+    numero_gh("Última atividade em PR", 18, 6, "pulls", '$max($map($, function($v) {$toMillis($v.updated_at)}))',
+              "Último push, comentário ou merge em qualquer pull request.", "dateTimeFromNow",
+              state="all", sort="updated", direction="desc", per_page=1),
 
     # ---------- linha 2: a lista de controle ----------
     tabela("Branches", 0, 4, 24, 12,
@@ -290,9 +295,10 @@ paineis_branches = [
            "Toda branch que subiu: as que existem hoje, as que já tiveram PR (mesmo apagadas depois do merge) e as com push recente. "
            "Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. PR atualizado = último push ou comentário no PR. "
            "Último push vem do feed de eventos do GitHub, que atrasa algumas horas e guarda só 90 dias.",
-           {"branch": "Branch", "situacao": "Situação", "pr": "PR", "titulo": "Título do PR", "autor": "Autor do PR", "destino": "Destino",
-            "atualizado": "PR atualizado", "ultimo_push": "Último push", "quem": "Quem enviou", "commit": "Commit", "existe": "No GitHub"},
-           [situacao("situacao"), data_relativa("atualizado"), data_relativa("ultimo_push"),
+           {"branch": "Branch", "situacao B": "Situação", "pr B": "PR", "titulo B": "Título do PR", "autor B": "Autor do PR",
+            "destino B": "Destino", "atualizado B": "PR atualizado", "ultimo_push C": "Último push", "quem C": "Quem enviou",
+            "commit A": "Commit", "existe A": "No GitHub"},
+           [situacao("situacao"), data_relativa("atualizado"), data_relativa("ultimo_push"), largura("branch", 330), largura("titulo", 360),
             {"matcher": {"id": "byName", "options": "existe"}, "properties": [
                 {"id": "mappings", "value": [{"type": "special", "options": {"match": "null", "result": {"text": "apagada", "color": CINZA}}}]},
                 {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}],
@@ -319,7 +325,7 @@ paineis_branches = [
            "Os 100 pull requests mais recentes. Clique no título para abrir o PR no GitHub.",
            {"pr": "PR", "titulo": "Título", "situacao": "Situação", "branch": "Branch", "destino": "Destino", "autor": "Autor",
             "aberto_em": "Aberto em", "merge_em": "Merge em"},
-           [situacao("situacao"),
+           [situacao("situacao"), largura("titulo", 420), largura("branch", 260),
             {"matcher": {"id": "byName", "options": "titulo"}, "properties": [
                 {"id": "links", "value": [{"title": "Abrir no GitHub", "url": "${__data.fields.link}", "targetBlank": True}]}]}],
            {"displayName": "PR", "desc": True}),

@@ -239,8 +239,8 @@
     {
       "id": 27,
       "type": "stat",
-      "title": "Último push",
-      "description": "Último envio de commits (git push) para qualquer branch, pelo feed de eventos do GitHub (atrasa algumas horas).",
+      "title": "Última atividade em PR",
+      "description": "Último push, comentário ou merge em qualquer pull request.",
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
         "uid": "github"
@@ -262,18 +262,30 @@
           "source": "url",
           "format": "table",
           "parser": "backend",
-          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/events",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/pulls",
           "url_options": {
             "method": "GET",
             "data": "",
             "params": [
               {
+                "key": "state",
+                "value": "all"
+              },
+              {
+                "key": "sort",
+                "value": "updated"
+              },
+              {
+                "key": "direction",
+                "value": "desc"
+              },
+              {
                 "key": "per_page",
-                "value": "100"
+                "value": "1"
               }
             ]
           },
-          "root_selector": "$max($map($[type = \"PushEvent\"], function($v) {$toMillis($v.created_at)}))",
+          "root_selector": "$max($map($, function($v) {$toMillis($v.updated_at)}))",
           "columns": []
         }
       ],
@@ -536,6 +548,30 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "branch"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 330
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "titulo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 360
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "existe"
             },
             "properties": [
@@ -587,29 +623,29 @@
           "options": {
             "renameByName": {
               "branch": "Branch",
-              "situacao": "Situação",
-              "pr": "PR",
-              "titulo": "Título do PR",
-              "autor": "Autor do PR",
-              "destino": "Destino",
-              "atualizado": "PR atualizado",
-              "ultimo_push": "Último push",
-              "quem": "Quem enviou",
-              "commit": "Commit",
-              "existe": "No GitHub"
+              "situacao B": "Situação",
+              "pr B": "PR",
+              "titulo B": "Título do PR",
+              "autor B": "Autor do PR",
+              "destino B": "Destino",
+              "atualizado B": "PR atualizado",
+              "ultimo_push C": "Último push",
+              "quem C": "Quem enviou",
+              "commit A": "Commit",
+              "existe A": "No GitHub"
             },
             "indexByName": {
               "branch": 0,
-              "situacao": 1,
-              "pr": 2,
-              "titulo": 3,
-              "autor": 4,
-              "destino": 5,
-              "atualizado": 6,
-              "ultimo_push": 7,
-              "quem": 8,
-              "commit": 9,
-              "existe": 10
+              "situacao B": 1,
+              "pr B": 2,
+              "titulo B": 3,
+              "autor B": 4,
+              "destino B": 5,
+              "atualizado B": 6,
+              "ultimo_push C": 7,
+              "quem C": 8,
+              "commit A": 9,
+              "existe A": 10
             },
             "excludeByName": {
               "link": true
@@ -937,6 +973,30 @@
                     }
                   }
                 ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "titulo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "branch"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
               }
             ]
           },

@@ -371,7 +371,8 @@ O painel "Support Nexus · Branches do Git" mostra toda branch que subiu para o 
 PR mais recente (aberto, merge feito, fechado ou sem PR), quem enviou o último push e quando, e o histórico de pull
 requests. Os dados vêm da API pública do GitHub (plugin Infinity); o painel se atualiza a cada 15 minutos.
 
-Na máquina de 1 GB o Grafana sobe sozinho, sem o Prometheus, só com esse painel (limite de 256 MB). Para ligar:
+Na máquina de 1 GB o Grafana sobe sozinho, sem o Prometheus, só com esse painel (limite de 256 MB). O processador
+dela é pequeno: o painel leva de 10 a 20 segundos para carregar. Para ligar:
 
 ```bash
 cd ~/wiki-support-nexus
