@@ -251,6 +251,9 @@ pytest.ini                 configuração dos testes (rodar na raiz)
   branca, mesmo abaixo do contraste AA: regra da marca, a pedido do marketing. Texto, links e foco em turquesa
   escuro `#007A73`; destaque do diagrama em laranja. Fonte Inter, a mesma dos outros sistemas da rede. Logo,
   favicon e ícones dos módulos em `frontend/public/marca/`; o PDF embute o logo no cabeçalho.
+  Tamanhos de janela (fim do `app.css`): sem rolagem horizontal de 360 a 2560 px e com zoom de 200%; alvos de toque
+  de 44 px no celular e em telas de toque; topo em duas linhas abaixo de 1100 px; em telas a partir de 1800 px o
+  conteúdo cresce com `zoom` (menos no diagrama, onde o zoom atrapalharia o arrastar do React Flow).
   Tema claro (padrão) e escuro (`frontend/src/tema.ts`, `:root[data-tema="escuro"]` no `app.css`): o escuro troca só
   fundos, textos e bordas; botões, faixa da marca e o manual (papel branco) não mudam.
 

@@ -92,3 +92,17 @@
   .modo-pdf .doc-cab, .modo-pdf .doc-rod { display: none; }
 }
 .modo-pdf body { background: #fff; }
+
+/* celular: o A4 cabe na tela com margens menores (só na tela; a impressão e o PDF continuam com as medidas do A4) */
+@media screen and (max-width: 720px) {
+  .doc { min-height: 0; font-size: 11pt; }
+  .doc-faixa { width: 7mm; }
+  .doc-cab { padding: 6mm 5mm 0 13mm; flex-wrap: wrap; gap: 3mm; }
+  .doc-corpo { padding: 8mm 5mm 10mm 13mm; }
+  .doc-rod { padding: 0 5mm 6mm 10mm; }
+  .doc-titulo { font-size: 20pt; }
+  .doc-nota { margin-left: 0; max-width: none; }
+  .doc-sql { margin-left: 0; }
+  .doc-figura img { height: auto; }
+}
+

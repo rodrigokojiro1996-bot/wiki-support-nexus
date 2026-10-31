@@ -5,6 +5,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Layout para qualquer tamanho de janela, de 360 px (celular) a 2560 px, e com zoom de 200%, sem rolagem
+  horizontal. Topo em duas linhas abaixo de 1100 px; no celular, módulos lado a lado, tema só com o ícone e alvos de
+  toque de 44 px (também em telas de toque); manual em A4 com margens menores no celular (a impressão não muda).
+  Em telas grandes o conteúdo cresce junto (topo, ficha, manual e editor; o diagrama não, para não atrapalhar o
+  arrastar), as colunas acompanham a largura e o manual da tela e os chamados ficam lado a lado.
 - Dois tipos de manual por tela: o **manual da tela** (passo a passo dos processos e funcionalidades, um por tela)
   e os **chamados frequentes** (problemas recorrentes da tela e como resolver, quantos forem preciso). A ficha da
   tela mostra os dois; o chamado novo já vem com Sintoma, Causa e Solução; a página do manual da tela lista os
