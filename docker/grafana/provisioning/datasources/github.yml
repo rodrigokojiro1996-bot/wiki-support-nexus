@@ -1,6 +1,6 @@
 # API pública do GitHub, lida pelo plugin Infinity (instalado ao subir: GF_PLUGINS_PREINSTALL_SYNC no docker-compose.yml).
-# Alimenta o painel "Support Nexus · Branches do Git". O repositório é público: sem token, limite de 60 consultas por hora
-# por IP, folgado para o painel (7 consultas a cada 15 min).
+# Alimenta o painel "Support Nexus · Branches do Git". O repositório é público e funciona sem token, mas o GitHub aceita
+# só 60 consultas por hora por IP (6 aberturas do painel). Com GITHUB_TOKEN no .env o limite vai a 5000 por hora.
 apiVersion: 1
 datasources:
   - name: GitHub
@@ -10,3 +10,7 @@ datasources:
     jsonData:
       allowedHosts:            # o Grafana só consulta este endereço por esta fonte
         - https://api.github.com
+      httpHeaderName1: Authorization
+    secureJsonData:
+      # "Bearer <token>" quando há GITHUB_TOKEN no .env (montado no docker-compose.yml); vazio, o GitHub ignora
+      httpHeaderValue1: $GITHUB_AUTORIZACAO

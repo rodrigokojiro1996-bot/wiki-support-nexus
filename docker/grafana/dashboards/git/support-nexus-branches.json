@@ -17,19 +17,10 @@
   "graphTooltip": 1,
   "links": [
     {
-      "title": "Painéis do Support Nexus",
-      "type": "dashboards",
-      "tags": [
-        "support-nexus"
-      ],
-      "asDropdown": false,
-      "includeVars": false
-    },
-    {
-      "title": "Abrir o Support Nexus",
+      "title": "Abrir o repositório no GitHub",
       "type": "link",
-      "url": "http://localhost:8010",
       "targetBlank": true,
+      "url": "https://github.com/rodrigokojiro1996-bot/wiki-support-nexus",
       "icon": "external link"
     }
   ],

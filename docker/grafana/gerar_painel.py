@@ -200,7 +200,8 @@ paineis_cobertura = [
 ]
 
 # ---------------------------------------------------------------------------------------------------------------
-# Painel 3 · Branches do Git (API pública do GitHub, lida pelo plugin Infinity; sem token: 60 consultas por hora)
+# Painel 3 · Branches do Git (API pública do GitHub, lida pelo plugin Infinity; 10 consultas por abertura do painel:
+# sem token o GitHub aceita 60 por hora, com GITHUB_TOKEN no .env, 5000)
 # Cada consulta devolve JSON do GitHub e uma expressão JSONata (root_selector) monta as linhas da tabela.
 # ---------------------------------------------------------------------------------------------------------------
 GH = {"type": "yesoreyeram-infinity-datasource", "uid": "github"}
@@ -328,10 +329,10 @@ LINKS = [{"title": "Painéis do Support Nexus", "type": "dashboards", "tags": ["
          {"title": "Abrir o Support Nexus", "type": "link", "url": "http://localhost:8010", "targetBlank": True, "icon": "external link"}]
 
 
-def dashboard(uid, titulo, descricao, paineis_, desde, refresh):
+def dashboard(uid, titulo, descricao, paineis_, desde, refresh, links=LINKS):
     return {"uid": uid, "title": titulo, "tags": ["support-nexus"], "editable": True, "description": descricao,
             "schemaVersion": 39, "version": 1, "refresh": refresh, "time": {"from": desde, "to": "now"},
-            "timezone": "browser", "graphTooltip": 1, "links": LINKS, "panels": paineis_}
+            "timezone": "browser", "graphTooltip": 1, "links": links, "panels": paineis_}
 
 
 PAINEIS = {
@@ -344,7 +345,9 @@ PAINEIS = {
     # em pasta própria: no servidor da Oracle o Grafana sobe só com este painel (deploy/oracle/docker-compose.grafana.yml)
     "git/support-nexus-branches.json": dashboard("support-nexus-branches", "Support Nexus · Branches do Git",
                                                  "Controle das branches enviadas ao GitHub: situação do PR, último push e histórico.",
-                                                 paineis_branches, "now-90d", "15m"),
+                                                 paineis_branches, "now-90d", "15m",
+                                                 [{"title": "Abrir o repositório no GitHub", "type": "link", "targetBlank": True,
+                                                   "url": REPO.replace("api.github.com/repos", "github.com"), "icon": "external link"}]),
 }
 
 pasta = Path(__file__).parent / "dashboards"
