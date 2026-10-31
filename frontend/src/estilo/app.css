@@ -170,6 +170,18 @@ a.topo-mod { text-decoration: none; }
 .secao h3 { font-size: 13px; font-weight: 800; letter-spacing: .02em; }
 .manual-card { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--laranja); border-radius: 8px; text-decoration: none; color: var(--fg); background: var(--surface-2); max-width: 640px; }
 .manual-card:hover { border-color: var(--laranja); }
+.manual-card.tipo-chamado { border-left-color: var(--marca); }
+.manual-card.tipo-chamado:hover { border-color: var(--marca); }
+.manual-card + .manual-card { margin-top: 8px; }
+.secao-dica { margin: -4px 0 10px; font-size: 12.5px; color: var(--muted); }
+/* página do manual: o tipo e os outros manuais da mesma tela (fica fora do PDF e da impressão) */
+.manual-tipo { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.manual-tipo.tipo-chamado { background: var(--laranja-claro); color: var(--laranja); }
+.manual-relacionados { width: 210mm; max-width: 100%; margin: 0 auto 16px; padding: 12px 16px; border: 1px solid var(--line); border-left: 3px solid var(--marca); border-radius: 8px; background: var(--surface); }
+.manual-relacionados h2 { font-size: 14px; margin-bottom: 6px; }
+.manual-relacionados ul { margin: 0; padding-left: 18px; }
+.manual-relacionados li { margin: 3px 0; }
+@media print { .manual-relacionados { display: none; } }
 .manual-card b { font-size: 14.5px; }
 .manual-card small { color: var(--muted); font-size: 12.5px; }
 .manual-cod { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
@@ -280,7 +292,7 @@ a.topo-mod { text-decoration: none; }
 .manual-barra { position: sticky; top: var(--topo-h); z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .manual-barra-esq { display: flex; align-items: center; gap: 16px; min-width: 0; flex-wrap: wrap; }
 .manual-caminho { font-size: 12.5px; color: var(--muted); }
-.manual-palco { padding: 28px 16px 60px; display: flex; justify-content: center; }
+.manual-palco { padding: 28px 16px 60px; display: flex; flex-direction: column; align-items: center; }
 
 /* ---------- editor de manuais ---------- */
 .secao-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -289,6 +301,8 @@ a.btn { text-decoration: none; color: inherit; }
 a.btn-primario { color: var(--sobre-accent); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .editor-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.editor-tipo-manual { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.editor-tipo-manual select { font: inherit; font-weight: 700; color: var(--fg); background: var(--surface); border: 1px solid var(--line-strong); border-radius: 7px; padding: 4px 8px; }
 .editor-vistas { display: none; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
 .editor-vistas button { border: 0; background: var(--surface); padding: 6px 12px; font-weight: 700; font-size: 13px; cursor: pointer; }
 .editor-vistas button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); }

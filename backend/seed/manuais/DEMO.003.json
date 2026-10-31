@@ -6,6 +6,7 @@
   "versao": "1.0",
   "modulo": "pdv",
   "menu": "pdv.fiscal.monitor-nfc-e",
+  "tipo": "chamado",
   "fontes": ["Manual de exemplo"],
   "tabelas": ["nfce", "vendas", "terminais"],
   "secoes": [

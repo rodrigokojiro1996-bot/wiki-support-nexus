@@ -6,6 +6,7 @@
   "versao": "1.0",
   "modulo": "pdv",
   "menu": "pdv.vendas.devolucoes",
+  "tipo": "processo",
   "fontes": ["Manual de exemplo"],
   "tabelas": ["devolucoes", "devolucao_itens", "vendas", "clientes"],
   "secoes": [

@@ -54,7 +54,7 @@ export default function Documento({ manual }: { manual: Manual }) {
       <header className="doc-cab">
         <div>
           <b>Support Nexus – Base de conhecimento</b>
-          <span>{manual.modulo_nome}</span>
+          <span>{manual.modulo_nome}{manual.tipo === 'chamado' ? ' · Chamado frequente' : ''}</span>
         </div>
         <Marca />
       </header>

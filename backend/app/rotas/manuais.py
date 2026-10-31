@@ -25,7 +25,7 @@ def _manual(con, codigo: str) -> dict:
 
 @router.get("/manuais")
 def manuais(modulo: str | None = None, con=Depends(db)):
-    sql = "SELECT codigo, titulo, subtitulo, versao, modulo, menu, atualizado_em FROM manuais"
+    sql = "SELECT codigo, titulo, subtitulo, versao, modulo, menu, tipo, atualizado_em FROM manuais"
     args = ()
     if modulo:
         sql += " WHERE modulo = ?"
@@ -91,6 +91,9 @@ class ManualEntrada(BaseModel):
     secoes: list[SecaoEntrada] = Field(min_length=1, max_length=100)
     # documentos de origem (importação); vazio mantém os que o manual já tinha
     fontes: list[Annotated[str, Field(max_length=200)]] = Field(default_factory=list, max_length=20)
+    # processo = o manual da tela (um por tela); chamado = chamado frequente da tela. Sem tipo: processo no novo,
+    # o que já era na edição
+    tipo: Literal["processo", "chamado"] | None = None
 
     @field_validator("titulo")
     @classmethod
@@ -100,7 +103,7 @@ class ManualEntrada(BaseModel):
         return v
 
 
-def _conferir_destino(con, corpo: ManualEntrada) -> None:
+def _conferir_destino(con, corpo: ManualEntrada, codigo: str | None = None) -> None:
     if not con.execute("SELECT 1 FROM modulos WHERE id = ? AND banco IS NOT NULL", (corpo.modulo,)).fetchone():
         raise HTTPException(422, f"Módulo {corpo.modulo} não existe ou ainda não tem banco mapeado")
     if not corpo.menu:
@@ -111,6 +114,15 @@ def _conferir_destino(con, corpo: ManualEntrada) -> None:
     # manual só em tela final: menu principal ou submenu (com opções depois dele) é só navegação
     if menu["submenu"] or con.execute("SELECT 1 FROM menus WHERE pai = ?", (corpo.menu,)).fetchone():
         raise HTTPException(422, f"{menu['titulo']} é um menu, não uma tela: escolha uma das opções dentro dele")
+    # um manual de processos por tela; chamados frequentes, quantos forem preciso
+    anterior = con.execute("SELECT tipo FROM manuais WHERE codigo = ?", (codigo,)).fetchone() if codigo else None
+    tipo = corpo.tipo or (anterior["tipo"] if anterior else "processo")
+    if tipo == "processo":
+        outro = con.execute("SELECT codigo FROM manuais WHERE menu = ? AND tipo = 'processo' AND codigo <> ?",
+                            (corpo.menu, codigo or "")).fetchone()
+        if outro:
+            raise HTTPException(409, f"{menu['titulo']} já tem o manual da tela ({outro['codigo']}): edite esse manual, "
+                                     "ou cadastre este como chamado frequente")
 
 
 @router.post("/manuais", status_code=201)
@@ -123,7 +135,7 @@ def criar_manual(corpo: ManualEntrada, con=Depends(db), por: str = Depends(usuar
 @router.put("/manuais/{codigo}")
 def editar_manual(codigo: str, corpo: ManualEntrada, con=Depends(db), por: str = Depends(usuario)):
     _manual(con, codigo)
-    _conferir_destino(con, corpo)
+    _conferir_destino(con, corpo, codigo)
     m = servico.salvar(con, corpo.model_dump(), por, codigo)
     return {"codigo": m["codigo"], "versao": m["versao"]}
 

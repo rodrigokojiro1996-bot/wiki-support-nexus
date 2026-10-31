@@ -10,7 +10,8 @@ MENU = "pdv.caixa.fechamento-de-caixa"
 
 
 def novo(**extra):
-    m = {"titulo": "Reabrir caixa", "subtitulo": "Quando o operador fechou antes da hora", "modulo": "pdv", "menu": MENU,
+    # chamado frequente: a tela pode ter vários (manual da tela é um só, ver test_tipos_manual.py)
+    m = {"titulo": "Reabrir caixa", "subtitulo": "Quando o operador fechou antes da hora", "modulo": "pdv", "menu": MENU, "tipo": "chamado",
          "secoes": [{"titulo": "Procedimento", "blocos": [
              {"tipo": "passo", "texto": "Acesse **Caixa > Reabrir**."},
              {"tipo": "sql", "texto": "SELECT * FROM caixa_mov WHERE id_caixa = 1;"},

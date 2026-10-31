@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, caminhoTexto, IMPORTACAO_ACEITA, IMPORTACAO_MAXIMO_MB } from '../api';
 import Documento from '../componentes/Documento';
 import Topo from '../componentes/Topo';
-import type { Bloco, Manual, Passo } from '../tipos';
+import { ROTULO_TIPO, type Bloco, type Manual, type Passo, type TipoManual } from '../tipos';
 
 type TipoBloco = Bloco['tipo'];
 type BlocoEd = Bloco & { id: number };
@@ -35,6 +35,12 @@ const mover = <T,>(lista: T[], i: number, d: number) => {
 };
 /** mesma regra da API: 1.0 → 1.1 */
 const proximaVersao = (v: string) => { const m = /^(\d+)\.(\d+)$/.exec(v); return m ? `${m[1]}.${Number(m[2]) + 1}` : '1.1'; };
+/** chamado frequente novo já vem no formato de atendimento: o que a pessoa vê, por que acontece e como resolver */
+const modeloChamado = (): SecaoEd[] => [
+  { id: novoId(), titulo: 'Sintoma', blocos: [{ ...blocoVazio('texto') }] },
+  { id: novoId(), titulo: 'Causa', blocos: [{ ...blocoVazio('texto') }] },
+  { id: novoId(), titulo: 'Solução', blocos: [blocoVazio('passo')] }
+];
 const urlImagem = (arquivo: string) => `/api/imagens/${arquivo.split('/').map(encodeURIComponent).join('/')}`;
 
 export default function ManualEditor() {
@@ -56,6 +62,7 @@ export default function ManualEditor() {
   const [importando, setImportando] = useState<'fechado' | 'aberto' | 'enviando'>(params.get('importar') ? 'aberto' : 'fechado');
   const [avisosImportacao, setAvisosImportacao] = useState<{ arquivo: string; avisos: string[] } | null>(null);
   const [fontes, setFontes] = useState<string[]>([]);
+  const [tipo, setTipo] = useState<TipoManual>(params.get('tipo') === 'chamado' ? 'chamado' : 'processo');
   const seletorDocumento = useRef<HTMLInputElement>(null);
   const alvo = useRef<{ secao: number; bloco: number | null }>({ secao: -1, bloco: null }); // onde o print colado entra
   const seletor = useRef<HTMLInputElement>(null);
@@ -69,6 +76,7 @@ export default function ManualEditor() {
       api.manual(codigo).then(m => {
         setTitulo(m.titulo); setSubtitulo(m.subtitulo); setSecoes(comIds(m.secoes));
         setContexto({ modulo: m.modulo, moduloNome: m.modulo_nome, menu: m.menu, caminho: m.caminho, versao: m.versao });
+        setTipo(m.tipo ?? 'processo');
       }).catch(e => setErro(e.message));
       return;
     }
@@ -76,8 +84,13 @@ export default function ManualEditor() {
     if (!menu) { setErro('Abra o editor a partir de uma tela do mapa do sistema.'); return; }
     Promise.all([api.menu(menu), api.modulos()]).then(([ficha, mods]) => {
       setContexto({ modulo: ficha.modulo, moduloNome: mods.find(x => x.id === ficha.modulo)?.nome ?? ficha.modulo, menu, caminho: ficha.caminho, versao: '' });
-      setTitulo(ficha.titulo);
-      setSecoes([{ id: novoId(), titulo: 'Procedimento', blocos: [blocoVazio('passo')] }]);
+      if (params.get('tipo') === 'chamado') {
+        setTitulo(''); // o título do chamado é o problema, ex.: "Transferência presa como em uso"
+        setSecoes(modeloChamado());
+      } else {
+        setTitulo(ficha.titulo);
+        setSecoes([{ id: novoId(), titulo: 'Procedimento', blocos: [blocoVazio('passo')] }]);
+      }
     }).catch(e => setErro(e.message));
   }, [codigo, params]);
 
@@ -173,7 +186,7 @@ export default function ManualEditor() {
     setSalvando(true);
     try {
       const r = await api.salvarManual({
-        titulo, subtitulo, modulo: contexto.modulo, menu: contexto.menu, fontes,
+        titulo, subtitulo, modulo: contexto.modulo, menu: contexto.menu, fontes, tipo,
         secoes: secoes.map(s => ({ titulo: s.titulo, blocos: s.blocos.map(semId) }))
       }, codigo);
       setSujo(false);
@@ -192,7 +205,7 @@ export default function ManualEditor() {
   const previa: Manual | null = contexto && {
     codigo: codigo ?? `${contexto.modulo.toUpperCase()}.???`, titulo: titulo || 'Título do manual', subtitulo,
     versao: contexto.versao ? proximaVersao(contexto.versao) : '1.0', modulo: contexto.modulo, modulo_nome: contexto.moduloNome, menu: contexto.menu,
-    caminho: contexto.caminho, tabelas: [], fontes, atualizado_em: '',
+    caminho: contexto.caminho, tabelas: [], fontes, atualizado_em: '', tipo,
     secoes: secoes.map(s => ({ titulo: s.titulo || 'Seção sem título', blocos: s.blocos.map(semId) }))
   };
 
@@ -204,7 +217,13 @@ export default function ManualEditor() {
       <div className="manual-barra">
         <div className="manual-barra-esq">
           <button type="button" className="link" onClick={cancelar}>← {codigo ? 'Voltar ao manual' : 'Voltar ao mapa'}</button>
-          <b>{codigo ? `Editando ${codigo}` : 'Novo manual'}</b>
+          <b>{codigo ? `Editando ${codigo}` : tipo === 'chamado' ? 'Novo chamado frequente' : 'Novo manual da tela'}</b>
+          <label className="editor-tipo-manual">
+            <span>Tipo</span>
+            <select value={tipo} onChange={e => { setTipo(e.target.value as TipoManual); setSujo(true); }} aria-label="Tipo do manual">
+              {(Object.keys(ROTULO_TIPO) as TipoManual[]).map(t => <option key={t} value={t}>{ROTULO_TIPO[t]}</option>)}
+            </select>
+          </label>
           {contexto && contexto.caminho.length > 0 && <span className="manual-caminho">{caminhoTexto(contexto.moduloNome, contexto.caminho)}</span>}
         </div>
         <div className="editor-acoes">

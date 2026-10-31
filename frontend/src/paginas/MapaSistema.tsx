@@ -236,30 +236,52 @@ export default function MapaSistema() {
             ) : (
             <div className="painel-corpo">
 
-              <div className="secao">
-                <div className="secao-cab">
-                  <h3>Manuais</h3>
-                  {ficha.manuais.length > 0 && (
-                    <div className="secao-acoes">
-                      <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}&importar=1`}>Importar documento</Link>
-                      <Link className="btn btn-p" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>+ Novo manual</Link>
-                    </div>
-                  )}
-                </div>
-                {ficha.manuais.length ? ficha.manuais.map(m => (
-                  <Link key={m.codigo} to={`/manuais/${encodeURIComponent(m.codigo)}`} className="manual-card">
+              {(() => {
+                const novo = (tipo: string, importar = false) =>
+                  `/manuais/novo?menu=${encodeURIComponent(ficha.id)}&tipo=${tipo}${importar ? '&importar=1' : ''}`;
+                const cartao = (m: MenuFicha['manuais'][number]) => (
+                  <Link key={m.codigo} to={`/manuais/${encodeURIComponent(m.codigo)}`} className={`manual-card tipo-${m.tipo}`}>
                     <span className="manual-cod">{m.codigo} · v{m.versao}</span>
                     <b>{m.titulo}</b>
                     <small>{m.subtitulo}</small>
                   </Link>
-                )) : (
-                  <div className="sem-manual">
-                    <p className="vazio">Nenhum manual para esta tela ainda.</p>
-                    <Link className="btn btn-primario" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}`}>Criar manual para esta tela</Link>
-                    <Link className="btn" to={`/manuais/novo?menu=${encodeURIComponent(ficha.id)}&importar=1`}>Importar documento</Link>
+                );
+                const daTela = ficha.manuais.filter(m => m.tipo !== 'chamado');
+                const chamados = ficha.manuais.filter(m => m.tipo === 'chamado');
+                return (<>
+                  <div className="secao">
+                    <div className="secao-cab"><h3>Manual da tela</h3></div>
+                    <p className="secao-dica">Como usar a tela: o passo a passo dos processos e as funcionalidades.</p>
+                    {daTela.length ? daTela.map(cartao) : (
+                      <div className="sem-manual">
+                        <p className="vazio">Esta tela ainda não tem manual.</p>
+                        <Link className="btn btn-primario" to={novo('processo')}>Criar manual da tela</Link>
+                        <Link className="btn" to={novo('processo', true)}>Importar documento</Link>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+
+                  <div className="secao">
+                    <div className="secao-cab">
+                      <h3>Chamados frequentes{chamados.length > 0 && ` (${chamados.length})`}</h3>
+                      {chamados.length > 0 && (
+                        <div className="secao-acoes">
+                          <Link className="btn btn-p" to={novo('chamado', true)}>Importar documento</Link>
+                          <Link className="btn btn-p" to={novo('chamado')}>+ Novo chamado frequente</Link>
+                        </div>
+                      )}
+                    </div>
+                    <p className="secao-dica">Problemas que costumam aparecer nesta tela e como resolver.</p>
+                    {chamados.length ? chamados.map(cartao) : (
+                      <div className="sem-manual">
+                        <p className="vazio">Nenhum chamado frequente registrado para esta tela.</p>
+                        <Link className="btn btn-primario" to={novo('chamado')}>Registrar chamado frequente</Link>
+                        <Link className="btn" to={novo('chamado', true)}>Importar documento</Link>
+                      </div>
+                    )}
+                  </div>
+                </>);
+              })()}
 
               {ficha.filhos.length > 0 && (
                 <div className="secao">
