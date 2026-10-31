@@ -33,7 +33,7 @@ body:
     id: versao
     attributes:
       label: Versão ou commit
-      placeholder: v0.3.0 ou 357eb8d
+      placeholder: v0.4.0 ou cb8c3dd
   - type: dropdown
     id: area
     attributes:

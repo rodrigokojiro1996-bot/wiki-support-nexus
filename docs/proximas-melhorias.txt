@@ -324,6 +324,7 @@ ORDEM SUGERIDA DE TRABALHO
   [x] 1.7 interface: "Importar documento" abrindo o editor preenchido
   [x] 1.8 testes completos da importacao
   [x] versao 0.3.0: CHANGELOG + tag v0.3.0 -> Release automatica
+  [x] versao 0.4.0: manuais por tipo, layout, icones, painel de branches
 
 Regra para todos os passos: pytest -q e npm run build verdes (agora pelo CI)
 antes de cada merge.
