@@ -22,7 +22,9 @@ def menu(menu_id: str, con=Depends(db)):
     if nomes:
         marca = ",".join("?" * len(nomes))
         rels = relacoes.listar(con, banco, f" AND (r.origem IN ({marca}) OR r.destino IN ({marca}))", (*nomes, *nomes))
-    manuais = [dict(m) for m in con.execute("SELECT codigo, titulo, subtitulo, versao, atualizado_em FROM manuais WHERE menu = ? ORDER BY codigo", (menu_id,))]
+    # o manual da tela (processo) primeiro, depois os chamados frequentes
+    manuais = [dict(m) for m in con.execute("SELECT codigo, titulo, subtitulo, versao, tipo, atualizado_em FROM manuais WHERE menu = ? "
+                                            "ORDER BY tipo DESC, codigo", (menu_id,))]
     filhos = [dict(f) for f in con.execute("SELECT id, titulo, atalho FROM menus WHERE pai = ? ORDER BY ordem", (menu_id,))]
     return {**dict(r), "desabilitado": bool(r["desabilitado"]), "banco": banco, "caminho": caminho_menu(con, menu_id),
             "tabelas": tabelas, "relacoes": [x for x in rels if x["estado"] != "descartada"], "manuais": manuais, "filhos": filhos}

@@ -6,6 +6,7 @@
   "versao": "1.0",
   "modulo": "pdv",
   "menu": "pdv.estoque.transferencia-entre-lojas.entrada-de-transferencia",
+  "tipo": "chamado",
   "fontes": ["Manual de exemplo"],
   "tabelas": ["transferencias", "transferencia_itens", "sync_fila"],
   "secoes": [

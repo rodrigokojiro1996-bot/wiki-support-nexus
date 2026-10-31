@@ -4,7 +4,7 @@ export type Modulo = {
 };
 
 /** GET /api/manuais: a lista, sem o conteúdo */
-export type ManualResumo = { codigo: string; titulo: string; subtitulo: string; versao: string; modulo: string; menu: string | null; atualizado_em: string };
+export type ManualResumo = { codigo: string; titulo: string; subtitulo: string; versao: string; modulo: string; menu: string | null; tipo: TipoManual; atualizado_em: string };
 
 export type MenuNo = {
   id: string; titulo: string; atalho: string | null; tela_codigo: string | null;
@@ -26,7 +26,7 @@ export type MenuFicha = {
   banco: string; caminho: Passo[];
   tabelas: { tabela: string; origem: 'sugerido' | 'equipe'; por: string; em: string | null; engine: string | null; linhas: number | null; existe: number }[];
   relacoes: Relacao[];
-  manuais: { codigo: string; titulo: string; subtitulo: string; versao: string; atualizado_em: string }[];
+  manuais: { codigo: string; titulo: string; subtitulo: string; versao: string; tipo: TipoManual; atualizado_em: string }[];
   filhos: Passo[];
 };
 
@@ -45,9 +45,15 @@ export type Manual = {
   secoes: { titulo: string; blocos: Bloco[] }[];
   por?: string;
   alterado_em?: string | null; // quando alguém salvou pelo editor, hora de Brasília: "AAAA-MM-DD HH:MM:SS"
+  tipo?: TipoManual;
+  relacionados?: { codigo: string; titulo: string; tipo: TipoManual }[]; // os outros manuais da mesma tela
 };
 
-export type ManualEntrada = Pick<Manual, 'titulo' | 'subtitulo' | 'modulo' | 'secoes'> & { menu: string | null; fontes?: string[] };
+/** processo = o manual da tela (passo a passo e funcionalidades, um por tela); chamado = chamado frequente da tela */
+export type TipoManual = 'processo' | 'chamado';
+export const ROTULO_TIPO: Record<TipoManual, string> = { processo: 'Manual da tela', chamado: 'Chamado frequente' };
+
+export type ManualEntrada = Pick<Manual, 'titulo' | 'subtitulo' | 'modulo' | 'secoes'> & { menu: string | null; fontes?: string[]; tipo?: TipoManual };
 
 /** POST /api/manuais/importar: documento convertido, ainda não salvo (os prints ficam em rascunho) */
 export type Rascunho = Pick<Manual, 'titulo' | 'subtitulo' | 'secoes' | 'tabelas' | 'fontes'> & { avisos: string[] };

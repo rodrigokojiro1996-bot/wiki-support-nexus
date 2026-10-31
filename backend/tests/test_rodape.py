@@ -9,7 +9,7 @@ from app import pdf, seed
 from app.rotas import manuais as rotas
 
 MENU = "pdv.caixa.fechamento-de-caixa"
-CORPO = {"titulo": "Reabrir caixa", "subtitulo": "", "modulo": "pdv", "menu": MENU,
+CORPO = {"titulo": "Reabrir caixa", "subtitulo": "", "modulo": "pdv", "menu": MENU, "tipo": "chamado",
          "secoes": [{"titulo": "Procedimento", "blocos": [{"tipo": "passo", "texto": "Acesse **Caixa > Reabrir**."}]}]}
 
 

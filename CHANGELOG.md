@@ -5,6 +5,10 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Dois tipos de manual por tela: o **manual da tela** (passo a passo dos processos e funcionalidades, um por tela)
+  e os **chamados frequentes** (problemas recorrentes da tela e como resolver, quantos forem preciso). A ficha da
+  tela mostra os dois; o chamado novo já vem com Sintoma, Causa e Solução; a página do manual da tela lista os
+  chamados frequentes dela. Migração 006 (`manuais.tipo`); os manuais existentes viram manual da tela.
 - Botão de tema no topo: claro (padrão) ou escuro, guardado no navegador. No escuro, as cores da marca seguem as
   mesmas (botões laranja com letra branca, turquesa em links e foco); o manual continua papel branco e o PDF sai
   claro. Diagrama com as cores escuras do React Flow.
