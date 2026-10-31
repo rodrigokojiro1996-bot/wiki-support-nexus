@@ -34,5 +34,12 @@
 		max_size 10MB
 	}
 
+	# painel do Grafana (opcional: deploy/oracle/docker-compose.grafana.yml). Sem o complemento, /grafana/ dá erro 502.
+	# O Grafana não recebe a senha da entrada: senão tentaria usá-la como login dele.
+	# (o Caddy tenta primeiro o reverse_proxy com caminho; o sem caminho fica para o resto)
+	reverse_proxy /grafana* grafana:3000 {
+		header_up -Authorization
+	}
+
 	reverse_proxy nexus:8010
 }

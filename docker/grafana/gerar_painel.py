@@ -1,4 +1,5 @@
-"""Gera os painéis do Grafana em docker/grafana/dashboards/: "Support Nexus · API" e "Support Nexus · Cobertura da wiki".
+"""Gera os painéis do Grafana em docker/grafana/dashboards/: "Support Nexus · API", "Support Nexus · Cobertura da wiki"
+e "Support Nexus · Branches do Git" (este em dashboards/git/, lido da API pública do GitHub pelo plugin Infinity).
 
 O JSON é gerado, não editado à mão: aqui ficam as decisões (consultas, cores, unidades) em poucas linhas.
 Rodar depois de mudar algo:  python docker/grafana/gerar_painel.py
@@ -28,13 +29,13 @@ SEM_RUIDO = 'route!~"/api/saude|/metrics"'  # o healthcheck do Docker chama /api
 _id = 0
 
 
-def painel(tipo, titulo, x, y, w, h, alvos, descricao, defaults=None, overrides=None, options=None):
+def painel(tipo, titulo, x, y, w, h, alvos, descricao, defaults=None, overrides=None, options=None, ds=DS, **extra):
     global _id
     _id += 1
-    return {"id": _id, "type": tipo, "title": titulo, "description": descricao, "datasource": DS,
+    return {"id": _id, "type": tipo, "title": titulo, "description": descricao, "datasource": ds,
             "gridPos": {"x": x, "y": y, "w": w, "h": h},
-            "targets": [{"datasource": DS, "refId": chr(65 + i), **a} for i, a in enumerate(alvos)],
-            "fieldConfig": {"defaults": defaults or {}, "overrides": overrides or []}, "options": options or {}}
+            "targets": [{"datasource": ds, "refId": chr(65 + i), **a} for i, a in enumerate(alvos)],
+            "fieldConfig": {"defaults": defaults or {}, "overrides": overrides or []}, "options": options or {}, **extra}
 
 
 def cor_fixa(nome, cor):
@@ -198,6 +199,118 @@ paineis_cobertura = [
            decimals=0, sem_dado="Nenhuma contribuição nos últimos 7 dias"),
 ]
 
+# ---------------------------------------------------------------------------------------------------------------
+# Painel 3 · Branches do Git (API pública do GitHub, lida pelo plugin Infinity; sem token: 60 consultas por hora)
+# Cada consulta devolve JSON do GitHub e uma expressão JSONata (root_selector) monta as linhas da tabela.
+# ---------------------------------------------------------------------------------------------------------------
+GH = {"type": "yesoreyeram-infinity-datasource", "uid": "github"}
+REPO = "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus"
+SITUACOES = [("PR aberto", SERIE[0]), ("merge feito", BOM), ("PR fechado", CINZA)]
+
+
+def github(caminho, raiz, colunas=(), **params):
+    """Uma consulta à API do GitHub. colunas: (nome, tipo) quando o tipo não é texto (datas, números)."""
+    return {"type": "json", "source": "url", "format": "table", "parser": "backend", "url": f"{REPO}/{caminho}",
+            "url_options": {"method": "GET", "data": "", "params": [{"key": k, "value": str(v)} for k, v in params.items()]},
+            "root_selector": raiz, "columns": [{"selector": c, "text": c, "type": t} for c, t in colunas]}
+
+
+# o PR mais recente de cada branch (a API devolve do mais novo para o mais antigo)
+ULTIMO_PR = ('($p := $; $distinct($p.head.ref).($r := $; $x := $p[head.ref = $r][0]; {"branch": $r, "pr": "#" & $string($x.number), '
+             '"titulo": $x.title, "situacao": $x.merged_at ? "merge feito" : ($x.state = "open" ? "PR aberto" : "PR fechado"), '
+             '"autor": $x.user.login, "destino": $x.base.ref}))')
+# o push mais recente de cada branch, entre os últimos 100 eventos do repositório
+ULTIMO_PUSH = ('($e := $[type = "PushEvent"]; $distinct($e.payload.ref).($r := $; $x := $e[payload.ref = $r][0]; '
+               '{"branch": $substringAfter($r, "refs/heads/"), "ultimo_push": $x.created_at, "quem": $x.actor.login}))')
+PUSHES = '$[type = "PushEvent"].{"quando": created_at, "branch": $substringAfter(payload.ref, "refs/heads/"), "quem": actor.login}'
+POR_BRANCH = ('($e := $[type = "PushEvent"]; $distinct($e.payload.ref).($r := $; '
+              '{"branch": $substringAfter($r, "refs/heads/"), "pushes": $count($e[payload.ref = $r])}))')
+HISTORICO = ('$.{"pr": number, "titulo": title, "branch": head.ref, "destino": base.ref, "autor": user.login, '
+             '"situacao": merged_at ? "merge feito" : (state = "open" ? "PR aberto" : "PR fechado"), '
+             '"aberto_em": created_at, "merge_em": merged_at, "link": html_url}')
+
+
+def numero_gh(titulo, x, w, caminho, raiz, descricao, unidade="none", **params):
+    return painel("stat", titulo, x, 0, w, 4, [github(caminho, raiz, [("total", "number")], **params)], descricao,
+                  {"unit": unidade, "noValue": "—", "color": {"mode": "fixed", "fixedColor": "text"}},
+                  options={"reduceOptions": {"calcs": ["lastNotNull"], "values": False, "fields": "/^total$/"},
+                           "colorMode": "none", "graphMode": "none", "textMode": "value", "justifyMode": "center"}, ds=GH)
+
+
+def tabela(titulo, x, y, w, h, alvos, descricao, nomes, overrides=(), ordem=None, transformacoes=()):
+    """Tabela com colunas renomeadas e na ordem de `nomes` ({campo: título}); o campo link fica escondido."""
+    organizar = {"id": "organize", "options": {"renameByName": nomes, "indexByName": {c: i for i, c in enumerate(nomes)},
+                                               "excludeByName": {"link": True}}}
+    return painel("table", titulo, x, y, w, h, alvos, descricao, {"noValue": "—", "custom": {"align": "auto", "filterable": True}},
+                  list(overrides), {"showHeader": True, "cellHeight": "sm", "sortBy": [ordem] if ordem else []}, ds=GH,
+                  transformations=[*transformacoes, organizar])
+
+
+def situacao(campo):
+    """Situação do PR em texto colorido; sem PR fica em amarelo (branch que subiu e ainda não pediu revisão)."""
+    return {"matcher": {"id": "byName", "options": campo}, "properties": [
+        {"id": "custom.cellOptions", "value": {"type": "color-text"}},
+        {"id": "mappings", "value": [{"type": "value", "options": {s: {"text": s, "color": c} for s, c in SITUACOES}},
+                                     {"type": "special", "options": {"match": "null", "result": {"text": "sem PR", "color": ATENCAO}}}]}]}
+
+
+def data_relativa(campo):
+    return {"matcher": {"id": "byName", "options": campo}, "properties": [{"id": "unit", "value": "dateTimeFromNow"}]}
+
+
+paineis_branches = [
+    # ---------- linha 1: números-chave ----------
+    numero_gh("Branches no GitHub", 0, 6, "branches", '{"total": $count($)}',
+              "Branches que existem hoje no repositório (as apagadas depois do merge não contam).", per_page=100),
+    numero_gh("PRs abertos", 6, 6, "pulls", '{"total": $count($)}', "Pull requests esperando revisão ou merge.",
+              state="open", per_page=100),
+    numero_gh("Merges nos últimos 30 dias", 12, 6, "pulls",
+              '{"total": $count($[merged_at and $toMillis(merged_at) > $millis() - 30 * 86400000])}',
+              "Pull requests com merge feito nos últimos 30 dias (entre os 100 fechados mais recentes).",
+              state="closed", sort="updated", direction="desc", per_page=100),
+    numero_gh("Último push", 18, 6, "events", '{"total": $toMillis($[type = "PushEvent"][0].created_at)}',
+              "Quando foi o último envio de commits (git push) para qualquer branch.", "dateTimeFromNow", per_page=100),
+
+    # ---------- linha 2: a lista de controle ----------
+    tabela("Branches", 0, 4, 24, 12,
+           [github("branches", '$.{"branch": name, "existe": "sim", "commit": $substring(commit.sha, 0, 7)}', per_page=100),
+            github("pulls", ULTIMO_PR, state="all", sort="created", direction="desc", per_page=100),
+            github("events", ULTIMO_PUSH, [("ultimo_push", "timestamp")], per_page=100)],
+           "Toda branch que subiu: as que existem hoje, as que já tiveram PR (mesmo apagadas depois do merge) e as com push recente. "
+           "Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. O GitHub só guarda os eventos de push dos últimos 90 dias.",
+           {"branch": "Branch", "situacao": "Situação", "pr": "PR", "titulo": "Título do PR", "autor": "Autor do PR", "destino": "Destino",
+            "ultimo_push": "Último push", "quem": "Quem enviou", "commit": "Commit", "existe": "No GitHub"},
+           [situacao("situacao"), data_relativa("ultimo_push"),
+            {"matcher": {"id": "byName", "options": "existe"}, "properties": [
+                {"id": "mappings", "value": [{"type": "special", "options": {"match": "null", "result": {"text": "apagada", "color": CINZA}}}]},
+                {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}],
+           {"displayName": "Último push", "desc": True},
+           [{"id": "joinByField", "options": {"byField": "branch", "mode": "outer"}}]),
+
+    # ---------- linha 3: o que subiu por último ----------
+    tabela("Pushes recentes", 0, 16, 14, 10, [github("events", PUSHES, [("quando", "timestamp")], per_page=100)],
+           "Cada envio de commits (git push), do mais recente para o mais antigo. O GitHub guarda até 90 dias.",
+           {"quando": "Quando", "branch": "Branch", "quem": "Quem enviou"}, ordem={"displayName": "Quando", "desc": True}),
+    painel("bargauge", "Pushes por branch", 14, 16, 10, 10, [github("events", POR_BRANCH, [("pushes", "number")], per_page=100)],
+           "Quantos envios cada branch recebeu entre os últimos 100 eventos do repositório: onde o trabalho está acontecendo.",
+           {"unit": "none", "decimals": 0, "min": 0, "noValue": "Nenhum push recente", "color": {"mode": "fixed", "fixedColor": SERIE[0]}},
+           options={"orientation": "horizontal", "displayMode": "basic", "showUnfilled": True, "valueMode": "text", "namePlacement": "top",
+                    "sizing": "auto", "minVizHeight": 16, "maxVizHeight": 26,
+                    "reduceOptions": {"calcs": [], "values": True, "fields": "/^pushes$/"}}, ds=GH),
+
+    # ---------- linha 4: histórico ----------
+    tabela("Histórico de pull requests", 0, 26, 24, 12,
+           [github("pulls", HISTORICO, [("pr", "number"), ("aberto_em", "timestamp"), ("merge_em", "timestamp")],
+                   state="all", sort="created", direction="desc", per_page=100)],
+           "Os 100 pull requests mais recentes. Clique no título para abrir o PR no GitHub.",
+           {"pr": "PR", "titulo": "Título", "situacao": "Situação", "branch": "Branch", "destino": "Destino", "autor": "Autor",
+            "aberto_em": "Aberto em", "merge_em": "Merge em"},
+           [situacao("situacao"),
+            {"matcher": {"id": "byName", "options": "titulo"}, "properties": [
+                {"id": "links", "value": [{"title": "Abrir no GitHub", "url": "${__data.fields.link}", "targetBlank": True}]}]}],
+           {"displayName": "PR", "desc": True}),
+]
+
 LINKS = [{"title": "Painéis do Support Nexus", "type": "dashboards", "tags": ["support-nexus"], "asDropdown": False, "includeVars": False},
          {"title": "Abrir o Support Nexus", "type": "link", "url": "http://localhost:8010", "targetBlank": True, "icon": "external link"}]
 
@@ -215,11 +328,16 @@ PAINEIS = {
     "support-nexus-cobertura.json": dashboard("support-nexus-cobertura", "Support Nexus · Cobertura da wiki",
                                               "Quanto do sistema está documentado e quem está contribuindo (métricas nexus_wiki_*).",
                                               paineis_cobertura, "now-7d", "1m"),
+    # em pasta própria: no servidor da Oracle o Grafana sobe só com este painel (deploy/oracle/docker-compose.grafana.yml)
+    "git/support-nexus-branches.json": dashboard("support-nexus-branches", "Support Nexus · Branches do Git",
+                                                 "Controle das branches enviadas ao GitHub: situação do PR, último push e histórico.",
+                                                 paineis_branches, "now-90d", "15m"),
 }
 
 pasta = Path(__file__).parent / "dashboards"
 pasta.mkdir(exist_ok=True)
 for arquivo, d in PAINEIS.items():
+    (pasta / arquivo).parent.mkdir(exist_ok=True)
     (pasta / arquivo).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"{pasta / arquivo} · {len(d['panels'])} painéis")
 
@@ -231,6 +349,8 @@ def conferir(prometheus: str) -> int:
         print(d["title"])
         for p in d["panels"]:
             for t in p["targets"]:
+                if "expr" not in t:  # consultas ao GitHub (painel de branches) não são PromQL
+                    continue
                 url = f"{prometheus.rstrip('/')}/api/v1/query?" + urllib.parse.urlencode({"query": t["expr"]})
                 try:
                     n = len(json.load(urllib.request.urlopen(url, timeout=10))["data"]["result"])

@@ -68,6 +68,8 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_USERS_DEFAULT_LANGUAGE: pt-BR
       GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/support-nexus.json
+      # plugin Infinity: lê a API do GitHub para o painel de branches (versão fixa, instalada ao subir)
+      GF_PLUGINS_PREINSTALL_SYNC: yesoreyeram-infinity-datasource@4.1.5
       # sem telemetria nem consultas a servidores externos (atualizações, notícias)
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"

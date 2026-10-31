@@ -1,0 +1,12 @@
+# API pública do GitHub, lida pelo plugin Infinity (instalado ao subir: GF_PLUGINS_PREINSTALL_SYNC no docker-compose.yml).
+# Alimenta o painel "Support Nexus · Branches do Git". O repositório é público: sem token, limite de 60 consultas por hora
+# por IP, folgado para o painel (7 consultas a cada 15 min).
+apiVersion: 1
+datasources:
+  - name: GitHub
+    uid: github                # o painel aponta para este uid
+    type: yesoreyeram-infinity-datasource
+    editable: false            # mudanças vêm deste arquivo, não da tela
+    jsonData:
+      allowedHosts:            # o Grafana só consulta este endereço por esta fonte
+        - https://api.github.com
