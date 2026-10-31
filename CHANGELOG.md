@@ -5,6 +5,10 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Ícones dos módulos SPA PDV, SPA ADM e SPA FIN redesenhados em SVG nas cores da marca: nítidos em qualquer tamanho
+  e nos dois temas (eram PNGs de 64 px, um deles com fundo branco). No tema escuro, o logo da rede fica sobre uma
+  placa branca (o logo completo só funciona sobre branco) e some o contorno claro das bordas. Barra do editor e da
+  página do manual com as ações numa linha própria abaixo de 1100 px, o Salvar à direita.
 - Layout para qualquer tamanho de janela, de 360 px (celular) a 2560 px, e com zoom de 200%, sem rolagem
   horizontal. Topo em duas linhas abaixo de 1100 px; no celular, módulos lado a lado, tema só com o ícone e alvos de
   toque de 44 px (também em telas de toque); manual em A4 com margens menores no celular (a impressão não muda).

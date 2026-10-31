@@ -74,13 +74,16 @@ a { color: var(--accent); }
 /* faixa da marca: turquesa que termina no laranja da rede */
 .topo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: linear-gradient(90deg, var(--marca), var(--marca-2)); }
 .topo-marca { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--fg); }
-.topo-logo { height: 30px; width: auto; display: block; }
+.topo-logo { height: var(--logo-h, 30px); width: auto; display: block; }
+/* tema escuro: o logo completo (laranja e turquesa) só funciona sobre branco (regra da marca), então ganha uma placa
+   branca; sem ela, as bordas do PNG, recortado de fundo branco, aparecem como um contorno claro */
+:root[data-tema="escuro"] .topo-logo { box-sizing: content-box; padding: 4px 8px; background: #fff; border-radius: 8px; }
 .topo-div { width: 1px; height: 30px; background: var(--line-strong); }
 .topo-marca b { display: block; font-size: 16px; font-weight: 800; line-height: 1.1; }
 .topo-marca small { display: block; font-size: 11.5px; color: var(--muted); }
 .topo-modulos { display: flex; gap: 6px; }
 .topo-mod { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 9px; font-weight: 700; font-size: 13px; color: var(--muted); border: 1px solid transparent; }
-.topo-mod img { width: 24px; height: 24px; border-radius: 5px; display: block; }
+.topo-mod img { width: 24px; height: 24px; display: block; }
 a.topo-mod { text-decoration: none; }
 .topo-tema { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--fg); font-weight: 600; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
 .topo-tema span { font-size: 15px; line-height: 1; }
@@ -388,6 +391,13 @@ a.btn-primario { color: var(--sobre-accent); }
   .topo-marca small { display: none; }
 }
 
+/* barra do editor e da página do manual: abaixo de 1100 px, ações numa linha própria, ocupando a largura */
+@media (max-width: 1100px) {
+  .manual-barra { flex-direction: column; align-items: stretch; gap: 10px; }
+  .manual-barra .editor-acoes { justify-content: flex-start; }
+  .manual-barra .editor-acoes > .btn-primario { margin-left: auto; }
+}
+
 /* celular: módulos dividem a largura; tema só com o ícone; textos que sobram saem */
 @media (max-width: 720px) {
   :root { --topo-h: 112px; }
@@ -401,6 +411,9 @@ a.btn-primario { color: var(--sobre-accent); }
   .painel-corpo { padding: 14px; }
   .manual-palco { padding: 12px 8px 40px; }
   .manual-barra-esq { gap: 8px 12px; }
+}
+@media (max-width: 720px) {
+  :root[data-tema="escuro"] .topo-logo { --logo-h: 24px; padding: 3px 6px; }
 }
 @media (max-width: 420px) {
   .topo-div, .topo-marca > span:last-child { display: none; }  /* fica o logo da rede; o nome do sistema sai */
@@ -434,7 +447,7 @@ a.btn-primario { color: var(--sobre-accent); }
 }
 @media (min-width: 1800px) {
   :root { --topo-h: 66px; }
-  .topo-logo { height: 36px; }
+  .topo-logo { --logo-h: 36px; }
   .topo-marca b { font-size: 18px; }
   .topo-mod { font-size: 14.5px; }
   .topo-mod img { width: 28px; height: 28px; }
@@ -445,7 +458,7 @@ a.btn-primario { color: var(--sobre-accent); }
 }
 @media (min-width: 2300px) {
   :root { --topo-h: 74px; }
-  .topo-logo { height: 40px; }
+  .topo-logo { --logo-h: 40px; }
   .topo-marca b { font-size: 20px; }
   .topo-mod { font-size: 16px; }
   .topo-tema { height: 42px; font-size: 15.5px; }
