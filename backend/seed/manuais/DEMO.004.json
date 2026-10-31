@@ -6,6 +6,7 @@
   "versao": "1.0",
   "modulo": "pdv",
   "menu": "pdv.estoque.entrada-de-nota-fiscal.entrada-por-xml",
+  "tipo": "processo",
   "fontes": ["Manual de exemplo"],
   "tabelas": ["nf_entrada", "nf_entrada_itens", "fornecedores", "produtos"],
   "secoes": [

@@ -6,6 +6,7 @@
   "versao": "1.0",
   "modulo": "pdv",
   "menu": "pdv.caixa.fechamento-de-caixa",
+  "tipo": "chamado",
   "fontes": ["Manual de exemplo"],
   "tabelas": ["caixas", "caixa_mov", "venda_pagamentos", "formas_pgto"],
   "secoes": [

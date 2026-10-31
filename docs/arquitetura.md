@@ -337,6 +337,10 @@ A conversão de um documento em manual fica em `converter()`, usada pela rota `P
   sobrescritos.
 
 ### 7.5 Criação e edição de manuais pela interface
+Cada tela tem dois tipos de manual (`manuais.tipo`): o **manual da tela** (`processo`, um por tela: como usar a tela
+e suas funcionalidades) e os **chamados frequentes** (`chamado`, vários: problema recorrente, causa e solução). A
+API recusa um segundo manual da tela (409); a página do manual da tela lista os chamados da mesma tela.
+
 0. Opcional, num manual novo: "Importar documento" (no mapa ou no editor) envia um PDF, `.docx`, `.txt` ou `.md`
    para `POST /api/manuais/importar` (seção 7.4). O editor abre preenchido, com os avisos da conversão no topo; o
    documento também pode ser arrastado para o editor. Nada é salvo até clicar em Salvar manual, que grava o nome

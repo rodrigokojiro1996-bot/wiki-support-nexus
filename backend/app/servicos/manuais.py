@@ -15,8 +15,11 @@ def manual_completo(con: sqlite3.Connection, codigo: str) -> dict | None:
     m = con.execute("SELECT m.*, mo.nome AS modulo_nome FROM manuais m JOIN modulos mo ON mo.id = m.modulo WHERE codigo = ?", (codigo,)).fetchone()
     if not m:
         return None
+    # os outros manuais da mesma tela: quem lê o manual da tela vê os chamados frequentes dela (e vice-versa)
+    relacionados = [dict(r) for r in con.execute(
+        "SELECT codigo, titulo, tipo FROM manuais WHERE menu = ? AND codigo <> ? ORDER BY tipo DESC, codigo", (m["menu"], codigo))] if m["menu"] else []
     return {**dict(m), "secoes": json.loads(m["conteudo"]), "tabelas": json.loads(m["tabelas"]), "conteudo": None,
-            "fontes": json.loads(m["fontes"] or "[]"),
+            "fontes": json.loads(m["fontes"] or "[]"), "relacionados": relacionados,
             "caminho": caminho_menu(con, m["menu"]) if m["menu"] else []}
 
 
@@ -26,20 +29,21 @@ def gravar_no_banco(con: sqlite3.Connection, m: dict, menu: str | None) -> None:
     atualizado_em: a data gravada no JSON pelo editor, quando houver; senão, agora. Num manual que já existe, a data
     só muda se o conteúdo mudou: o seed roda a cada subida e não pode "atualizar" manuais que ninguém mexeu.
     """
-    con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes, por, alterado_em, atualizado_em)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', 'localtime')))
+    con.execute("""INSERT INTO manuais (codigo, titulo, subtitulo, versao, modulo, menu, conteudo, tabelas, fontes, por, alterado_em, tipo, atualizado_em)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, datetime('now', 'localtime')))
                    ON CONFLICT(codigo) DO UPDATE SET
                      atualizado_em = CASE WHEN manuais.titulo = excluded.titulo AND manuais.subtitulo = excluded.subtitulo
                                            AND manuais.conteudo = excluded.conteudo AND manuais.versao = excluded.versao
                                           THEN manuais.atualizado_em ELSE excluded.atualizado_em END,
                      titulo = excluded.titulo, subtitulo = excluded.subtitulo, versao = excluded.versao,
                      modulo = excluded.modulo, menu = excluded.menu, conteudo = excluded.conteudo, tabelas = excluded.tabelas,
-                     fontes = excluded.fontes, por = excluded.por, alterado_em = excluded.alterado_em""",
+                     fontes = excluded.fontes, por = excluded.por, alterado_em = excluded.alterado_em, tipo = excluded.tipo""",
                 (m["codigo"], m["titulo"], m.get("subtitulo", ""), m.get("versao", "1.0"), m["modulo"], menu,
                  json.dumps(m["secoes"], ensure_ascii=False), json.dumps(m.get("tabelas", [])),
                  json.dumps(m.get("fontes", []), ensure_ascii=False), m.get("por", ""),
                  # manual salvo pelo editor antes de existir alterado_em: a data dele é a da última gravação
-                 m.get("alterado_em") or (m.get("atualizado_em") if m.get("editado") else None), m.get("atualizado_em")))
+                 m.get("alterado_em") or (m.get("atualizado_em") if m.get("editado") else None),
+                 m.get("tipo") or "processo", m.get("atualizado_em")))
 
 
 # ---------------- editor ----------------
@@ -155,6 +159,8 @@ def salvar(con: sqlite3.Connection, dados: dict, por: str, codigo: str | None = 
         "codigo": codigo, "titulo": mascarar(dados["titulo"].strip()), "subtitulo": mascarar(dados.get("subtitulo", "").strip()),
         "versao": proxima_versao(anterior["versao"]) if anterior else "1.0",
         "modulo": dados["modulo"], "menu": dados.get("menu"),
+        # processo (o manual da tela) ou chamado (chamado frequente); sem tipo, a edição mantém o que o manual tinha
+        "tipo": dados.get("tipo") or (anterior["tipo"] if anterior else "processo"),
         "fontes": dados.get("fontes") or (anterior["fontes"] if anterior else []),
         "tabelas": tabelas_citadas(textos, sqls, nomes),
         # alterado_em: hora de Brasília em que alguém salvou pelo editor; vai no rodapé do manual e do PDF

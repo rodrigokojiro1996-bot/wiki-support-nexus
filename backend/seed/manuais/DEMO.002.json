@@ -6,6 +6,7 @@
   "versao": "1.0",
   "modulo": "pdv",
   "menu": "pdv.vendas.frente-de-caixa",
+  "tipo": "chamado",
   "fontes": ["Manual de exemplo"],
   "tabelas": ["vendas", "venda_itens", "mov_estoque", "estoque"],
   "secoes": [
