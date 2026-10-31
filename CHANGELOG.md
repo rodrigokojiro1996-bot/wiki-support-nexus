@@ -14,6 +14,7 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   catálogo; desfazer pela ficha apaga a ligação. Entram na cobertura e nas contribuições do Grafana.
 - Rodapé "+ N colunas" dos cartões do diagrama clicável: seleciona a tabela e mostra todas as colunas só dela (para
   ligar uma coluna que não é chave), centralizando o diagrama nela; "− recolher colunas" volta ao resumo.
+  Enquanto as colunas são escolhidas, nenhuma tabela fica apagada, para a segunda estar à vista.
 
 ## [0.4.0] - 2026-10-31
 

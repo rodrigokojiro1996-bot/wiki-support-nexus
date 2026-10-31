@@ -311,6 +311,9 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     if (proposta) { marcar(proposta.origem, proposta.coluna_origem); marcar(proposta.destino, proposta.coluna_destino); }
     else if (ponta) marcar(ponta.tabela, ponta.coluna);
     const foco = new Set(resp?.foco ?? []);
+    // escolhendo colunas para ligar: nada fica apagado, para a segunda tabela estar à vista
+    const ligando = !!ponta || !!proposta;
+    const apagar = !!sel && !ligando;
     const centro = sel ? new Set([sel]) : foco;
     const vizinhas = new Set<string>(centro);
     base.arestas.forEach(e => { if (centro.has(e.source)) vizinhas.add(e.target); if (centro.has(e.target)) vizinhas.add(e.source); });
@@ -324,12 +327,12 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
       nos: base.nos.map(n => ({
         ...n,
         data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
-                estado: sel ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
+                estado: apagar ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
                 marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir }
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
-        return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: !!sel && !toca } };
+        return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: apagar && !toca } };
       }) as Edge<DadosRelacao>[]
     };
   }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir]);
@@ -404,7 +407,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
       {ponta && !proposta && (
         <Panel position="top-left" className="diag-ligando" role="status">
           <span><b>{ponta.tabela}.{ponta.coluna}</b> selecionada · clique na coluna de outra tabela
-            {!todas && <> (para ver as outras colunas, escolha “Todas as colunas”)</>}</span>
+            {!todas && <> (coluna escondida? clique em “+ N colunas” no rodapé da tabela)</>}</span>
           <button type="button" className="link" onClick={cancelarLigacao}>Cancelar</button>
         </Panel>
       )}
