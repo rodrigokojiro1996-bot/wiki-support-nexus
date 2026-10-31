@@ -12,6 +12,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   validar só confirma a sugestão; colunas já ligadas (pelo banco ou pela equipe) são recusadas. As relações ligadas
   pela equipe ficam numa tabela própria (migração 007, `relacoes_equipe`) e sobrevivem a uma nova importação do
   catálogo; desfazer pela ficha apaga a ligação. Entram na cobertura e nas contribuições do Grafana.
+- Rodapé "+ N colunas" dos cartões do diagrama clicável: seleciona a tabela e mostra todas as colunas só dela (para
+  ligar uma coluna que não é chave), centralizando o diagrama nela; "− recolher colunas" volta ao resumo.
 
 ## [0.4.0] - 2026-10-31
 

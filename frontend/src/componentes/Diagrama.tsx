@@ -20,6 +20,7 @@ type DadosTabela = {
   nome: string; engine: string; foco: boolean; apoio: boolean; colunas: Coluna[]; ocultas: number;
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
   marcadas: Set<string>; onColuna: (tabela: string, coluna: string) => void; // colunas escolhidas para ligar
+  expandida: boolean; onExpandir: (tabela: string) => void; // todas as colunas só desta tabela
 };
 type Ponta = { tabela: string; coluna: string; pk: boolean };
 // uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação
@@ -76,7 +77,13 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
           <Handle type="source" position={Position.Right} id={`${c.nome}-s`} className="tb-alca" isConnectable={false} />
         </div>
       ))}
-      {data.ocultas > 0 && <div className="tb-mais">+ {data.ocultas} colunas</div>}
+      {data.ocultas > 0 && (
+        <button type="button" className="tb-mais" title="Mostrar todas as colunas desta tabela para ligar a outra"
+          onClick={e => { e.stopPropagation(); data.onExpandir(data.nome); }}>+ {data.ocultas} colunas · mostrar todas</button>
+      )}
+      {data.expandida && (
+        <button type="button" className="tb-mais" onClick={e => { e.stopPropagation(); data.onExpandir(data.nome); }}>− recolher colunas</button>
+      )}
     </div>
   );
 }
@@ -134,10 +141,14 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
   const [aviso, setAviso] = useState('');
   const [recarga, setRecarga] = useState(0);
   const botaoValidar = useRef<HTMLButtonElement>(null);
-  const { fitView, zoomIn, zoomOut } = useReactFlow();
+  // tabelas com todas as colunas à mostra (rodapé "+ N colunas"); depois de abrir, o diagrama centraliza nela
+  const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
+  const centralizar = useRef<string | null>(null);
+  const { fitView, zoomIn, zoomOut, setCenter, getZoom } = useReactFlow();
   const tema = useTema();
 
   const chave = tabelas.join(',');
+  useEffect(() => { setExpandidas(new Set()); }, [modulo, chave]);
   useEffect(() => {
     if (!chave) { setResp(null); return; }
     setErro('');
@@ -208,14 +219,16 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     let cancelado = false;
     const nos = resp.tabelas.map(t => {
       const chaves = chavesPorTabela.get(t.nome) ?? new Set<string>();
-      let visiveis = todas ? t.colunas : t.colunas.filter(c => c.pk || chaves.has(c.nome));
-      if (!visiveis.length) visiveis = t.colunas.slice(0, 3);
-      const altura = BORDA * 2 + CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length ? RODAPE : 0);
+      let resumidas = t.colunas.filter(c => c.pk || chaves.has(c.nome));
+      if (!resumidas.length) resumidas = t.colunas.slice(0, 3);
+      const expandida = !todas && expandidas.has(t.nome) && resumidas.length < t.colunas.length;
+      const visiveis = todas || expandida ? t.colunas : resumidas;
+      const altura = BORDA * 2 + CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length || expandida ? RODAPE : 0);
       return {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
         data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
                 chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '',
-                marcadas: new Set<string>(), onColuna: () => {} }
+                marcadas: new Set<string>(), onColuna: () => {}, expandida, onExpandir: () => {} }
       } as Node<DadosTabela>;
     });
     const linhaDe = new Map(nos.map(n => [n.id, new Map(n.data.colunas.map((c, i) => [c.nome, i]))]));
@@ -280,10 +293,18 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
       if (!cancelado) setBase({ nos: nos.map((n, i) => ({ ...n, position: { x: (i % 4) * (LARGURA + 120), y: Math.floor(i / 4) * 260 } })), arestas });
     });
     return () => { cancelado = true; };
-  }, [resp, todas, chavesPorTabela]);
+  }, [resp, todas, chavesPorTabela, expandidas]);
 
   // destaque: sem seleção, ilumina as tabelas da tela e as ligações delas; com seleção, só a tabela escolhida e vizinhas
   const termo = busca.trim().toLowerCase();
+  const expandir = useCallback((tabela: string) => {
+    setSel(tabela);
+    setExpandidas(atual => {
+      const novo = new Set(atual);
+      if (novo.has(tabela)) novo.delete(tabela); else { novo.add(tabela); centralizar.current = tabela; }
+      return novo;
+    });
+  }, []);
   const { nos, arestas } = useMemo(() => {
     const marcadas = new Map<string, Set<string>>();
     const marcar = (t: string, c: string) => (marcadas.get(t) ?? marcadas.set(t, new Set()).get(t)!).add(c);
@@ -304,16 +325,24 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         ...n,
         data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
                 estado: sel ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
-                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna }
+                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir }
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
         return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: !!sel && !toca } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo, ponta, proposta, escolherColuna]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir]);
 
-  useEffect(() => { if (base.nos.length) requestAnimationFrame(() => fitView({ padding: 0.12, duration: 300 })); }, [base, fitView]);
+  useEffect(() => {
+    if (!base.nos.length) return;
+    const alvo = centralizar.current;
+    centralizar.current = null;
+    const no = alvo ? base.nos.find(n => n.id === alvo) : undefined;
+    // tabela expandida: centraliza nela pela posição do layout (fitView com nós ainda não medidos não faz nada)
+    if (no) setCenter(no.position.x + LARGURA / 2, no.position.y + (no.height ?? 0) / 2, { zoom: Math.max(getZoom(), 0.85), duration: 400 });
+    else requestAnimationFrame(() => fitView({ padding: 0.12, duration: 300 }));
+  }, [base, fitView, setCenter, getZoom]);
 
   // reenquadra quando o painel muda de tamanho (abrir a ficha da tabela, redimensionar a janela)
   const [canvas, setCanvas] = useState<HTMLDivElement | null>(null);

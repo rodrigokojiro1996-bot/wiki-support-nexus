@@ -259,6 +259,9 @@ a.topo-mod { text-decoration: none; }
 .tb-col.ligada b, .tb-col.ligada .tb-ic { color: var(--destaque); }
 .tb-col.achou, .tb-cab .achou { outline: 2px solid var(--marca); outline-offset: -2px; }
 .tb-mais { display: flex; align-items: center; height: 24px; padding: 0 12px; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--line); }
+button.tb-mais { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; font-size: 10.5px; cursor: pointer; text-align: left; }
+button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(--marca) 10%, transparent); }
+.tb-sel button.tb-mais { color: var(--accent); font-weight: 700; }
 .tb-alca { width: 6px !important; height: 6px !important; min-width: 0 !important; min-height: 0 !important; background: transparent !important; border: 0 !important; }
 /* todas as ligações na cor do destaque; confirmada/documentada contínua, sugerida tracejada */
 .rel-aresta { stroke: var(--destaque) !important; stroke-width: 1.6 !important; opacity: .5; }
