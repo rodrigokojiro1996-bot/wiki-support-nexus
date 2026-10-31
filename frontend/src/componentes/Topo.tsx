@@ -59,12 +59,12 @@ export default function Topo({ children, modulo }: { children?: React.ReactNode;
       <nav className="topo-modulos" aria-label="Módulos do sistema">
         {modulos.map(m => m.ativo ? (
           <Link key={m.id} to={`/?modulo=${encodeURIComponent(m.id)}`} className="topo-mod" aria-current={m.id === modulo ? 'page' : undefined}>
-            <img src={`/marca/modulo-${m.id}.png`} alt="" />
+            <img src={`/marca/modulo-${m.id}.svg`} alt="" />
             {m.nome}
           </Link>
         ) : (
           <span key={m.id} className="topo-mod" aria-disabled title="Em breve">
-            <img src={`/marca/modulo-${m.id}.png`} alt="" />
+            <img src={`/marca/modulo-${m.id}.svg`} alt="" />
             {m.nome}
             <small>em breve</small>
           </span>
