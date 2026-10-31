@@ -1,0 +1,1065 @@
+{
+  "uid": "support-nexus-branches",
+  "title": "Support Nexus · Branches do Git",
+  "tags": [
+    "support-nexus"
+  ],
+  "editable": true,
+  "description": "Controle das branches enviadas ao GitHub: situação do PR, último push e histórico.",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15m",
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "graphTooltip": 1,
+  "links": [
+    {
+      "title": "Abrir o repositório no GitHub",
+      "type": "link",
+      "targetBlank": true,
+      "url": "https://github.com/rodrigokojiro1996-bot/wiki-support-nexus",
+      "icon": "external link"
+    }
+  ],
+  "panels": [
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Branches no GitHub",
+      "description": "Branches que existem hoje no repositório (as apagadas depois do merge não contam).",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/branches",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$count($)",
+          "columns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "PRs abertos",
+      "description": "Pull requests esperando revisão ou merge.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/pulls",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "state",
+                "value": "open"
+              },
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$count($)",
+          "columns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Merges nos últimos 30 dias",
+      "description": "Pull requests com merge feito nos últimos 30 dias (entre os 100 fechados mais recentes).",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/pulls",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "state",
+                "value": "closed"
+              },
+              {
+                "key": "sort",
+                "value": "updated"
+              },
+              {
+                "key": "direction",
+                "value": "desc"
+              },
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$count($[merged_at and $toMillis(merged_at) > $millis() - 2592000000])",
+          "columns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 27,
+      "type": "stat",
+      "title": "Última atividade em PR",
+      "description": "Último push, comentário ou merge em qualquer pull request.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/pulls",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "state",
+                "value": "all"
+              },
+              {
+                "key": "sort",
+                "value": "updated"
+              },
+              {
+                "key": "direction",
+                "value": "desc"
+              },
+              {
+                "key": "per_page",
+                "value": "1"
+              }
+            ]
+          },
+          "root_selector": "$max($map($, function($v) {$toMillis($v.updated_at)}))",
+          "columns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeFromNow",
+          "noValue": "—",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 28,
+      "type": "table",
+      "title": "Branches",
+      "description": "Toda branch que subiu: as que existem hoje, as que já tiveram PR (mesmo apagadas depois do merge) e as com push recente. Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. PR atualizado = último push ou comentário no PR. Último push vem do feed de eventos do GitHub, que atrasa algumas horas e guarda só 90 dias.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/branches",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$map($, function($v) {{\"branch\": $v.name, \"existe\": \"sim\", \"commit\": $substring($v.commit.sha, 0, 7)}})",
+          "columns": []
+        },
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "B",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/pulls",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "state",
+                "value": "all"
+              },
+              {
+                "key": "sort",
+                "value": "created"
+              },
+              {
+                "key": "direction",
+                "value": "desc"
+              },
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$each($reduce($reverse($), function($a, $v) {$merge([$a, {$v.head.ref: $v}])}, {}), function($x, $r) {{\"branch\": $r, \"pr\": \"#\" & $string($x.number), \"titulo\": $x.title, \"situacao\": $x.merged_at ? \"merge feito\" : ($x.state = \"open\" ? \"PR aberto\" : \"PR fechado\"), \"autor\": $x.user.login, \"destino\": $x.base.ref, \"atualizado\": $x.updated_at}})",
+          "columns": [
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "pr",
+              "text": "pr",
+              "type": "string"
+            },
+            {
+              "selector": "titulo",
+              "text": "titulo",
+              "type": "string"
+            },
+            {
+              "selector": "situacao",
+              "text": "situacao",
+              "type": "string"
+            },
+            {
+              "selector": "autor",
+              "text": "autor",
+              "type": "string"
+            },
+            {
+              "selector": "destino",
+              "text": "destino",
+              "type": "string"
+            },
+            {
+              "selector": "atualizado",
+              "text": "atualizado",
+              "type": "timestamp"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "C",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/events",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$each($reduce($reverse($[type = \"PushEvent\"]), function($a, $v) {$merge([$a, {$v.payload.ref: $v}])}, {}), function($x, $r) {{\"branch\": $substringAfter($r, \"refs/heads/\"), \"ultimo_push\": $x.created_at, \"quem\": $x.actor.login}})",
+          "columns": [
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "ultimo_push",
+              "text": "ultimo_push",
+              "type": "timestamp"
+            },
+            {
+              "selector": "quem",
+              "text": "quem",
+              "type": "string"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "situacao"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PR aberto": {
+                        "text": "PR aberto",
+                        "color": "#3987e5"
+                      },
+                      "merge feito": {
+                        "text": "merge feito",
+                        "color": "#0ca30c"
+                      },
+                      "PR fechado": {
+                        "text": "PR fechado",
+                        "color": "#898781"
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "sem PR",
+                        "color": "#fab219"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "atualizado"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ultimo_push"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "branch"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 330
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "titulo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 360
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "existe"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "apagada",
+                        "color": "#898781"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "PR atualizado",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "branch",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "branch": "Branch",
+              "situacao B": "Situação",
+              "pr B": "PR",
+              "titulo B": "Título do PR",
+              "autor B": "Autor do PR",
+              "destino B": "Destino",
+              "atualizado B": "PR atualizado",
+              "ultimo_push C": "Último push",
+              "quem C": "Quem enviou",
+              "commit A": "Commit",
+              "existe A": "No GitHub"
+            },
+            "indexByName": {
+              "branch": 0,
+              "situacao B": 1,
+              "pr B": 2,
+              "titulo B": 3,
+              "autor B": 4,
+              "destino B": 5,
+              "atualizado B": 6,
+              "ultimo_push C": 7,
+              "quem C": 8,
+              "commit A": 9,
+              "existe A": 10
+            },
+            "excludeByName": {
+              "link": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "type": "table",
+      "title": "Pushes recentes",
+      "description": "Cada envio de commits (git push), do mais recente para o mais antigo. O GitHub guarda até 90 dias.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 14,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/events",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$map($[type = \"PushEvent\"], function($v) {{\"quando\": $v.created_at, \"branch\": $substringAfter($v.payload.ref, \"refs/heads/\"), \"quem\": $v.actor.login}})",
+          "columns": [
+            {
+              "selector": "quando",
+              "text": "quando",
+              "type": "timestamp"
+            },
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "quem",
+              "text": "quem",
+              "type": "string"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Quando",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "quando": "Quando",
+              "branch": "Branch",
+              "quem": "Quem enviou"
+            },
+            "indexByName": {
+              "quando": 0,
+              "branch": 1,
+              "quem": 2
+            },
+            "excludeByName": {
+              "link": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "bargauge",
+      "title": "Pushes por branch",
+      "description": "Quantos envios cada branch recebeu entre os últimos 100 eventos do repositório: onde o trabalho está acontecendo.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 16,
+        "w": 10,
+        "h": 10
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/events",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$each($reduce($[type = \"PushEvent\"], function($a, $v) {$merge([$a, {$v.payload.ref: ($lookup($a, $v.payload.ref) ? $lookup($a, $v.payload.ref) : 0) + 1}])}, {}), function($n, $r) {{\"branch\": $substringAfter($r, \"refs/heads/\"), \"pushes\": $n}})",
+          "columns": []
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "min": 0,
+          "noValue": "Nenhum push recente",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "namePlacement": "top",
+        "sizing": "auto",
+        "minVizHeight": 16,
+        "maxVizHeight": 26,
+        "reduceOptions": {
+          "calcs": [],
+          "values": true,
+          "fields": "/^pushes$/"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "table",
+      "title": "Histórico de pull requests",
+      "description": "Os 100 pull requests mais recentes. Clique no título para abrir o PR no GitHub.",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "github"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 12
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "github"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "https://api.github.com/repos/rodrigokojiro1996-bot/wiki-support-nexus/pulls",
+          "url_options": {
+            "method": "GET",
+            "data": "",
+            "params": [
+              {
+                "key": "state",
+                "value": "all"
+              },
+              {
+                "key": "sort",
+                "value": "created"
+              },
+              {
+                "key": "direction",
+                "value": "desc"
+              },
+              {
+                "key": "per_page",
+                "value": "100"
+              }
+            ]
+          },
+          "root_selector": "$map($, function($v) {{\"pr\": $v.number, \"titulo\": $v.title, \"branch\": $v.head.ref, \"destino\": $v.base.ref, \"autor\": $v.user.login, \"situacao\": $v.merged_at ? \"merge feito\" : ($v.state = \"open\" ? \"PR aberto\" : \"PR fechado\"), \"aberto_em\": $v.created_at, \"merge_em\": $v.merged_at, \"link\": $v.html_url}})",
+          "columns": [
+            {
+              "selector": "pr",
+              "text": "pr",
+              "type": "number"
+            },
+            {
+              "selector": "titulo",
+              "text": "titulo",
+              "type": "string"
+            },
+            {
+              "selector": "situacao",
+              "text": "situacao",
+              "type": "string"
+            },
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "destino",
+              "text": "destino",
+              "type": "string"
+            },
+            {
+              "selector": "autor",
+              "text": "autor",
+              "type": "string"
+            },
+            {
+              "selector": "aberto_em",
+              "text": "aberto_em",
+              "type": "timestamp"
+            },
+            {
+              "selector": "merge_em",
+              "text": "merge_em",
+              "type": "timestamp"
+            },
+            {
+              "selector": "link",
+              "text": "link",
+              "type": "string"
+            }
+          ]
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "noValue": "—",
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "situacao"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "PR aberto": {
+                        "text": "PR aberto",
+                        "color": "#3987e5"
+                      },
+                      "merge feito": {
+                        "text": "merge feito",
+                        "color": "#0ca30c"
+                      },
+                      "PR fechado": {
+                        "text": "PR fechado",
+                        "color": "#898781"
+                      }
+                    }
+                  },
+                  {
+                    "type": "special",
+                    "options": {
+                      "match": "null",
+                      "result": {
+                        "text": "sem PR",
+                        "color": "#fab219"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "titulo"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 420
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "branch"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 260
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "titulo"
+            },
+            "properties": [
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Abrir no GitHub",
+                    "url": "${__data.fields.link}",
+                    "targetBlank": true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "PR",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "pr": "PR",
+              "titulo": "Título",
+              "situacao": "Situação",
+              "branch": "Branch",
+              "destino": "Destino",
+              "autor": "Autor",
+              "aberto_em": "Aberto em",
+              "merge_em": "Merge em"
+            },
+            "indexByName": {
+              "pr": 0,
+              "titulo": 1,
+              "situacao": 2,
+              "branch": 3,
+              "destino": 4,
+              "autor": 5,
+              "aberto_em": 6,
+              "merge_em": 7
+            },
+            "excludeByName": {
+              "link": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -364,3 +364,32 @@ O que muda na troca:
 
 > A estrutura do banco é interna da empresa: o servidor só a mostra para quem tem a senha da entrada. Para fechar
 > mais, restrinja a porta 443 ao IP da empresa (passo 4).
+
+## 15. Painel das branches do Git (Grafana em /grafana/)
+
+O painel "Support Nexus · Branches do Git" mostra toda branch que subiu para o GitHub: se existe ainda, a situação do
+PR mais recente (aberto, merge feito, fechado ou sem PR), quem enviou o último push e quando, e o histórico de pull
+requests. Os dados vêm da API pública do GitHub (plugin Infinity); o painel se atualiza a cada 15 minutos.
+
+Na máquina de 1 GB o Grafana sobe sozinho, sem o Prometheus, só com esse painel (limite de 400 MB). O processador
+dela é pequeno: o painel leva de 10 a 20 segundos para carregar. Para ligar:
+
+```bash
+cd ~/wiki-support-nexus
+sed -i 's#^COMPOSE_FILE=.*#&:deploy/oracle/docker-compose.grafana.yml#' .env
+docker compose up -d grafana
+docker compose restart caddy            # o Caddyfile passa a encaminhar /grafana/ para o Grafana
+```
+
+Sem token, o GitHub aceita 60 consultas por hora e cada abertura do painel faz 10: com a equipe usando, o painel
+fica sem dados até a hora virar. Crie um token **fine-grained sem nenhuma permissão** (ele só lê o que já é público)
+em <https://github.com/settings/personal-access-tokens>, ponha no `.env` do servidor e recrie o Grafana:
+
+```bash
+nano ~/wiki-support-nexus/.env           # GITHUB_TOKEN=github_pat_...
+docker compose up -d grafana
+```
+
+Abra `https://<domínio>/grafana/`: pede a mesma senha da entrada e mostra o painel. Para editar, entre como `admin`
+com a `GRAFANA_SENHA` do `.env`. O painel em si é gerado por `docker/grafana/gerar_painel.py`; mudanças feitas na
+tela não ficam salvas (use "Save as" para uma cópia sua).

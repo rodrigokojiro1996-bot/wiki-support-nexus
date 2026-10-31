@@ -1,0 +1,26 @@
+# Complemento opcional: o Grafana no servidor, só com o painel "Branches do Git", em https://<domínio>/grafana/.
+# Sem Prometheus (não cabe na máquina de 1 GB): os painéis de API e cobertura continuam só no ambiente local.
+# Fica atrás da mesma senha da entrada (Caddy); lá dentro qualquer um vê os painéis, e para editar entra como admin
+# com a GRAFANA_SENHA do .env.
+# Para ligar, acrescente este arquivo ao COMPOSE_FILE do .env e rode "docker compose up -d grafana caddy"
+# (docs/oracle-cloud.md, seção 15).
+services:
+  grafana:
+    depends_on: !reset {}      # sem Prometheus aqui
+    ports: !reset []           # só o Caddy fala com ele, pela rede interna do compose
+    environment:
+      GF_SERVER_ROOT_URL: "https://${NEXUS_DOMINIO}/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/support-nexus-branches.json
+      GF_AUTH_ANONYMOUS_ENABLED: "true"      # a senha da entrada já barrou quem é de fora
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer     # só ver; editar pede o login de admin
+      GF_AUTH_BASIC_ENABLED: "false"
+      GF_METRICS_ENABLED: "false"
+    volumes: !override
+      - ./docker/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/grafana/provisioning/datasources/github.yml:/etc/grafana/provisioning/datasources/github.yml:ro
+      - ./docker/grafana/dashboards/git:/etc/grafana/dashboards:ro
+      - grafana-dados:/var/lib/grafana
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/grafana/api/health"]
+    mem_limit: 400m             # o JSONata das respostas do GitHub passa de 230 MB; com 256 MB ele travava
