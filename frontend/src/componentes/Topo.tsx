@@ -27,8 +27,8 @@ function BotaoTema() {
   const escuro = tema === 'escuro';
   return (
     <button type="button" className="topo-tema" aria-pressed={escuro} onClick={() => aplicarTema(escuro ? 'claro' : 'escuro')}
-      title={escuro ? 'Voltar ao tema claro' : 'Usar o tema escuro'}>
-      <span aria-hidden="true">{escuro ? '☀' : '☾'}</span>{escuro ? 'Tema claro' : 'Tema escuro'}
+      title={escuro ? 'Voltar ao tema claro' : 'Usar o tema escuro'} aria-label={escuro ? 'Tema claro' : 'Tema escuro'}>
+      <span aria-hidden="true">{escuro ? '☀' : '☾'}</span><span className="topo-tema-txt">{escuro ? 'Tema claro' : 'Tema escuro'}</span>
     </button>
   );
 }

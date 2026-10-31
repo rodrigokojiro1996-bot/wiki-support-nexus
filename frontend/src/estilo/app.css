@@ -167,6 +167,9 @@ a.topo-mod { text-decoration: none; }
 .caminho-completo span { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; opacity: .8; }
 .secao { display: flex; flex-direction: column; gap: 8px; padding: 18px 0; border-bottom: 1px solid var(--line); }
 .secao:last-child { border-bottom: 0; }
+/* manual da tela + chamados: a linha de baixo é do grupo (em tela larga as duas seções ficam lado a lado) */
+.manuais-grade { border-bottom: 1px solid var(--line); }
+.manuais-grade > .secao:last-child { border-bottom: 0; }
 .secao h3 { font-size: 13px; font-weight: 800; letter-spacing: .02em; }
 .manual-card { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--laranja); border-radius: 8px; text-decoration: none; color: var(--fg); background: var(--surface-2); max-width: 640px; }
 .manual-card:hover { border-color: var(--laranja); }
@@ -369,3 +372,85 @@ a.btn-primario { color: var(--sobre-accent); }
   .painel.arvore .painel-corpo { max-height: 50vh; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ================= tamanhos de janela =================
+   Critérios (os mesmos dos outros sistemas da rede): sem rolagem horizontal de 360 px a 2560 px e com zoom de 200%,
+   alvos de toque de 44 px no celular, textos que quebram linha em vez de estourar. */
+
+/* tablet e janela estreita: o topo vira duas linhas (marca + tema/nome; módulos embaixo) */
+@media (max-width: 1100px) {
+  :root { --topo-h: 104px; }
+  .topo { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); grid-template-areas: "marca extra" "mods mods";
+          align-items: center; column-gap: 12px; row-gap: 4px; padding: 6px 16px 8px; }
+  .topo-marca { grid-area: marca; min-width: 0; }
+  .topo-extra { grid-area: extra; justify-self: end; min-width: 0; margin-left: 0; }
+  .topo-modulos { grid-area: mods; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .topo-marca small { display: none; }
+}
+
+/* celular: módulos dividem a largura; tema só com o ícone; textos que sobram saem */
+@media (max-width: 720px) {
+  :root { --topo-h: 112px; }
+  .topo-modulos { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+  .topo-mod { justify-content: center; padding: 6px 8px; }
+  .topo-tema-txt { display: none; }
+  .topo-tema { width: 44px; justify-content: center; padding: 0; }
+  .topo-usuario input { width: 104px; }
+  .faixa-ambiente { padding: 6px 16px; font-size: 12px; }
+  .mapa { padding: 12px 12px 20px; gap: 12px; }
+  .painel-corpo { padding: 14px; }
+  .manual-palco { padding: 12px 8px 40px; }
+  .manual-barra-esq { gap: 8px 12px; }
+}
+@media (max-width: 420px) {
+  .topo-div, .topo-marca > span:last-child { display: none; }  /* fica o logo da rede; o nome do sistema sai */
+  .topo-mod img { width: 20px; height: 20px; }
+}
+
+/* alvos de toque: 44 px no celular e em qualquer tela de toque */
+@media (max-width: 720px), (pointer: coarse) {
+  .btn, .btn-p { min-height: 44px; height: auto; padding-top: 6px; padding-bottom: 6px; white-space: normal; text-align: center; }
+  .topo-mod, .topo-tema, .chip, .abas button, .arv-item { min-height: 44px; }
+  .topo-usuario input, .campo input, .vincular input, .busca input, select, .editor-secao-tit { min-height: 44px; }
+  .arv-seta { min-width: 44px; min-height: 44px; }   /* quadrado: a seta gira ao abrir */
+  .editor-mini button, .diag-barra button { width: 44px; height: 44px; }
+  .diag-barra select, .diag-barra input[type="search"] { height: 44px; }
+  .diag-barra input[type="search"] { width: 100%; max-width: 280px; }
+  .diag-check { min-height: 44px; }
+  .diag-check input { width: 22px; height: 22px; }
+  .editor-vistas button { min-height: 44px; }
+  .topo-marca { min-height: 44px; }
+  .link { padding: 12px 0; }
+  .manual-relacionados a, .sem-tela a { display: inline-block; padding: 12px 0; }
+}
+
+/* telas grandes: colunas acompanham a largura e o conteúdo cresce junto (o diagrama não: zoom atrapalha o arrastar) */
+@media (min-width: 1500px) {
+  .mapa { grid-template-columns: clamp(330px, 19vw, 440px) minmax(0, 1fr); }
+  .mapa.com-tabela { grid-template-columns: clamp(330px, 19vw, 440px) minmax(0, 1fr) clamp(400px, 24vw, 560px); }
+  .manuais-grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; align-items: start; }
+  .manuais-grade > .secao { border-bottom: 0; }
+  .manuais-grade .manual-card, .manuais-grade .sem-manual { max-width: none; }
+}
+@media (min-width: 1800px) {
+  :root { --topo-h: 66px; }
+  .topo-logo { height: 36px; }
+  .topo-marca b { font-size: 18px; }
+  .topo-mod { font-size: 14.5px; }
+  .topo-mod img { width: 28px; height: 28px; }
+  .topo-tema { height: 38px; font-size: 14px; }
+  .topo-usuario { font-size: 13.5px; }
+  .topo-usuario input { width: 180px; height: 36px; font-size: 14px; }
+  .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: 1.12; }
+}
+@media (min-width: 2300px) {
+  :root { --topo-h: 74px; }
+  .topo-logo { height: 40px; }
+  .topo-marca b { font-size: 20px; }
+  .topo-mod { font-size: 16px; }
+  .topo-tema { height: 42px; font-size: 15.5px; }
+  .topo-usuario { font-size: 15px; }
+  .topo-usuario input { width: 210px; height: 40px; font-size: 15px; }
+  .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: 1.25; }
+}
+

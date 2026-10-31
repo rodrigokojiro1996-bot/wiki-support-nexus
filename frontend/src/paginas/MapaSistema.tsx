@@ -248,7 +248,7 @@ export default function MapaSistema() {
                 );
                 const daTela = ficha.manuais.filter(m => m.tipo !== 'chamado');
                 const chamados = ficha.manuais.filter(m => m.tipo === 'chamado');
-                return (<>
+                return (<div className="manuais-grade">
                   <div className="secao">
                     <div className="secao-cab"><h3>Manual da tela</h3></div>
                     <p className="secao-dica">Como usar a tela: o passo a passo dos processos e as funcionalidades.</p>
@@ -280,7 +280,7 @@ export default function MapaSistema() {
                       </div>
                     )}
                   </div>
-                </>);
+                </div>);
               })()}
 
               {ficha.filhos.length > 0 && (
