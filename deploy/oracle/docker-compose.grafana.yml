@@ -23,4 +23,4 @@ services:
       - grafana-dados:/var/lib/grafana
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1:3000/grafana/api/health"]
-    mem_limit: 256m
+    mem_limit: 400m             # o JSONata das respostas do GitHub passa de 230 MB; com 256 MB ele travava
