@@ -71,14 +71,8 @@
               }
             ]
           },
-          "root_selector": "{\"total\": $count($)}",
-          "columns": [
-            {
-              "selector": "total",
-              "text": "total",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$count($)",
+          "columns": []
         }
       ],
       "fieldConfig": {
@@ -97,8 +91,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "values": false,
-          "fields": "/^total$/"
+          "values": false
         },
         "colorMode": "none",
         "graphMode": "none",
@@ -147,14 +140,8 @@
               }
             ]
           },
-          "root_selector": "{\"total\": $count($)}",
-          "columns": [
-            {
-              "selector": "total",
-              "text": "total",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$count($)",
+          "columns": []
         }
       ],
       "fieldConfig": {
@@ -173,8 +160,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "values": false,
-          "fields": "/^total$/"
+          "values": false
         },
         "colorMode": "none",
         "graphMode": "none",
@@ -231,14 +217,8 @@
               }
             ]
           },
-          "root_selector": "{\"total\": $count($[merged_at and $toMillis(merged_at) > $millis() - 30 * 86400000])}",
-          "columns": [
-            {
-              "selector": "total",
-              "text": "total",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$count($[merged_at and $toMillis(merged_at) > $millis() - 2592000000])",
+          "columns": []
         }
       ],
       "fieldConfig": {
@@ -257,8 +237,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "values": false,
-          "fields": "/^total$/"
+          "values": false
         },
         "colorMode": "none",
         "graphMode": "none",
@@ -270,7 +249,7 @@
       "id": 27,
       "type": "stat",
       "title": "Último push",
-      "description": "Quando foi o último envio de commits (git push) para qualquer branch.",
+      "description": "Último envio de commits (git push) para qualquer branch, pelo feed de eventos do GitHub (atrasa algumas horas).",
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
         "uid": "github"
@@ -303,14 +282,8 @@
               }
             ]
           },
-          "root_selector": "{\"total\": $toMillis($[type = \"PushEvent\"][0].created_at)}",
-          "columns": [
-            {
-              "selector": "total",
-              "text": "total",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$max($map($[type = \"PushEvent\"], function($v) {$toMillis($v.created_at)}))",
+          "columns": []
         }
       ],
       "fieldConfig": {
@@ -329,8 +302,7 @@
           "calcs": [
             "lastNotNull"
           ],
-          "values": false,
-          "fields": "/^total$/"
+          "values": false
         },
         "colorMode": "none",
         "graphMode": "none",
@@ -342,7 +314,7 @@
       "id": 28,
       "type": "table",
       "title": "Branches",
-      "description": "Toda branch que subiu: as que existem hoje, as que já tiveram PR (mesmo apagadas depois do merge) e as com push recente. Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. O GitHub só guarda os eventos de push dos últimos 90 dias.",
+      "description": "Toda branch que subiu: as que existem hoje, as que já tiveram PR (mesmo apagadas depois do merge) e as com push recente. Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. PR atualizado = último push ou comentário no PR. Último push vem do feed de eventos do GitHub, que atrasa algumas horas e guarda só 90 dias.",
       "datasource": {
         "type": "yesoreyeram-infinity-datasource",
         "uid": "github"
@@ -375,7 +347,7 @@
               }
             ]
           },
-          "root_selector": "$.{\"branch\": name, \"existe\": \"sim\", \"commit\": $substring(commit.sha, 0, 7)}",
+          "root_selector": "$map($, function($v) {{\"branch\": $v.name, \"existe\": \"sim\", \"commit\": $substring($v.commit.sha, 0, 7)}})",
           "columns": []
         },
         {
@@ -411,8 +383,44 @@
               }
             ]
           },
-          "root_selector": "($p := $; $distinct($p.head.ref).($r := $; $x := $p[head.ref = $r][0]; {\"branch\": $r, \"pr\": \"#\" & $string($x.number), \"titulo\": $x.title, \"situacao\": $x.merged_at ? \"merge feito\" : ($x.state = \"open\" ? \"PR aberto\" : \"PR fechado\"), \"autor\": $x.user.login, \"destino\": $x.base.ref}))",
-          "columns": []
+          "root_selector": "$each($reduce($reverse($), function($a, $v) {$merge([$a, {$v.head.ref: $v}])}, {}), function($x, $r) {{\"branch\": $r, \"pr\": \"#\" & $string($x.number), \"titulo\": $x.title, \"situacao\": $x.merged_at ? \"merge feito\" : ($x.state = \"open\" ? \"PR aberto\" : \"PR fechado\"), \"autor\": $x.user.login, \"destino\": $x.base.ref, \"atualizado\": $x.updated_at}})",
+          "columns": [
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "pr",
+              "text": "pr",
+              "type": "string"
+            },
+            {
+              "selector": "titulo",
+              "text": "titulo",
+              "type": "string"
+            },
+            {
+              "selector": "situacao",
+              "text": "situacao",
+              "type": "string"
+            },
+            {
+              "selector": "autor",
+              "text": "autor",
+              "type": "string"
+            },
+            {
+              "selector": "destino",
+              "text": "destino",
+              "type": "string"
+            },
+            {
+              "selector": "atualizado",
+              "text": "atualizado",
+              "type": "timestamp"
+            }
+          ]
         },
         {
           "datasource": {
@@ -435,12 +443,22 @@
               }
             ]
           },
-          "root_selector": "($e := $[type = \"PushEvent\"]; $distinct($e.payload.ref).($r := $; $x := $e[payload.ref = $r][0]; {\"branch\": $substringAfter($r, \"refs/heads/\"), \"ultimo_push\": $x.created_at, \"quem\": $x.actor.login}))",
+          "root_selector": "$each($reduce($reverse($[type = \"PushEvent\"]), function($a, $v) {$merge([$a, {$v.payload.ref: $v}])}, {}), function($x, $r) {{\"branch\": $substringAfter($r, \"refs/heads/\"), \"ultimo_push\": $x.created_at, \"quem\": $x.actor.login}})",
           "columns": [
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
             {
               "selector": "ultimo_push",
               "text": "ultimo_push",
               "type": "timestamp"
+            },
+            {
+              "selector": "quem",
+              "text": "quem",
+              "type": "string"
             }
           ]
         }
@@ -503,6 +521,18 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "atualizado"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "dateTimeFromNow"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "ultimo_push"
             },
             "properties": [
@@ -548,7 +578,7 @@
         "cellHeight": "sm",
         "sortBy": [
           {
-            "displayName": "Último push",
+            "displayName": "PR atualizado",
             "desc": true
           }
         ]
@@ -571,6 +601,7 @@
               "titulo": "Título do PR",
               "autor": "Autor do PR",
               "destino": "Destino",
+              "atualizado": "PR atualizado",
               "ultimo_push": "Último push",
               "quem": "Quem enviou",
               "commit": "Commit",
@@ -583,10 +614,11 @@
               "titulo": 3,
               "autor": 4,
               "destino": 5,
-              "ultimo_push": 6,
-              "quem": 7,
-              "commit": 8,
-              "existe": 9
+              "atualizado": 6,
+              "ultimo_push": 7,
+              "quem": 8,
+              "commit": 9,
+              "existe": 10
             },
             "excludeByName": {
               "link": true
@@ -632,12 +664,22 @@
               }
             ]
           },
-          "root_selector": "$[type = \"PushEvent\"].{\"quando\": created_at, \"branch\": $substringAfter(payload.ref, \"refs/heads/\"), \"quem\": actor.login}",
+          "root_selector": "$map($[type = \"PushEvent\"], function($v) {{\"quando\": $v.created_at, \"branch\": $substringAfter($v.payload.ref, \"refs/heads/\"), \"quem\": $v.actor.login}})",
           "columns": [
             {
               "selector": "quando",
               "text": "quando",
               "type": "timestamp"
+            },
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "quem",
+              "text": "quem",
+              "type": "string"
             }
           ]
         }
@@ -720,14 +762,8 @@
               }
             ]
           },
-          "root_selector": "($e := $[type = \"PushEvent\"]; $distinct($e.payload.ref).($r := $; {\"branch\": $substringAfter($r, \"refs/heads/\"), \"pushes\": $count($e[payload.ref = $r])}))",
-          "columns": [
-            {
-              "selector": "pushes",
-              "text": "pushes",
-              "type": "number"
-            }
-          ]
+          "root_selector": "$each($reduce($[type = \"PushEvent\"], function($a, $v) {$merge([$a, {$v.payload.ref: ($lookup($a, $v.payload.ref) ? $lookup($a, $v.payload.ref) : 0) + 1}])}, {}), function($n, $r) {{\"branch\": $substringAfter($r, \"refs/heads/\"), \"pushes\": $n}})",
+          "columns": []
         }
       ],
       "fieldConfig": {
@@ -808,12 +844,37 @@
               }
             ]
           },
-          "root_selector": "$.{\"pr\": number, \"titulo\": title, \"branch\": head.ref, \"destino\": base.ref, \"autor\": user.login, \"situacao\": merged_at ? \"merge feito\" : (state = \"open\" ? \"PR aberto\" : \"PR fechado\"), \"aberto_em\": created_at, \"merge_em\": merged_at, \"link\": html_url}",
+          "root_selector": "$map($, function($v) {{\"pr\": $v.number, \"titulo\": $v.title, \"branch\": $v.head.ref, \"destino\": $v.base.ref, \"autor\": $v.user.login, \"situacao\": $v.merged_at ? \"merge feito\" : ($v.state = \"open\" ? \"PR aberto\" : \"PR fechado\"), \"aberto_em\": $v.created_at, \"merge_em\": $v.merged_at, \"link\": $v.html_url}})",
           "columns": [
             {
               "selector": "pr",
               "text": "pr",
               "type": "number"
+            },
+            {
+              "selector": "titulo",
+              "text": "titulo",
+              "type": "string"
+            },
+            {
+              "selector": "situacao",
+              "text": "situacao",
+              "type": "string"
+            },
+            {
+              "selector": "branch",
+              "text": "branch",
+              "type": "string"
+            },
+            {
+              "selector": "destino",
+              "text": "destino",
+              "type": "string"
+            },
+            {
+              "selector": "autor",
+              "text": "autor",
+              "type": "string"
             },
             {
               "selector": "aberto_em",
@@ -824,6 +885,11 @@
               "selector": "merge_em",
               "text": "merge_em",
               "type": "timestamp"
+            },
+            {
+              "selector": "link",
+              "text": "link",
+              "type": "string"
             }
           ]
         }

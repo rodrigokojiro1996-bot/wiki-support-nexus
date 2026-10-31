@@ -215,25 +215,32 @@ def github(caminho, raiz, colunas=(), **params):
             "root_selector": raiz, "columns": [{"selector": c, "text": c, "type": t} for c, t in colunas]}
 
 
-# o PR mais recente de cada branch (a API devolve do mais novo para o mais antigo)
-ULTIMO_PR = ('($p := $; $distinct($p.head.ref).($r := $; $x := $p[head.ref = $r][0]; {"branch": $r, "pr": "#" & $string($x.number), '
-             '"titulo": $x.title, "situacao": $x.merged_at ? "merge feito" : ($x.state = "open" ? "PR aberto" : "PR fechado"), '
-             '"autor": $x.user.login, "destino": $x.base.ref}))')
+# O Infinity usa o JSONata em Go, que difere do JSONata da web: "$.{...}" no início vira outra sintaxe, "[0]" depois
+# de um filtro não pega o primeiro item e um objeto com número volta vazio. Por isso $map/$reduce/$each e totais escalares.
+# Testar no Grafana antes de mudar (POST /api/ds/query).
+# o PR mais recente de cada branch: um objeto por branch, do mais antigo ao mais novo (o mais novo sobrescreve)
+ULTIMO_PR = ('$each($reduce($reverse($), function($a, $v) {$merge([$a, {$v.head.ref: $v}])}, {}), function($x, $r) '
+             '{{"branch": $r, "pr": "#" & $string($x.number), "titulo": $x.title, '
+             '"situacao": $x.merged_at ? "merge feito" : ($x.state = "open" ? "PR aberto" : "PR fechado"), '
+             '"autor": $x.user.login, "destino": $x.base.ref, "atualizado": $x.updated_at}})')
 # o push mais recente de cada branch, entre os últimos 100 eventos do repositório
-ULTIMO_PUSH = ('($e := $[type = "PushEvent"]; $distinct($e.payload.ref).($r := $; $x := $e[payload.ref = $r][0]; '
-               '{"branch": $substringAfter($r, "refs/heads/"), "ultimo_push": $x.created_at, "quem": $x.actor.login}))')
-PUSHES = '$[type = "PushEvent"].{"quando": created_at, "branch": $substringAfter(payload.ref, "refs/heads/"), "quem": actor.login}'
-POR_BRANCH = ('($e := $[type = "PushEvent"]; $distinct($e.payload.ref).($r := $; '
-              '{"branch": $substringAfter($r, "refs/heads/"), "pushes": $count($e[payload.ref = $r])}))')
-HISTORICO = ('$.{"pr": number, "titulo": title, "branch": head.ref, "destino": base.ref, "autor": user.login, '
-             '"situacao": merged_at ? "merge feito" : (state = "open" ? "PR aberto" : "PR fechado"), '
-             '"aberto_em": created_at, "merge_em": merged_at, "link": html_url}')
+ULTIMO_PUSH = ('$each($reduce($reverse($[type = "PushEvent"]), function($a, $v) {$merge([$a, {$v.payload.ref: $v}])}, {}), '
+               'function($x, $r) {{"branch": $substringAfter($r, "refs/heads/"), "ultimo_push": $x.created_at, "quem": $x.actor.login}})')
+PUSHES = ('$map($[type = "PushEvent"], function($v) '
+          '{{"quando": $v.created_at, "branch": $substringAfter($v.payload.ref, "refs/heads/"), "quem": $v.actor.login}})')
+POR_BRANCH = ('$each($reduce($[type = "PushEvent"], function($a, $v) {$merge([$a, {$v.payload.ref: '
+              '($lookup($a, $v.payload.ref) ? $lookup($a, $v.payload.ref) : 0) + 1}])}, {}), '
+              'function($n, $r) {{"branch": $substringAfter($r, "refs/heads/"), "pushes": $n}})')
+HISTORICO = ('$map($, function($v) {{"pr": $v.number, "titulo": $v.title, "branch": $v.head.ref, "destino": $v.base.ref, '
+             '"autor": $v.user.login, "situacao": $v.merged_at ? "merge feito" : ($v.state = "open" ? "PR aberto" : "PR fechado"), '
+             '"aberto_em": $v.created_at, "merge_em": $v.merged_at, "link": $v.html_url}})')
+BRANCHES = '$map($, function($v) {{"branch": $v.name, "existe": "sim", "commit": $substring($v.commit.sha, 0, 7)}})'
 
 
 def numero_gh(titulo, x, w, caminho, raiz, descricao, unidade="none", **params):
-    return painel("stat", titulo, x, 0, w, 4, [github(caminho, raiz, [("total", "number")], **params)], descricao,
+    return painel("stat", titulo, x, 0, w, 4, [github(caminho, raiz, **params)], descricao,
                   {"unit": unidade, "noValue": "—", "color": {"mode": "fixed", "fixedColor": "text"}},
-                  options={"reduceOptions": {"calcs": ["lastNotNull"], "values": False, "fields": "/^total$/"},
+                  options={"reduceOptions": {"calcs": ["lastNotNull"], "values": False},
                            "colorMode": "none", "graphMode": "none", "textMode": "value", "justifyMode": "center"}, ds=GH)
 
 
@@ -260,38 +267,42 @@ def data_relativa(campo):
 
 paineis_branches = [
     # ---------- linha 1: números-chave ----------
-    numero_gh("Branches no GitHub", 0, 6, "branches", '{"total": $count($)}',
+    numero_gh("Branches no GitHub", 0, 6, "branches", "$count($)",
               "Branches que existem hoje no repositório (as apagadas depois do merge não contam).", per_page=100),
-    numero_gh("PRs abertos", 6, 6, "pulls", '{"total": $count($)}', "Pull requests esperando revisão ou merge.",
+    numero_gh("PRs abertos", 6, 6, "pulls", "$count($)", "Pull requests esperando revisão ou merge.",
               state="open", per_page=100),
     numero_gh("Merges nos últimos 30 dias", 12, 6, "pulls",
-              '{"total": $count($[merged_at and $toMillis(merged_at) > $millis() - 30 * 86400000])}',
+              '$count($[merged_at and $toMillis(merged_at) > $millis() - 2592000000])',  # 30 dias em ms
               "Pull requests com merge feito nos últimos 30 dias (entre os 100 fechados mais recentes).",
               state="closed", sort="updated", direction="desc", per_page=100),
-    numero_gh("Último push", 18, 6, "events", '{"total": $toMillis($[type = "PushEvent"][0].created_at)}',
-              "Quando foi o último envio de commits (git push) para qualquer branch.", "dateTimeFromNow", per_page=100),
+    numero_gh("Último push", 18, 6, "events", '$max($map($[type = "PushEvent"], function($v) {$toMillis($v.created_at)}))',
+              "Último envio de commits (git push) para qualquer branch, pelo feed de eventos do GitHub (atrasa algumas horas).",
+              "dateTimeFromNow", per_page=100),
 
     # ---------- linha 2: a lista de controle ----------
     tabela("Branches", 0, 4, 24, 12,
-           [github("branches", '$.{"branch": name, "existe": "sim", "commit": $substring(commit.sha, 0, 7)}', per_page=100),
-            github("pulls", ULTIMO_PR, state="all", sort="created", direction="desc", per_page=100),
-            github("events", ULTIMO_PUSH, [("ultimo_push", "timestamp")], per_page=100)],
+           [github("branches", BRANCHES, per_page=100),
+            github("pulls", ULTIMO_PR, [("branch", "string"), ("pr", "string"), ("titulo", "string"), ("situacao", "string"),
+                                        ("autor", "string"), ("destino", "string"), ("atualizado", "timestamp")],
+                   state="all", sort="created", direction="desc", per_page=100),
+            github("events", ULTIMO_PUSH, [("branch", "string"), ("ultimo_push", "timestamp"), ("quem", "string")], per_page=100)],
            "Toda branch que subiu: as que existem hoje, as que já tiveram PR (mesmo apagadas depois do merge) e as com push recente. "
-           "Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. O GitHub só guarda os eventos de push dos últimos 90 dias.",
+           "Situação = o PR mais recente da branch; sem PR = subiu e ainda não pediu revisão. PR atualizado = último push ou comentário no PR. "
+           "Último push vem do feed de eventos do GitHub, que atrasa algumas horas e guarda só 90 dias.",
            {"branch": "Branch", "situacao": "Situação", "pr": "PR", "titulo": "Título do PR", "autor": "Autor do PR", "destino": "Destino",
-            "ultimo_push": "Último push", "quem": "Quem enviou", "commit": "Commit", "existe": "No GitHub"},
-           [situacao("situacao"), data_relativa("ultimo_push"),
+            "atualizado": "PR atualizado", "ultimo_push": "Último push", "quem": "Quem enviou", "commit": "Commit", "existe": "No GitHub"},
+           [situacao("situacao"), data_relativa("atualizado"), data_relativa("ultimo_push"),
             {"matcher": {"id": "byName", "options": "existe"}, "properties": [
                 {"id": "mappings", "value": [{"type": "special", "options": {"match": "null", "result": {"text": "apagada", "color": CINZA}}}]},
                 {"id": "custom.cellOptions", "value": {"type": "color-text"}}]}],
-           {"displayName": "Último push", "desc": True},
+           {"displayName": "PR atualizado", "desc": True},
            [{"id": "joinByField", "options": {"byField": "branch", "mode": "outer"}}]),
 
     # ---------- linha 3: o que subiu por último ----------
-    tabela("Pushes recentes", 0, 16, 14, 10, [github("events", PUSHES, [("quando", "timestamp")], per_page=100)],
+    tabela("Pushes recentes", 0, 16, 14, 10, [github("events", PUSHES, [("quando", "timestamp"), ("branch", "string"), ("quem", "string")], per_page=100)],
            "Cada envio de commits (git push), do mais recente para o mais antigo. O GitHub guarda até 90 dias.",
            {"quando": "Quando", "branch": "Branch", "quem": "Quem enviou"}, ordem={"displayName": "Quando", "desc": True}),
-    painel("bargauge", "Pushes por branch", 14, 16, 10, 10, [github("events", POR_BRANCH, [("pushes", "number")], per_page=100)],
+    painel("bargauge", "Pushes por branch", 14, 16, 10, 10, [github("events", POR_BRANCH, per_page=100)],
            "Quantos envios cada branch recebeu entre os últimos 100 eventos do repositório: onde o trabalho está acontecendo.",
            {"unit": "none", "decimals": 0, "min": 0, "noValue": "Nenhum push recente", "color": {"mode": "fixed", "fixedColor": SERIE[0]}},
            options={"orientation": "horizontal", "displayMode": "basic", "showUnfilled": True, "valueMode": "text", "namePlacement": "top",
@@ -300,7 +311,9 @@ paineis_branches = [
 
     # ---------- linha 4: histórico ----------
     tabela("Histórico de pull requests", 0, 26, 24, 12,
-           [github("pulls", HISTORICO, [("pr", "number"), ("aberto_em", "timestamp"), ("merge_em", "timestamp")],
+           [github("pulls", HISTORICO, [("pr", "number"), ("titulo", "string"), ("situacao", "string"), ("branch", "string"),
+                                     ("destino", "string"), ("autor", "string"), ("aberto_em", "timestamp"),
+                                     ("merge_em", "timestamp"), ("link", "string")],
                    state="all", sort="created", direction="desc", per_page=100)],
            "Os 100 pull requests mais recentes. Clique no título para abrir o PR no GitHub.",
            {"pr": "PR", "titulo": "Título", "situacao": "Situação", "branch": "Branch", "destino": "Destino", "autor": "Autor",
