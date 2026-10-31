@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-VERSAO = "0.3.0"
+VERSAO = "0.4.0"
 
 RAIZ = Path(__file__).resolve().parent.parent  # backend/
 PROJETO = RAIZ.parent

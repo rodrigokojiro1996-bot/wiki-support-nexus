@@ -4,6 +4,21 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+## [0.4.0] - 2026-10-31
+
+### Adicionado
+- Painel "Support Nexus · Branches do Git" no Grafana: toda branch enviada ao GitHub (existentes e apagadas), situação
+  do PR mais recente, autor, destino, última atualização, pushes recentes e histórico de pull requests. Lê a API
+  pública do GitHub pelo plugin Infinity; token opcional (`GITHUB_TOKEN`) para sair do limite de 60 consultas por
+  hora. No servidor da Oracle, `deploy/oracle/docker-compose.grafana.yml` sobe um Grafana só com esse painel em
+  `/grafana/`, atrás da senha da entrada.
+- Ícone do SPA ADM com a cruz do logo da rede (quatro braços em H e o redemoinho no centro), em branco sobre o
+  turquesa da marca.
+
+### Alterado
+- Dependências: Python 3.15 e Node 26 nas imagens, TypeScript 7, FastAPI 0.161, react-router-dom 7.18, elkjs 0.12 e
+  correções do pip.
+
 ### Adicionado
 - Ícones dos módulos SPA PDV, SPA ADM e SPA FIN redesenhados em SVG nas cores da marca: nítidos em qualquer tamanho
   e nos dois temas (eram PNGs de 64 px, um deles com fundo branco). No tema escuro, o logo da rede fica sobre uma
@@ -191,7 +206,8 @@ Estrutura e boas práticas a partir do plano em [docs/ideias-melhorias.txt](docs
 Primeira versão: mapa do sistema, diagrama ER por tela, catálogo do banco com relações inferidas, manuais com
 exportação para PDF, importador de documentos e sistema de exemplo (demo_pdv).
 
-[Não publicado]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.3.0...HEAD
+[Não publicado]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/releases/tag/v0.1.0
