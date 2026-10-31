@@ -4,6 +4,15 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Adicionado
+- Ligar colunas no diagrama: clique numa coluna e na coluna de outra tabela; o diagrama pergunta se estão
+  relacionadas, com o sentido sugerido (a chave primária fica no lado 1, dá para inverter) e uma observação
+  opcional. **Validar** grava a relação como documentada pela equipe, com quem ligou e quando, e o diagrama se
+  redesenha com ela; **Descartar** (ou Esc) volta a navegar sem gravar nada. Se o catálogo já sugeria essa ligação,
+  validar só confirma a sugestão; colunas já ligadas (pelo banco ou pela equipe) são recusadas. As relações ligadas
+  pela equipe ficam numa tabela própria (migração 007, `relacoes_equipe`) e sobrevivem a uma nova importação do
+  catálogo; desfazer pela ficha apaga a ligação. Entram na cobertura e nas contribuições do Grafana.
+
 ## [0.4.0] - 2026-10-31
 
 ### Adicionado

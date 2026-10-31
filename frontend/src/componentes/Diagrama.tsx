@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background, BaseEdge, EdgeLabelRenderer, Handle, Panel, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, useReactFlow,
   type Edge, type EdgeProps, type Node, type NodeProps
 } from '@xyflow/react';
+import { api } from '../api';
 import { useTema } from '../tema';
 import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode } from 'elkjs/lib/elk-api';
-import type { Relacao } from '../tipos';
+import type { NovaRelacao, Relacao } from '../tipos';
 
 const elk = new ELK();
 
@@ -18,7 +19,9 @@ type RespostaDiagrama = { foco: string[]; tabelas: TabelaDiag[]; relacoes: Relac
 type DadosTabela = {
   nome: string; engine: string; foco: boolean; apoio: boolean; colunas: Coluna[]; ocultas: number;
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
+  marcadas: Set<string>; onColuna: (tabela: string, coluna: string) => void; // colunas escolhidas para ligar
 };
+type Ponta = { tabela: string; coluna: string; pk: boolean };
 // uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação
 type Ponto = { x: number; y: number };
 type DadosRelacao = {
@@ -63,7 +66,9 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
         <small>{data.engine}</small>
       </div>
       {data.colunas.map(c => (
-        <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${data.acesas.has(c.nome) ? 'ligada' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''}`}>
+        <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${data.acesas.has(c.nome) ? 'ligada' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''} ${data.marcadas.has(c.nome) ? 'marcada' : ''}`}
+          title="Clique para ligar esta coluna à coluna de outra tabela"
+          onClick={e => { e.stopPropagation(); data.onColuna(data.nome, c.nome); }}>
           <Handle type="target" position={Position.Left} id={`${c.nome}-t`} className="tb-alca" isConnectable={false} />
           <i className="tb-ic">{icone(c.tipo)}</i>
           <b>{c.nome}</b>
@@ -104,9 +109,15 @@ function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition,
 const tiposNo = { tabela: TabelaNo };
 const tiposAresta = { relacao: RelacaoAresta };
 
-type Props = { modulo: string; tabelas: string[]; onAbrirTabela: (nome: string) => void };
+type Props = { modulo: string; tabelas: string[]; onAbrirTabela: (nome: string) => void; onLigou?: () => void };
 
-function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
+/** Quem é o lado N (chave estrangeira) e quem é o lado 1: a chave primária fica no destino; sem pista, vale a ordem dos cliques. */
+function orientar(a: Ponta, b: Ponta): NovaRelacao {
+  const [o, d] = a.pk && !b.pk ? [b, a] : [a, b];
+  return { origem: o.tabela, coluna_origem: o.coluna, destino: d.tabela, coluna_destino: d.coluna };
+}
+
+function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
   const [resp, setResp] = useState<RespostaDiagrama | null>(null);
   const [erro, setErro] = useState('');
   const [nivel, setNivel] = useState(1);
@@ -114,6 +125,15 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
   const [todas, setTodas] = useState(false);
   const [busca, setBusca] = useState('');
   const [sel, setSel] = useState<string | null>(null);
+  // ligar colunas: primeira coluna escolhida, depois a pergunta com as duas
+  const [ponta, setPonta] = useState<Ponta | null>(null);
+  const [proposta, setProposta] = useState<NovaRelacao | null>(null);
+  const [obs, setObs] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [erroLigar, setErroLigar] = useState('');
+  const [aviso, setAviso] = useState('');
+  const [recarga, setRecarga] = useState(0);
+  const botaoValidar = useRef<HTMLButtonElement>(null);
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const tema = useTema();
 
@@ -123,9 +143,51 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
     setErro('');
     fetch(`/api/modulos/${modulo}/diagrama?tabelas=${encodeURIComponent(chave)}&nivel=${nivel}&apoio=${apoio}`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
-      .then((d: RespostaDiagrama) => { setResp(d); setSel(null); })
+      .then((d: RespostaDiagrama) => { setResp(d); if (!recarga) setSel(null); })
       .catch(e => setErro(`Não foi possível carregar o diagrama (${e.message}).`));
-  }, [modulo, chave, nivel, apoio]);
+    // recarga só pede os dados de novo (depois de ligar colunas), sem perder a tabela selecionada
+  }, [modulo, chave, nivel, apoio, recarga]);
+
+  const ehPk = useCallback((tabela: string, coluna: string) =>
+    !!resp?.tabelas.find(t => t.nome === tabela)?.colunas.find(c => c.nome === coluna)?.pk, [resp]);
+
+  const cancelarLigacao = useCallback(() => { setPonta(null); setProposta(null); setObs(''); setErroLigar(''); }, []);
+
+  // 1º clique marca a coluna; clique na mesma desmarca; na mesma tabela troca; na coluna de outra tabela pergunta
+  const escolherColuna = useCallback((tabela: string, coluna: string) => {
+    if (proposta) return;
+    const nova = { tabela, coluna, pk: ehPk(tabela, coluna) };
+    if (!ponta || ponta.tabela === tabela) { setPonta(ponta?.tabela === tabela && ponta.coluna === coluna ? null : nova); return; }
+    setProposta(orientar(ponta, nova));
+  }, [ponta, proposta, ehPk]);
+
+  // foco no Validar ao abrir a pergunta, sem rolar o diagrama (autoFocus rola o canvas e corta o topo)
+  const abriu = !!proposta;
+  useEffect(() => { if (abriu) botaoValidar.current?.focus({ preventScroll: true }); }, [abriu]);
+
+  useEffect(() => {
+    if (!ponta && !proposta) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') cancelarLigacao(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [ponta, proposta, cancelarLigacao]);
+
+  const validar = async () => {
+    if (!proposta) return;
+    setEnviando(true); setErroLigar('');
+    try {
+      const rel = await api.ligarColunas(modulo, { ...proposta, observacao: obs });
+      cancelarLigacao();
+      setAviso(`Ligação validada: ${rel.colunas.map(([a, b]) => `${rel.origem}.${a} → ${rel.destino}.${b}`).join(', ')}`);
+      setRecarga(n => n + 1);
+      onLigou?.();
+    } catch (e) {
+      setErroLigar((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+  useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(''), 4000); return () => clearTimeout(t); }, [aviso]);
 
   // colunas que participam de ligações (lado de cada tabela)
   const chavesPorTabela = useMemo(() => {
@@ -152,7 +214,8 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
       return {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
         data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
-                chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '' }
+                chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '',
+                marcadas: new Set<string>(), onColuna: () => {} }
       } as Node<DadosTabela>;
     });
     const linhaDe = new Map(nos.map(n => [n.id, new Map(n.data.colunas.map((c, i) => [c.nome, i]))]));
@@ -222,6 +285,10 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
   // destaque: sem seleção, ilumina as tabelas da tela e as ligações delas; com seleção, só a tabela escolhida e vizinhas
   const termo = busca.trim().toLowerCase();
   const { nos, arestas } = useMemo(() => {
+    const marcadas = new Map<string, Set<string>>();
+    const marcar = (t: string, c: string) => (marcadas.get(t) ?? marcadas.set(t, new Set()).get(t)!).add(c);
+    if (proposta) { marcar(proposta.origem, proposta.coluna_origem); marcar(proposta.destino, proposta.coluna_destino); }
+    else if (ponta) marcar(ponta.tabela, ponta.coluna);
     const foco = new Set(resp?.foco ?? []);
     const centro = sel ? new Set([sel]) : foco;
     const vizinhas = new Set<string>(centro);
@@ -236,14 +303,15 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
       nos: base.nos.map(n => ({
         ...n,
         data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
-                estado: sel ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal' }
+                estado: sel ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
+                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna }
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
         return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: !!sel && !toca } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna]);
 
   useEffect(() => { if (base.nos.length) requestAnimationFrame(() => fitView({ padding: 0.12, duration: 300 })); }, [base, fitView]);
 
@@ -284,7 +352,7 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
         <label className="diag-check"><input id="diag-apoio" type="checkbox" checked={apoio} onChange={e => setApoio(e.target.checked)} /> Tabelas de apoio</label>
         <input id="diag-busca" type="search" placeholder="Buscar tabela ou coluna (Enter)" value={busca}
           onChange={e => setBusca(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') buscar(); }} />
-        <span className="diag-dica">Clique numa tabela para iluminar as ligações · duplo clique abre a ficha</span>
+        <span className="diag-dica">Clique numa tabela para iluminar as ligações · duplo clique abre a ficha · clique numa coluna e na de outra tabela para ligar</span>
       </div>
       <div className="diag-canvas" ref={setCanvas}>
       <ReactFlow
@@ -293,7 +361,7 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
         fitView fitViewOptions={{ padding: 0.12 }}
         onNodeClick={(_, n) => setSel(n.id === sel ? null : n.id)}
         onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}
-        onPaneClick={() => setSel(null)}
+        onPaneClick={() => { setSel(null); if (!proposta) setPonta(null); }}
         proOptions={{ hideAttribution: true }}
       >
       <Background gap={22} size={1.2} />
@@ -304,7 +372,35 @@ function Interno({ modulo, tabelas, onAbrirTabela }: Props) {
         <span><b className="rel-marca estatica">N</b>→<b className="rel-marca estatica">1</b> muitas para uma</span>
         {resp && resp.apoio_ocultas.length > 0 && !apoio && <span className="lg-ocultas">Ocultas: {resp.apoio_ocultas.join(', ')}</span>}
       </Panel>
-      {sel && (
+      {ponta && !proposta && (
+        <Panel position="top-left" className="diag-ligando" role="status">
+          <span><b>{ponta.tabela}.{ponta.coluna}</b> selecionada · clique na coluna de outra tabela
+            {!todas && <> (para ver as outras colunas, escolha “Todas as colunas”)</>}</span>
+          <button type="button" className="link" onClick={cancelarLigacao}>Cancelar</button>
+        </Panel>
+      )}
+      {proposta && (
+        <Panel position="top-center" className="diag-pergunta" role="dialog" aria-labelledby="diag-pergunta-titulo">
+          <h3 id="diag-pergunta-titulo">Estas colunas estão relacionadas?</h3>
+          <p className="juncao">
+            <code>{proposta.origem}.{proposta.coluna_origem}</code><span>N → 1</span><code>{proposta.destino}.{proposta.coluna_destino}</code>
+          </p>
+          <p className="ajuda">Cada registro de <b>{proposta.origem}</b> aponta para um de <b>{proposta.destino}</b>.{' '}
+            <button type="button" className="link" onClick={() => setProposta({ origem: proposta.destino, coluna_origem: proposta.coluna_destino,
+              destino: proposta.origem, coluna_destino: proposta.coluna_origem })}>Inverter o sentido</button></p>
+          <input type="text" value={obs} maxLength={500} onChange={e => setObs(e.target.value)}
+            placeholder="Observação (opcional): ex. conferido no fechamento de caixa" aria-label="Observação" />
+          {erroLigar && <p className="erro" role="alert">{erroLigar}</p>}
+          <div className="acoes">
+            <button type="button" className="btn" onClick={cancelarLigacao} disabled={enviando}>Descartar</button>
+            <button type="button" className="btn btn-primario" onClick={validar} disabled={enviando}
+              ref={botaoValidar}>
+              {enviando ? 'Validando…' : 'Validar'}</button>
+          </div>
+        </Panel>
+      )}
+      {aviso && <Panel position="top-center" className="diag-ligando" role="status">{aviso}</Panel>}
+      {sel && !ponta && !proposta && (
         <Panel position="top-left" className="diag-sel">
           <b>{sel}</b> · {arestas.filter(e => e.data!.destaque).length} ligações
           <button type="button" className="link" onClick={() => onAbrirTabela(sel)}>Abrir ficha</button>

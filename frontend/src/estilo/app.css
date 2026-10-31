@@ -292,6 +292,20 @@ a.topo-mod { text-decoration: none; }
 .lg-ocultas { font-style: italic; }
 .diag-sel { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--destaque); border-radius: 8px; font-size: 12.5px; }
 .diag-erro { padding: 8px 12px; background: var(--crit); color: #fff; border-radius: 8px; }
+/* ligar colunas: clicar numa coluna e na coluna de outra tabela, depois Validar ou Descartar */
+.tb-col { cursor: pointer; }
+.tb-col:hover { background: color-mix(in srgb, var(--marca) 10%, transparent); }
+.tb-col.marcada { background: var(--laranja-claro); box-shadow: inset 3px 0 0 var(--laranja), inset -3px 0 0 var(--laranja); }
+.tb-col.marcada b, .tb-col.marcada .tb-ic { color: var(--laranja); }
+.diag-ligando { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--laranja); border-radius: 8px; font-size: 12.5px; }
+.diag-pergunta { width: min(440px, calc(100vw - 48px)); padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--laranja); border-radius: 10px; box-shadow: 0 8px 28px rgb(0 0 0 / 18%); font-size: 13px; }
+.diag-pergunta h3 { margin: 0 0 8px; font-size: 14.5px; }
+.diag-pergunta .juncao { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 4px; font-family: var(--mono); font-size: 12px; }
+.diag-pergunta .juncao code { padding: 2px 6px; border-radius: 5px; background: var(--surface-2); }
+.diag-pergunta .ajuda { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.diag-pergunta input { width: 100%; margin-bottom: 10px; }
+.diag-pergunta .acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.diag-pergunta .erro { margin: 0 0 8px; color: var(--crit); font-size: 12px; }
 .manual-fonte { font-size: 12px; color: var(--muted); font-style: italic; }
 
 /* ---------- página do manual ---------- */
