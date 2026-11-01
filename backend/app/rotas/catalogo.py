@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ..db import caminho_menu
 from ..servicos import relacoes
@@ -58,13 +58,37 @@ class StatusRelacao(BaseModel):
     observacao: str = ""
 
 
+class NovaRelacao(BaseModel):
+    origem: str = Field(min_length=1)          # tabela com a chave estrangeira (lado N)
+    coluna_origem: str = Field(min_length=1)
+    destino: str = Field(min_length=1)         # tabela referenciada (lado 1)
+    coluna_destino: str = Field(min_length=1)
+    observacao: str = Field("", max_length=500)
+
+
+@router.post("/relacoes", status_code=201)
+def ligar_colunas(modulo: str, corpo: NovaRelacao, con=Depends(db), por: str = Depends(usuario)):
+    """Relação validada pela equipe no diagrama (duas colunas de tabelas diferentes)."""
+    banco = banco_do_modulo(con, modulo)
+    try:
+        return relacoes.ligar(con, banco, corpo.origem, corpo.coluna_origem, corpo.destino, corpo.coluna_destino,
+                              por, corpo.observacao.strip())
+    except relacoes.LigacaoExistente as e:
+        raise HTTPException(409, str(e)) from e
+    except relacoes.LigacaoInvalida as e:
+        raise HTTPException(422, str(e)) from e
+
+
 @router.put("/relacoes/status")
 def status_relacao(modulo: str, corpo: StatusRelacao, con=Depends(db), por: str = Depends(usuario)):
     banco = banco_do_modulo(con, modulo)
-    if not con.execute("SELECT 1 FROM relacoes WHERE banco = ? AND id = ?", (banco, corpo.id)).fetchone():
+    rel = relacoes.existe(con, banco, corpo.id)
+    if not rel:
         raise HTTPException(404, "Relação não encontrada")
     if corpo.status == "sugerida":
         con.execute("DELETE FROM relacao_status WHERE banco = ? AND id = ?", (banco, corpo.id))
+        if rel["tipo"] == "equipe":  # ligada à mão no diagrama: desfazer apaga a ligação (não vira sugestão)
+            con.execute("DELETE FROM relacoes_equipe WHERE banco = ? AND id = ?", (banco, corpo.id))
     else:
         con.execute("""INSERT INTO relacao_status (banco, id, status, observacao, por) VALUES (?, ?, ?, ?, ?)
                        ON CONFLICT(banco, id) DO UPDATE SET status = excluded.status, observacao = excluded.observacao,

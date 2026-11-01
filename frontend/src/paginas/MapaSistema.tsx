@@ -231,7 +231,7 @@ export default function MapaSistema() {
             </div>
             {aba === 'tabelas' ? (
               <div className="ficha-diagrama">
-                <Diagrama modulo={MODULO} tabelas={ficha.tabelas.map(t => t.tabela)} onAbrirTabela={abrirTabela} />
+                <Diagrama modulo={MODULO} tabelas={ficha.tabelas.map(t => t.tabela)} onAbrirTabela={abrirTabela} onLigou={recarregarFicha} />
               </div>
             ) : (
             <div className="painel-corpo">

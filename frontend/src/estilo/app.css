@@ -259,6 +259,9 @@ a.topo-mod { text-decoration: none; }
 .tb-col.ligada b, .tb-col.ligada .tb-ic { color: var(--destaque); }
 .tb-col.achou, .tb-cab .achou { outline: 2px solid var(--marca); outline-offset: -2px; }
 .tb-mais { display: flex; align-items: center; height: 24px; padding: 0 12px; font-size: 10.5px; color: var(--muted); border-top: 1px solid var(--line); }
+button.tb-mais { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; font: inherit; font-size: 10.5px; cursor: pointer; text-align: left; }
+button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(--marca) 10%, transparent); }
+.tb-sel button.tb-mais { color: var(--accent); font-weight: 700; }
 .tb-alca { width: 6px !important; height: 6px !important; min-width: 0 !important; min-height: 0 !important; background: transparent !important; border: 0 !important; }
 /* todas as ligações na cor do destaque; confirmada/documentada contínua, sugerida tracejada */
 .rel-aresta { stroke: var(--destaque) !important; stroke-width: 1.6 !important; opacity: .5; }
@@ -292,10 +295,25 @@ a.topo-mod { text-decoration: none; }
 .lg-ocultas { font-style: italic; }
 .diag-sel { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--destaque); border-radius: 8px; font-size: 12.5px; }
 .diag-erro { padding: 8px 12px; background: var(--crit); color: #fff; border-radius: 8px; }
+/* ligar colunas: clicar numa coluna e na coluna de outra tabela, depois Validar ou Descartar */
+.tb-col { cursor: pointer; }
+.tb-col:hover { background: color-mix(in srgb, var(--marca) 10%, transparent); }
+.tb-col.marcada { background: var(--laranja-claro); box-shadow: inset 3px 0 0 var(--laranja), inset -3px 0 0 var(--laranja); }
+.tb-col.marcada b, .tb-col.marcada .tb-ic { color: var(--laranja); }
+.diag-ligando { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--laranja); border-radius: 8px; font-size: 12.5px; }
+.diag-pergunta { width: min(440px, calc(100vw - 48px)); padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--laranja); border-radius: 10px; box-shadow: 0 8px 28px rgb(0 0 0 / 18%); font-size: 13px; }
+.diag-pergunta h3 { margin: 0 0 8px; font-size: 14.5px; }
+.diag-pergunta .juncao { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 4px; font-family: var(--mono); font-size: 12px; }
+.diag-pergunta .juncao code { padding: 2px 6px; border-radius: 5px; background: var(--surface-2); }
+.diag-pergunta .ajuda { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.diag-pergunta input { width: 100%; margin-bottom: 10px; }
+.diag-pergunta .acoes { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.diag-pergunta .erro { margin: 0 0 8px; color: var(--crit); font-size: 12px; }
 .manual-fonte { font-size: 12px; color: var(--muted); font-style: italic; }
 
 /* ---------- página do manual ---------- */
-.manual-barra { position: sticky; top: var(--topo-h); z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
+/* o zoom das telas grandes também multiplica o top do sticky: divide para a barra encostar no topo */
+.manual-barra { position: sticky; top: calc(var(--topo-h) / var(--zoom-tela, 1)); z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .manual-barra-esq { display: flex; align-items: center; gap: 16px; min-width: 0; flex-wrap: wrap; }
 .manual-caminho { font-size: 12.5px; color: var(--muted); }
 .manual-palco { padding: 28px 16px 60px; display: flex; flex-direction: column; align-items: center; }
@@ -355,7 +373,7 @@ a.btn-primario { color: var(--sobre-accent); }
 .editor-add .chip { font-size: 12px; padding: 2px 8px; }
 .editor-form > .btn { align-self: flex-start; }
 /* prévia: o manual em tamanho reduzido ao lado do formulário */
-.editor-previa { position: sticky; top: calc(var(--topo-h) + 64px); max-height: calc(100vh - var(--topo-h) - 84px); overflow: auto; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); }
+.editor-previa { position: sticky; top: calc(var(--topo-h) / var(--zoom-tela, 1) + 64px); max-height: calc((100vh - var(--topo-h)) / var(--zoom-tela, 1) - 84px); overflow: auto; border-radius: 4px; box-shadow: 0 0 0 1px var(--line); }
 .editor-previa .doc { zoom: .72; }
 @media (max-width: 1280px) {
   .editor { grid-template-columns: minmax(0, 1fr); }
@@ -446,7 +464,7 @@ a.btn-primario { color: var(--sobre-accent); }
   .manuais-grade .manual-card, .manuais-grade .sem-manual { max-width: none; }
 }
 @media (min-width: 1800px) {
-  :root { --topo-h: 66px; }
+  :root { --topo-h: 66px; --zoom-tela: 1.12; }
   .topo-logo { --logo-h: 36px; }
   .topo-marca b { font-size: 18px; }
   .topo-mod { font-size: 14.5px; }
@@ -454,16 +472,16 @@ a.btn-primario { color: var(--sobre-accent); }
   .topo-tema { height: 38px; font-size: 14px; }
   .topo-usuario { font-size: 13.5px; }
   .topo-usuario input { width: 180px; height: 36px; font-size: 14px; }
-  .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: 1.12; }
+  .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: var(--zoom-tela); }
 }
 @media (min-width: 2300px) {
-  :root { --topo-h: 74px; }
+  :root { --topo-h: 74px; --zoom-tela: 1.25; }
   .topo-logo { --logo-h: 40px; }
   .topo-marca b { font-size: 20px; }
   .topo-mod { font-size: 16px; }
   .topo-tema { height: 42px; font-size: 15.5px; }
   .topo-usuario { font-size: 15px; }
   .topo-usuario input { width: 210px; height: 40px; font-size: 15px; }
-  .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: 1.25; }
+  .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: var(--zoom-tela); }
 }
 
