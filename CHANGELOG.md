@@ -4,6 +4,11 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Corrigido
+- Barra "Voltar ao mapa" do manual e do editor descolava do topo em telas a partir de 1800 px: o zoom dessas telas
+  também aumentava a distância do topo e abria um vão por onde aparecia o texto do manual. Agora ela encosta no topo
+  em qualquer largura.
+
 ## [0.4.0] - 2026-10-31
 
 ### Adicionado
