@@ -315,6 +315,16 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
 .tb-col.marcada { background: var(--laranja-claro); box-shadow: inset 3px 0 0 var(--laranja), inset -3px 0 0 var(--laranja); }
 .tb-col.marcada b, .tb-col.marcada .tb-ic { color: var(--laranja); }
 .diag-ligando { display: flex; gap: 10px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--laranja); border-radius: 8px; font-size: 12.5px; }
+/* balão do cursor no diagrama: o que a tabela/coluna guarda (fica no body, fora do zoom do canvas) */
+.diag-balao { position: fixed; z-index: 1000; width: max-content; max-width: 320px; padding: 9px 12px; border-radius: 9px; pointer-events: none;
+              background: var(--surface); color: var(--fg); border: 1px solid var(--line-strong); box-shadow: 0 8px 24px rgb(0 0 0 / 18%); font-size: 13px; line-height: 1.4; }
+.diag-balao-cab { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.diag-balao-cab b { font-family: ui-monospace, Consolas, monospace; font-size: 13px; }
+.diag-balao-cab small, .diag-balao .dica { color: var(--muted); font-size: 11.5px; }
+.diag-balao p { margin: 5px 0 0; }
+.diag-balao p.sem { color: var(--muted); font-style: italic; }
+.diag-balao .dica { display: block; margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--line); }
+.tabela-desc { margin: 0 0 6px; font-size: 13.5px; }
 .diag-pergunta { width: min(440px, calc(100vw - 48px)); padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--laranja); border-radius: 10px; box-shadow: 0 8px 28px rgb(0 0 0 / 18%); font-size: 13px; }
 .diag-pergunta h3 { margin: 0 0 8px; font-size: 14.5px; }
 .diag-pergunta .juncao { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 4px; font-family: var(--mono); font-size: 12px; }

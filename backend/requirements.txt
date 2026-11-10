@@ -11,3 +11,5 @@ pillow==13.0.0
 tzdata==2026.5
 # login com a conta Microsoft (Entra ID): confere a assinatura do ID token contra as chaves públicas do tenant
 PyJWT[crypto]==2.15.1
+# dicionário de dados: lê a planilha conferida pela equipe (POST /api/descricoes/importar)
+openpyxl==3.1.5

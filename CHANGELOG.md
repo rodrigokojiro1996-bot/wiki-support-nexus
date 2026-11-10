@@ -24,6 +24,12 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Rodapé "+ N colunas" dos cartões do diagrama clicável: seleciona a tabela e mostra todas as colunas só dela (para
   ligar uma coluna que não é chave), centralizando o diagrama nela; "− recolher colunas" volta ao resumo.
   Enquanto as colunas são escolhidas, nenhuma tabela fica apagada, para a segunda estar à vista.
+- Dicionário de dados: ao parar o cursor numa tabela ou numa coluna do diagrama, um balão mostra o que ela guarda
+  ("Armazena os dados de produtos do SPA PDV", "Código do produto"); a descrição da tabela também aparece na ficha.
+  `coletor/rascunho_descricoes.py` gera a planilha de rascunho (Tabelas, Colunas por nome e Exceções por tabela) com
+  uma sugestão e o grau de confiança em cada linha; a equipe confere e `POST /api/descricoes/importar` grava só as
+  linhas com Conferido = S. As descrições ficam numa tabela própria (migração 009, `descricoes`), por módulo, e
+  sobrevivem a uma nova importação do catálogo. Passo a passo em `docs/dicionario-de-dados.md`.
 
 ### Alterado
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser

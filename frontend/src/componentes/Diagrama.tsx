@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Background, BaseEdge, EdgeLabelRenderer, Handle, Panel, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, useReactFlow,
   type Edge, type EdgeProps, type Node, type NodeProps
@@ -12,8 +13,10 @@ import type { NovaRelacao, Relacao } from '../tipos';
 
 const elk = new ELK();
 
-type Coluna = { nome: string; tipo: string; pk: boolean };
-type TabelaDiag = { nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; colunas: Coluna[] };
+type Coluna = { nome: string; tipo: string; pk: boolean; descricao?: string };
+type TabelaDiag = { nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; descricao?: string; colunas: Coluna[] };
+/** balão do cursor: o que a tabela ou a coluna guarda (dicionário de dados da equipe) */
+type Balao = { titulo: string; detalhe: string; texto: string; dica?: string; rect: DOMRect };
 type RespostaDiagrama = { foco: string[]; tabelas: TabelaDiag[]; relacoes: Relacao[]; apoio_ocultas: string[] };
 
 type DadosTabela = {
@@ -21,6 +24,7 @@ type DadosTabela = {
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
   marcadas: Set<string>; onColuna: (tabela: string, coluna: string) => void; // colunas escolhidas para ligar
   expandida: boolean; onExpandir: (tabela: string) => void; // todas as colunas só desta tabela
+  descricao: string; onBalao: (b: Balao | null) => void;
 };
 type Ponta = { tabela: string; coluna: string; pk: boolean };
 // uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação
@@ -59,17 +63,21 @@ function icone(tipo: string) {
 /* ---------- cartão da tabela ---------- */
 function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
   const b = data.busca;
+  const balao = (e: React.MouseEvent<HTMLElement>, x: Omit<Balao, 'rect'>) => data.onBalao({ ...x, rect: e.currentTarget.getBoundingClientRect() });
+  const sair = () => data.onBalao(null);
   return (
     <div className={`tb ${data.foco ? 'tb-foco' : ''} ${data.selecionada ? 'tb-sel' : ''} tb-${data.estado}`}>
-      <div className="tb-cab">
+      <div className="tb-cab" onMouseEnter={e => balao(e, { titulo: data.nome, detalhe: `tabela · ${data.engine}`, texto: data.descricao })} onMouseLeave={sair}>
         <span className={b && data.nome.toLowerCase().includes(b) ? 'achou' : undefined}>{data.nome}</span>
         {data.apoio && <em title="Tabela de apoio: muitas outras tabelas apontam para ela">apoio</em>}
         <small>{data.engine}</small>
       </div>
       {data.colunas.map(c => (
         <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${data.acesas.has(c.nome) ? 'ligada' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''} ${data.marcadas.has(c.nome) ? 'marcada' : ''}`}
-          title="Clique para ligar esta coluna à coluna de outra tabela"
-          onClick={e => { e.stopPropagation(); data.onColuna(data.nome, c.nome); }}>
+          onMouseEnter={e => balao(e, { titulo: c.nome, detalhe: `${c.tipo}${c.pk ? ' · chave primária' : ''}`, texto: c.descricao ?? '',
+                                        dica: 'Clique para ligar esta coluna à coluna de outra tabela' })}
+          onMouseLeave={sair}
+          onClick={e => { e.stopPropagation(); sair(); data.onColuna(data.nome, c.nome); }}>
           <Handle type="target" position={Position.Left} id={`${c.nome}-t`} className="tb-alca" isConnectable={false} />
           <i className="tb-ic">{icone(c.tipo)}</i>
           <b>{c.nome}</b>
@@ -85,6 +93,21 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
         <button type="button" className="tb-mais" onClick={e => { e.stopPropagation(); data.onExpandir(data.nome); }}>− recolher colunas</button>
       )}
     </div>
+  );
+}
+
+/** Fica ao lado do elemento (à direita; à esquerda se não couber), fora do canvas para não ser cortado nem escalado pelo zoom. */
+function BalaoFlutuante({ b }: { b: Balao }) {
+  const LARG = 320;
+  const cabeDireita = b.rect.right + 10 + LARG <= window.innerWidth;
+  const style = { top: Math.max(8, Math.min(b.rect.top, window.innerHeight - 150)), left: cabeDireita ? b.rect.right + 10 : Math.max(8, b.rect.left - 10 - LARG) };
+  return createPortal(
+    <div className="diag-balao" role="tooltip" style={style}>
+      <div className="diag-balao-cab"><b>{b.titulo}</b><small>{b.detalhe}</small></div>
+      {b.texto ? <p>{b.texto}</p> : <p className="sem">Descrição ainda não cadastrada.</p>}
+      {b.dica && <small className="dica">{b.dica}</small>}
+    </div>,
+    document.body
   );
 }
 
@@ -144,6 +167,15 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
   // tabelas com todas as colunas à mostra (rodapé "+ N colunas"); depois de abrir, o diagrama centraliza nela
   const [expandidas, setExpandidas] = useState<Set<string>>(new Set());
   const centralizar = useRef<string | null>(null);
+  // balão do cursor: aparece depois de uma pausa curta, para não piscar enquanto o mouse atravessa o diagrama
+  const [balao, setBalao] = useState<Balao | null>(null);
+  const esperaBalao = useRef(0);
+  const mostrarBalao = useCallback((b: Balao | null) => {
+    clearTimeout(esperaBalao.current);
+    if (b) esperaBalao.current = window.setTimeout(() => setBalao(b), 300);
+    else setBalao(null);
+  }, []);
+  useEffect(() => () => clearTimeout(esperaBalao.current), []);
   const { fitView, zoomIn, zoomOut, setCenter, getZoom } = useReactFlow();
   const tema = useTema();
 
@@ -228,7 +260,8 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
         data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
                 chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '',
-                marcadas: new Set<string>(), onColuna: () => {}, expandida, onExpandir: () => {} }
+                marcadas: new Set<string>(), onColuna: () => {}, expandida, onExpandir: () => {},
+                descricao: t.descricao ?? '', onBalao: () => {} }
       } as Node<DadosTabela>;
     });
     const linhaDe = new Map(nos.map(n => [n.id, new Map(n.data.colunas.map((c, i) => [c.nome, i]))]));
@@ -328,14 +361,14 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         ...n,
         data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
                 estado: apagar ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
-                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir }
+                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir, onBalao: mostrarBalao }
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
         return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: apagar && !toca } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao]);
 
   useEffect(() => {
     if (!base.nos.length) return;
@@ -394,6 +427,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         onNodeClick={(_, n) => setSel(n.id === sel ? null : n.id)}
         onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}
         onPaneClick={() => { setSel(null); if (!proposta) setPonta(null); }}
+        onMoveStart={() => mostrarBalao(null)}
         proOptions={{ hideAttribution: true }}
       >
       <Background gap={22} size={1.2} />
@@ -441,6 +475,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
       {erro && <Panel position="top-center" className="diag-erro">{erro}</Panel>}
       </ReactFlow>
       </div>
+      {balao && <BalaoFlutuante b={balao} />}
     </div>
   );
 }
