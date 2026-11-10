@@ -1,4 +1,4 @@
-import type { Catalogo, Manual, NotaRelacao, NovaRelacao, Relacao, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
+import type { Catalogo, Manual, NotaRelacao, NovaRelacao, Relacao, TrechoManual, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
 // login Microsoft: com ele ligado, a API responde 401 quando a sessão termina e quem estiver ouvindo é avisado
 // (a interface mostra "Sua sessão terminou" sem apagar o que está aberto, como um manual em edição)
@@ -108,6 +108,16 @@ export const api = {
     if (!r.ok) throw await erroDe(r);
   },
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
+  trechos: (codigo: string, tabela: string) => json<TrechoManual[]>(`/api/manuais/${enc(codigo)}/trechos?tabela=${enc(tabela)}`),
+  async ligarTrecho(codigo: string, trecho: { tabela: string; secao: number; bloco: number; texto: string }): Promise<TrechoManual> {
+    const r = await fetch(`/api/manuais/${enc(codigo)}/trechos`, enviar('POST', trecho));
+    if (!r.ok) throw await erroDe(r);
+    return r.json();
+  },
+  async desligarTrecho(codigo: string, id: number) {
+    const r = await fetch(`/api/manuais/${enc(codigo)}/trechos/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw await erroDe(r);
+  },
   manuais: (modulo: string) => json<ManualResumo[]>(`/api/manuais?modulo=${enc(modulo)}`),
   async salvarManual(corpo: ManualEntrada, codigo?: string): Promise<{ codigo: string; versao: string }> {
     const r = await buscar(codigo ? `/api/manuais/${enc(codigo)}` : '/api/manuais', enviar(codigo ? 'PUT' : 'POST', corpo));
