@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .. import pdf
 from ..metricas import IMPORTACAO_DURACAO, IMPORTACOES, PDF_DURACAO, PDF_FALHAS
-from ..servicos import importacao
+from ..servicos import entra, importacao, sessoes
 from ..servicos import manuais as servico
 from ..servicos.manuais import manual_completo
 from . import db, usuario
@@ -41,12 +41,17 @@ def manual(codigo: str, con=Depends(db)):
 @router.get("/manuais/{codigo}/pdf")
 def manual_pdf(codigo: str, con=Depends(db)):
     m = _manual(con, codigo)
+    # com login, o navegador sem tela que abre a página de impressão também precisa de sessão: uma só dele,
+    # que vale 2 minutos e é apagada assim que o PDF fica pronto
+    sessao = sessoes.criar(con, "gerador-de-pdf", "", "Gerador de PDF", duracao=120) if entra.login_ligado() else None
     inicio = time.perf_counter()
     try:
-        conteudo = pdf.gerar(codigo, m.get("alterado_em"))
+        conteudo = pdf.gerar(codigo, m.get("alterado_em"), sessao)
     except Exception as e:  # sem Edge/Chromium ou frontend fora do ar
         PDF_FALHAS.inc()
         raise HTTPException(503, f"Não foi possível gerar o PDF: {e}") from e
+    finally:
+        sessoes.encerrar(con, sessao)
     PDF_DURACAO.observe(time.perf_counter() - inicio)
     nome = f"{codigo} - {m['modulo_nome']} - {m['titulo']}.pdf".replace("/", "-")
     return Response(conteudo, media_type="application/pdf",

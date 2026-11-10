@@ -407,9 +407,10 @@ busca tabelas e colunas em duas consultas. Com 500 tabelas e 2000 relações a r
   Um vínculo que já era da equipe mantém o autor e a data originais.
 
 **Autoria**
-- Validar, descartar e vincular registram `por` (quem) e `em` (quando). Até ter login, o autor é o nome que a
-  pessoa informa no topo da interface, guardado no navegador e enviado no cabeçalho `X-Usuario`. Sem nome, a
-  alteração é aceita com autor vazio.
+- Validar, descartar e vincular registram `por` (quem) e `em` (quando). Com o login Microsoft ligado
+  ([login-microsoft.md](login-microsoft.md)), o autor é quem entrou e o cabeçalho `X-Usuario` é ignorado.
+  Desligado, o autor é o nome que a pessoa informa no topo da interface, guardado no navegador e enviado no
+  cabeçalho `X-Usuario`; sem nome, a alteração é aceita com autor vazio.
 
 **API**
 - Pydantic valida o corpo das requisições. O status de relação é limitado a documentada | descartada | sugerida.
@@ -434,6 +435,10 @@ Prefixo `/api`. Documentação interativa em http://localhost:8010/docs.
 |---|---|---|
 | GET | `/metrics` (fora de `/api`) | métricas no formato do Prometheus ([monitoramento.md](monitoramento.md)) |
 | GET | `/saude` | `{"ok": true, "versao": "…", "schema": N}`; 503 se o banco não responder |
+| GET | `/auth/eu` | `{"login": bool, "usuario": {nome, email} \| null}`: login ligado e quem entrou |
+| GET | `/auth/entrar?voltar=/caminho` | vai ao login da Microsoft (404 com o login desligado) |
+| GET | `/auth/retorno` | volta da Microsoft: abre a sessão ou volta para `/?erro_login=<código>` |
+| POST | `/auth/sair` | encerra a sessão |
 | GET | `/modulos` | módulos e data da última coleta |
 | GET | `/modulos/{m}/menus` | árvore de menus com contagens |
 | GET | `/menus/{id}` | ficha da tela: caminho, tabelas, relações, manuais e opções internas |
@@ -552,9 +557,9 @@ backend\.venv\Scripts\python.exe -m pytest -q      # na raiz do projeto
 
 ## 14. Limitações conhecidas e próximos passos
 
-- **Login**: a autoria hoje é o nome informado na interface, sem verificação. Antes de abrir para uma equipe
-  grande, incluir login (conta Microsoft da empresa via Entra ID, ou senha simples se for só uso local), com
-  leitura livre para logados e alterações só para o perfil "curador".
+- **Perfis**: o login com a conta Microsoft já existe ([login-microsoft.md](login-microsoft.md)), mas quem entra
+  pode ler e alterar tudo. Falta o perfil "curador" (só ele altera). Com o login desligado, a autoria continua
+  sendo o nome informado na interface, sem verificação.
 - Módulos Retaguarda e Financeiro: a estrutura está pronta (tabela `modulos`), falta mapear menus e bancos.
 - Relações entre bancos de módulos diferentes (ex.: PDV ← Retaguarda) como um quarto tipo de ligação.
 - Integração com a ferramenta de chamados da equipe de suporte.

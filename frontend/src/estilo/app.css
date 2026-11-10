@@ -96,6 +96,20 @@ a.topo-mod { text-decoration: none; }
 .topo-extra { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .topo-usuario { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .topo-usuario input { width: 150px; height: 30px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--fg); padding: 0 8px; font-size: 12.5px; }
+/* login Microsoft: quem entrou (o e-mail aparece ao passar o mouse) e o botão de sair */
+.topo-quem { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.topo-quem-ini { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 12px; }
+.topo-quem-nome { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; }
+.topo-sair { height: 32px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--fg); font-weight: 600; font-size: 12.5px; cursor: pointer; }
+.topo-sair:hover { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 720px) { .topo-quem-nome { display: none; } }
+@media (max-width: 720px), (pointer: coarse) { .topo-sair { min-height: 44px; } }
+
+/* a sessão terminou com a tela aberta: aviso logo abaixo do topo (o toast de erro do editor fica embaixo) */
+.faixa-sessao { position: fixed; z-index: 60; top: calc(var(--topo-h) + 12px); left: 50%; transform: translateX(-50%); width: min(640px, calc(100% - 32px)); display: flex; align-items: center; gap: 14px; padding: 10px 10px 10px 16px; border: 1px solid var(--warn); border-radius: 10px; background: var(--faixa-fundo); color: var(--faixa-texto); box-shadow: 0 10px 30px var(--sombra); font-size: 13.5px; }
+.faixa-sessao span { flex: 1; }
+.faixa-sessao-botao { flex: none; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border-radius: 8px; background: var(--botao); color: #fff; font-weight: 700; text-decoration: none; }
+@media (max-width: 720px) { .faixa-sessao { flex-wrap: wrap; } .faixa-sessao-botao { min-height: 44px; } }
 @media (max-width: 720px) {
   .topo { gap: 10px; padding: 0 16px; }
   .topo-marca small, .topo-mod[aria-disabled="true"], .topo-usuario span { display: none; }
@@ -484,4 +498,45 @@ a.btn-primario { color: var(--sobre-accent); }
   .topo-usuario input { width: 210px; height: 40px; font-size: 15px; }
   .painel.arvore, .ficha-topo, .painel.ficha > .painel-corpo, .painel.tabela, .manual-palco, .editor, .manual-barra { zoom: var(--zoom-tela); }
 }
+
+/* ---------- entrar (login Microsoft) ---------- */
+/* A tela é um nó do mapa: tabelas do PDV ao fundo, quietas, com as ligações convergindo para o cartão. O único
+   destaque é a relação em laranja (a cor de destaque do diagrama), que se desenha uma vez até o cartão. */
+/* fundo de pontos como o do diagrama, cobrindo qualquer tamanho de tela; o mapa fica em tamanho real, centrado */
+.entrar { position: relative; min-height: 100%; display: grid; place-items: center; padding: 32px 16px; overflow: hidden;
+  background-color: var(--diag-bg); background-image: radial-gradient(circle, var(--line-strong) 1.1px, transparent 1.6px); background-size: 24px 24px; background-position: center; }
+.entrar-mapa { position: absolute; left: 50%; top: 50%; width: 1200px; height: 800px; transform: translate(-50%, -50%); pointer-events: none; }
+.entrar-mapa .fundo { opacity: .55; }
+.entrar-mapa .lig { fill: none; stroke: var(--line-strong); stroke-width: 1.5; }
+.entrar-mapa .lig-ponto { fill: var(--line-strong); }
+.entrar-mapa .no-fundo { fill: var(--surface); }
+.entrar-mapa .no-cab { fill: var(--surface-2); }
+.entrar-mapa .no-div { stroke: var(--line); }
+.entrar-mapa .no-borda { fill: none; stroke: var(--line-strong); }
+.entrar-mapa .no-aceso .no-borda { stroke: var(--destaque); stroke-width: 2; }
+.entrar-mapa text { font-family: var(--mono); }
+.entrar-mapa .no-tit { font-size: 13px; font-weight: 700; fill: var(--fg); }
+.entrar-mapa .no-col { font-size: 11px; fill: var(--muted); }
+.entrar-mapa .rel { fill: none; stroke: var(--destaque); stroke-width: 2.5; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: entrar-relacao 1.1s .3s cubic-bezier(.3, .7, .2, 1) forwards; }
+.entrar-mapa .rel-ponto { fill: var(--destaque); }
+@keyframes entrar-relacao { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .entrar-mapa .rel { animation: none; stroke-dashoffset: 0; } }
+
+/* o cartão: placa branca do logo (regra da marca, nos dois temas) com a faixa turquesa→laranja do topo */
+.entrar-no { position: relative; width: min(400px, 100%); overflow: hidden; background: var(--surface); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--diag-bg) 75%, transparent), 0 18px 48px var(--sombra); }
+.entrar-placa { position: relative; display: flex; align-items: center; height: 68px; padding: 0 24px; background: #fff; }
+.entrar-placa::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--marca), var(--marca-2)); }
+.entrar-placa img { display: block; width: auto; height: 34px; }
+.entrar-corpo { padding: 28px 24px 24px; }
+.entrar-corpo h1 { font-size: 26px; font-weight: 800; letter-spacing: -.01em; }
+.entrar-sub { margin: 4px 0 24px; color: var(--muted); font-size: 14px; }
+.entrar-erro { margin: 0 0 18px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--crit) 45%, transparent); border-left-width: 4px; border-radius: 8px; background: color-mix(in srgb, var(--crit) 8%, var(--surface)); font-size: 13.5px; line-height: 1.45; }
+.entrar-botao { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 6px 16px; border-radius: 9px; background: var(--botao); color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; }
+.entrar-botao:hover { background: color-mix(in srgb, var(--botao) 88%, #000); }
+.entrar-botao:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.entrar-ms { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 5px; background: #fff; }
+.entrar-ms svg { display: block; width: 16px; height: 16px; }
+.entrar-nota { margin: 14px 0 0; color: var(--muted); font-size: 13px; }
+.entrar-nota b { color: var(--fg); font-weight: 600; }
+@media (max-width: 420px) { .entrar-corpo { padding: 24px 18px 20px; } .entrar-placa { padding: 0 18px; } }
 
