@@ -1,4 +1,4 @@
-import type { Catalogo, Manual, NovaRelacao, Relacao, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
+import type { Catalogo, Manual, NotaRelacao, NovaRelacao, Relacao, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
 // login Microsoft: com ele ligado, a API responde 401 quando a sessão termina e quem estiver ouvindo é avisado
 // (a interface mostra "Sua sessão terminou" sem apagar o que está aberto, como um manual em edição)
@@ -87,6 +87,25 @@ export const api = {
     const r = await fetch(`/api/modulos/${modulo}/relacoes`, enviar('POST', corpo));
     if (!r.ok) throw await erroDe(r);
     return r.json();
+  },
+  /** informativo de incidentes da ligação; sem texto, só move o post-it */
+  async notaRelacao(modulo: string, id: string, nota: { texto?: string; posicao?: number }): Promise<NotaRelacao> {
+    const r = await fetch(`/api/modulos/${modulo}/relacoes/nota`, put({ id, ...nota }));
+    if (!r.ok) throw await erroDe(r);
+    return r.json();
+  },
+  async apagarNota(modulo: string, id: string) {
+    const r = await fetch(`/api/modulos/${modulo}/relacoes/nota?id=${enc(id)}`, { method: 'DELETE' });
+    if (!r.ok) throw await erroDe(r);
+  },
+  /** tabelas arrastadas: valem para todos que abrirem a tela (chave = tabelas da tela) */
+  async salvarPosicoes(modulo: string, chave: string, posicoes: { tabela: string; x: number; y: number }[]) {
+    const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes`, put({ chave, posicoes }));
+    if (!r.ok) throw await erroDe(r);
+  },
+  async reorganizar(modulo: string, chave: string) {
+    const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes?chave=${enc(chave)}`, { method: 'DELETE' });
+    if (!r.ok) throw await erroDe(r);
   },
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
   manuais: (modulo: string) => json<ManualResumo[]>(`/api/manuais?modulo=${enc(modulo)}`),

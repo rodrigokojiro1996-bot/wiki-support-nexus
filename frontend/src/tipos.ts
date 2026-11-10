@@ -20,7 +20,11 @@ export type Relacao = {
   estado: EstadoRelacao; regra: string | null; motivo: string | null;
   equipe?: boolean; // ligada à mão pela equipe no diagrama (não veio do catálogo)
   por: string | null; em: string | null; // quem validou/descartou e quando
+  nota?: NotaRelacao; // informativo de incidentes (o post-it em cima da linha no diagrama)
 };
+
+/** posicao: onde o post-it fica ao longo da linha, de 0 (lado N) a 1 (lado 1) */
+export type NotaRelacao = { texto: string; posicao: number; por: string; em: string };
 
 /** duas colunas que a equipe ligou no diagrama: origem = lado N (chave estrangeira), destino = lado 1 */
 export type NovaRelacao = { origem: string; coluna_origem: string; destino: string; coluna_destino: string; observacao?: string };
