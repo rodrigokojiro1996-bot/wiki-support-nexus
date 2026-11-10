@@ -6,6 +6,7 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import './estilo/app.css';
 import './estilo/documento.css';
+import Acesso from './componentes/Acesso';
 import MapaSistema from './paginas/MapaSistema';
 import { lerTema } from './tema';
 import ManualPagina from './paginas/ManualPagina';
@@ -18,13 +19,15 @@ document.documentElement.dataset.tema = lerTema();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<MapaSistema />} />
-        <Route path="/manuais/novo" element={<ManualEditor />} />
-        <Route path="/manuais/:codigo" element={<ManualPagina />} />
-        <Route path="/manuais/:codigo/editar" element={<ManualEditor />} />
-        <Route path="/manuais/:codigo/imprimir" element={<ManualImpressao />} />
-      </Routes>
+      <Acesso>
+        <Routes>
+          <Route path="/" element={<MapaSistema />} />
+          <Route path="/manuais/novo" element={<ManualEditor />} />
+          <Route path="/manuais/:codigo" element={<ManualPagina />} />
+          <Route path="/manuais/:codigo/editar" element={<ManualEditor />} />
+          <Route path="/manuais/:codigo/imprimir" element={<ManualImpressao />} />
+        </Routes>
+      </Acesso>
     </BrowserRouter>
   </React.StrictMode>
 );

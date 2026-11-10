@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ambienteDoServidor, api, usuario } from '../api';
+import { iniciais } from '../acesso';
+import { ambienteDoServidor, api, sessao, usuario } from '../api';
 import { aplicarTema, useTema } from '../tema';
+import { useAcesso } from './Acesso';
 
 // nomes e módulos ativos vêm do modulos.json do servidor (GET /api/modulos); esta lista só aparece enquanto carrega
 const PADRAO = [
@@ -18,6 +20,21 @@ function SeuNome() {
       <input value={nome} placeholder="para a autoria" maxLength={80} aria-label="Seu nome, para registrar a autoria"
         onChange={e => setNome(e.target.value)} onBlur={() => usuario.gravar(nome)} />
     </label>
+  );
+}
+
+/** Com o login Microsoft: quem entrou e o botão de sair. Sem ele: o campo "Seu nome" para a autoria. */
+function Quem() {
+  const { login, usuario: pessoa } = useAcesso();
+  if (!login) return <SeuNome />;
+  if (!pessoa) return null;
+  const sair = () => { sessao.sair().finally(() => window.location.assign('/')); };
+  return (
+    <div className="topo-quem" title={pessoa.email}>
+      <span className="topo-quem-ini" aria-hidden="true">{iniciais(pessoa.nome)}</span>
+      <span className="topo-quem-nome">{pessoa.nome}</span>
+      <button type="button" className="topo-sair" onClick={sair}>Sair</button>
+    </div>
   );
 }
 
@@ -70,7 +87,7 @@ export default function Topo({ children, modulo }: { children?: React.ReactNode;
           </span>
         ))}
       </nav>
-      <div className="topo-extra">{children}<BotaoTema /><SeuNome /></div>
+      <div className="topo-extra">{children}<BotaoTema /><Quem /></div>
     </header>
     <FaixaAmbiente />
     </>
