@@ -1,7 +1,16 @@
 import type { Catalogo, Manual, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
-async function json<T>(url: string, init?: RequestInit): Promise<T> {
+// login Microsoft: com ele ligado, a API responde 401 quando a sessão termina e quem estiver ouvindo é avisado
+// (a interface mostra "Sua sessão terminou" sem apagar o que está aberto, como um manual em edição)
+const ouvintes = new Set<() => void>();
+async function buscar(url: string, init?: RequestInit): Promise<Response> {
   const r = await fetch(url, init);
+  if (r.status === 401) ouvintes.forEach(avisar => avisar());
+  return r;
+}
+
+async function json<T>(url: string, init?: RequestInit): Promise<T> {
+  const r = await buscar(url, init);
   if (!r.ok) {
     let msg = `${r.status} ${r.statusText}`;
     try { msg = (await r.json()).detail ?? msg; } catch { /* resposta sem JSON */ }
@@ -11,7 +20,24 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 }
 const enc = encodeURIComponent;
 
-// autoria das alterações até ter login: o nome que a pessoa informa no topo, guardado só neste navegador
+export type Usuario = { nome: string; email: string };
+/** login: o servidor exige a conta Microsoft; usuario: quem entrou (null = ainda não entrou) */
+export type Acesso = { login: boolean; usuario: Usuario | null };
+
+export const sessao = {
+  eu: () => json<Acesso>('/api/auth/eu'),
+  /** endereço do botão "Entrar": vai à Microsoft e volta para `voltar` */
+  urlEntrar: (voltar: string) => `/api/auth/entrar?voltar=${enc(voltar)}`,
+  async sair() { await fetch('/api/auth/sair', { method: 'POST' }); },
+  /** avisa quando a API recusar por sessão terminada; devolve a função que para de avisar */
+  aoExpirar(avisar: () => void): () => void {
+    ouvintes.add(avisar);
+    return () => { ouvintes.delete(avisar); };
+  }
+};
+
+// autoria das alterações com o login desligado: o nome que a pessoa informa no topo, guardado só neste navegador
+// (com o login ligado o servidor ignora este cabeçalho e usa quem entrou)
 const CHAVE_USUARIO = 'nexus.usuario';
 export const usuario = {
   ler(): string { try { return localStorage.getItem(CHAVE_USUARIO) ?? ''; } catch { return ''; } },
@@ -60,27 +86,27 @@ export const api = {
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
   manuais: (modulo: string) => json<ManualResumo[]>(`/api/manuais?modulo=${enc(modulo)}`),
   async salvarManual(corpo: ManualEntrada, codigo?: string): Promise<{ codigo: string; versao: string }> {
-    const r = await fetch(codigo ? `/api/manuais/${enc(codigo)}` : '/api/manuais', enviar(codigo ? 'PUT' : 'POST', corpo));
+    const r = await buscar(codigo ? `/api/manuais/${enc(codigo)}` : '/api/manuais', enviar(codigo ? 'PUT' : 'POST', corpo));
     if (!r.ok) throw await erroDe(r);
     return r.json();
   },
   /** print colado ou arquivo: fica em rascunho no servidor até o manual ser salvo */
   async enviarImagem(arquivo: Blob): Promise<string> {
-    const r = await fetch('/api/imagens', { method: 'POST', headers: { 'Content-Type': arquivo.type || 'application/octet-stream' }, body: arquivo });
+    const r = await buscar('/api/imagens', { method: 'POST', headers: { 'Content-Type': arquivo.type || 'application/octet-stream' }, body: arquivo });
     if (!r.ok) throw await erroDe(r);
     return (await r.json()).arquivo;
   },
   /** documento (PDF, Word, .txt, .md) → rascunho para revisar no editor; nada é salvo */
   async importarManual(modulo: string, arquivo: File): Promise<Rascunho> {
     if (arquivo.size > IMPORTACAO_MAXIMO_MB * 1024 * 1024) throw new Error(`Arquivo maior que ${IMPORTACAO_MAXIMO_MB} MB.`);
-    const r = await fetch(`/api/manuais/importar?modulo=${enc(modulo)}`, {
+    const r = await buscar(`/api/manuais/importar?modulo=${enc(modulo)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/octet-stream', 'X-Arquivo': enc(arquivo.name) }, body: arquivo
     });
     if (!r.ok) throw await erroDe(r);
     return r.json();
   },
   async pdf(codigo: string): Promise<Blob> {
-    const r = await fetch(`/api/manuais/${enc(codigo)}/pdf`);
+    const r = await buscar(`/api/manuais/${enc(codigo)}/pdf`);
     if (!r.ok) throw new Error((await r.json().catch(() => null))?.detail ?? 'Falha ao gerar o PDF');
     return r.blob();
   }

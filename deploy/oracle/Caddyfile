@@ -5,6 +5,29 @@
 	admin off              # sem API de administração do Caddy
 }
 
+# Quem pode entrar. MICROSOFT_AUTH_ENABLED (no .env) escolhe um destes dois blocos, e é a MESMA variável que liga
+# o login no app: um interruptor só, para nunca ficar o app sem senha e sem login. Use exatamente true ou false
+# (outro valor e o Caddy não sobe: falha fechada).
+
+# false (padrão): senha única da equipe (janela do navegador) na entrada de tudo. Não é o login do sistema: é um
+# portão contra robôs e curiosos. Ficam abertos: /api/saude (monitores de disponibilidade) e /robots.txt (para os
+# buscadores lerem o "não indexe" em vez de esbarrar na senha).
+(login_microsoft_false) {
+	@protegido not path /api/saude /robots.txt
+	basic_auth @protegido {
+		{$NEXUS_ACESSO_USUARIO} {$NEXUS_ACESSO_SENHA_HASH}
+	}
+}
+
+# true: o app pede a conta Microsoft da empresa (docs/login-microsoft.md). A senha da entrada continua só no painel
+# do Grafana, que não conhece o login Microsoft e mostra os painéis para quem passar dela.
+(login_microsoft_true) {
+	@grafana path /grafana /grafana/*
+	basic_auth @grafana {
+		{$NEXUS_ACESSO_USUARIO} {$NEXUS_ACESSO_SENHA_HASH}
+	}
+}
+
 {$NEXUS_DOMINIO} {
 	encode zstd gzip
 
@@ -20,14 +43,8 @@
 	@interno path /metrics /metrics/* /docs /docs/* /redoc /openapi.json
 	respond @interno 404
 
-	# Senha única da equipe (janela do navegador). Não é o login do sistema: é um portão contra robôs e curiosos
-	# enquanto a versão de homologação com login não chega. Ficam abertos: /api/saude (monitores de disponibilidade)
-	# e /robots.txt (para os buscadores lerem o "não indexe" em vez de esbarrar na senha).
-	# Para desligar a senha (não recomendado): comente as 3 linhas do basic_auth.
-	@protegido not path /api/saude /robots.txt
-	basic_auth @protegido {
-		{$NEXUS_ACESSO_USUARIO} {$NEXUS_ACESSO_SENHA_HASH}
-	}
+	# senha na entrada ou login Microsoft: ver os dois blocos no começo do arquivo
+	import login_microsoft_{$MICROSOFT_AUTH_ENABLED:false}
 
 	# prints de até 8 MB (limite da API) com folga; acima disso o Caddy recusa antes de chegar na aplicação
 	request_body {

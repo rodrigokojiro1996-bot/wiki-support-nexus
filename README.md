@@ -54,8 +54,14 @@ Tudo só nesta máquina. Instalação do Docker no Windows, backup dos dados e o
 
 ## Servidor de testes (Oracle Cloud)
 
-Link HTTPS para a equipe testar, com senha única na entrada (sem login ainda), num servidor gratuito da Oracle:
+Link HTTPS para a equipe testar, com senha única na entrada, num servidor gratuito da Oracle:
 passo a passo em [docs/oracle-cloud.md](docs/oracle-cloud.md). Arquivos em `deploy/oracle/`.
+
+## Login com a conta Microsoft
+
+Opcional: com `MICROSOFT_AUTH_ENABLED=true`, o Support Nexus pede a conta Microsoft da empresa e só aceita
+@farmaciasassociadas.com.br. A autoria passa a ser quem entrou. Registro do app no Entra, variáveis e problemas
+comuns: [docs/login-microsoft.md](docs/login-microsoft.md).
 
 ## Testes
 

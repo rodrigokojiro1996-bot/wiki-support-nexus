@@ -4,6 +4,25 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Adicionado
+- Login com a conta Microsoft da empresa (Entra ID), ligado por `MICROSOFT_AUTH_ENABLED=true`. Só entram contas
+  @farmaciasassociadas.com.br do tenant da empresa (conferido no UPN; os outros domínios do tenant ficam de fora).
+  Fluxo de código com PKCE, state e nonce; assinatura do ID token conferida contra as chaves do tenant (PyJWT,
+  só RS256). Sessão de 12 horas no SQLite (só o hash do token), cookie HttpOnly/SameSite=Lax e Secure em HTTPS.
+  Guia em [docs/login-microsoft.md](docs/login-microsoft.md).
+- Tela "Entrar com a conta Microsoft", desenhada como um nó do mapa do sistema, com mensagens para cada recusa.
+- Topo com quem entrou e o botão "Sair". Sessão que termina com a tela aberta mostra um aviso e o login abre numa
+  nova aba, sem perder o que está em edição.
+- Migração `007_login` (tabelas `sessoes` e `logins_pendentes`).
+
+### Alterado
+- Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser
+  quem entrou; o cabeçalho `X-Usuario` é ignorado. Desligado, nada muda.
+- O PDF leva uma sessão temporária (2 minutos, apagada ao terminar) para a página de impressão passar pelo login.
+- Servidor (Caddy): com `MICROSOFT_AUTH_ENABLED=true` a senha única sai da frente do app e fica só em `/grafana/`.
+  Um interruptor só para o app e o Caddy; valor diferente de `true`/`false` impede o Caddy de subir.
+- Com o login ligado e a configuração incompleta, o Support Nexus não sobe e o log diz o que falta.
+
 ## [0.4.0] - 2026-10-31
 
 ### Adicionado

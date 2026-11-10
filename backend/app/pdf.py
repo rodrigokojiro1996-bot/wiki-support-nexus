@@ -10,6 +10,7 @@ from urllib.parse import quote  # noqa: F401  (reexportado para as rotas)
 from playwright.sync_api import sync_playwright
 
 from .config import DIST, FRONTEND, PDF_CANAL, PROJETO
+from .servicos.sessoes import COOKIE as COOKIE_SESSAO
 
 # turquesa (Pantone 326C), turquesa escuro (texto) e laranja do logo da rede
 TURQUESA, TURQUESA_ESCURO, LARANJA = "#00b2a9", "#007a73", "#f36f21"
@@ -51,13 +52,17 @@ def rodape(alterado_em: str | None) -> str:
 </div>"""
 
 
-def gerar(codigo: str, alterado_em: str | None = None) -> bytes:
+def gerar(codigo: str, alterado_em: str | None = None, sessao: str | None = None) -> bytes:
+    """`sessao`: token de uma sessão temporária quando o login Microsoft está ligado (a página de impressão lê a API)."""
     with sync_playwright() as p:
         # --disable-dev-shm-usage: fora do docker-compose (shm_size) o /dev/shm do contêiner tem só 64 MB e o
         # Chromium quebra em PDFs grandes; com a opção ele usa /tmp. No Windows (Edge) não muda nada.
         nav = p.chromium.launch(channel=PDF_CANAL, args=["--disable-dev-shm-usage"])
         try:
-            pag = nav.new_page()
+            contexto = nav.new_context()
+            if sessao:
+                contexto.add_cookies([{"name": COOKIE_SESSAO, "value": sessao, "url": FRONTEND, "httpOnly": True}])
+            pag = contexto.new_page()
             pag.goto(f"{FRONTEND}/manuais/{quote(codigo)}/imprimir", wait_until="networkidle")
             pag.wait_for_selector("[data-pronto]", timeout=15000)
             pag.evaluate("() => document.fonts.ready.then(() => true)")  # sem isso o PDF pode sair com a fonte reserva
