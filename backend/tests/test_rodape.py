@@ -63,7 +63,8 @@ def test_texto_do_rodape():
 
 def test_pdf_leva_a_data_de_alteracao(cliente, banco, monkeypatch):
     recebido = {}
-    monkeypatch.setattr(rotas.pdf, "gerar", lambda codigo, alterado_em=None: recebido.update(c=codigo, a=alterado_em) or b"%PDF-")
+    monkeypatch.setattr(rotas.pdf, "gerar",
+                        lambda codigo, alterado_em=None, sessao=None: recebido.update(c=codigo, a=alterado_em) or b"%PDF-")
     codigo = salvar(cliente).json()["codigo"]
     assert cliente.get(f"/api/manuais/{codigo}/pdf").status_code == 200
     assert recebido["c"] == codigo and recebido["a"] == cliente.get(f"/api/manuais/{codigo}").json()["alterado_em"]

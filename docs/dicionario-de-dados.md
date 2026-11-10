@@ -36,7 +36,15 @@ curl -u USUARIO:SENHA -X POST https://SEU_DOMINIO/api/descricoes/importar \
      -H "X-Usuario: Nome de quem conferiu" --data-binary @coletor/saida/dicionario-spa.xlsx
 ```
 
+Com o login Microsoft ligado ([login-microsoft.md](login-microsoft.md)), a API pede a sessão de quem entrou e o
+`curl` acima não passa. Nesse caso, importe de dentro do servidor:
+
+```bash
+docker compose cp coletor/saida/dicionario-spa.xlsx nexus:/tmp/dicionario.xlsx
+docker compose exec nexus python -m app.servicos.descricoes /tmp/dicionario.xlsx "Nome de quem conferiu"
+```
+
 A resposta conta o que entrou (`tabelas`, `colunas`, `excecoes`), o que não estava conferido (`nao_conferidas`) e
 as linhas recusadas (`fora`, por exemplo um módulo que não existe). As descrições ficam na tabela `descricoes`
-(migração 008), por módulo, e não se perdem quando o catálogo é importado de novo. Um módulo ainda sem banco
+(migração 009), por módulo, e não se perdem quando o catálogo é importado de novo. Um módulo ainda sem banco
 ligado já guarda as suas.

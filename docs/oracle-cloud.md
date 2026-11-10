@@ -36,9 +36,10 @@ com HTTPS (um servidor da empresa, por exemplo), o caminho mais curto é o `dock
   └───────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Uma senha única na entrada** (usuário `equipe`). Não é o login do sistema, que fica para a versão de
-  homologação: é um portão para que robôs e curiosos da internet não apaguem manuais, encham o disco de imagens
-  ou ocupem o servidor gerando PDFs. O campo "Seu nome" continua registrando quem fez cada alteração.
+- **Uma senha única na entrada** (usuário `equipe`). Não é o login do sistema: é um portão para que robôs e
+  curiosos da internet não apaguem manuais, encham o disco de imagens ou ocupem o servidor gerando PDFs. O campo
+  "Seu nome" continua registrando quem fez cada alteração. Para trocar pela conta Microsoft da empresa (cada
+  pessoa entra com a sua, e a senha única fica só no `/grafana/`): [login-microsoft.md](login-microsoft.md).
 - **Faixa "Ambiente de homologação"** no topo de todas as telas (`NEXUS_AMBIENTE=homologacao`,
   ligado no `docker-compose.oracle.yml`), e o site **fora dos buscadores** (`robots.txt` e `X-Robots-Tag`).
 - **Só o sistema de exemplo** (o PDV fictício). Para os testes, não coloque manuais reais nem dados de clientes:
@@ -279,7 +280,8 @@ O que protege:
 - **Cabeçalhos de segurança** (HSTS, nosniff, proibido abrir dentro de outro site) e sem anunciar o servidor.
 - Servidor com **atualizações automáticas de segurança**; contêineres sem root; imagens travadas por versão.
 
-O que **não** protege (fica para a homologação, com login):
+O que **não** protege com a senha única (o login com a conta Microsoft resolve os dois primeiros:
+[login-microsoft.md](login-microsoft.md)):
 - Não há usuário por pessoa: quem tem a senha pode criar, editar e validar. A autoria é o nome digitado.
 - Não há permissão por perfil (ex.: só curadores editam).
 - Não há limite de tentativas de senha. Para reduzir o risco, use uma senha forte (a gerada tem 16 caracteres)

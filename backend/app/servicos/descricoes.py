@@ -86,3 +86,16 @@ def das_colunas(con: sqlite3.Connection, modulo: str, banco: str, tabelas: list[
               LEFT JOIN descricoes g ON g.modulo = '' AND g.tabela = '' AND g.coluna = lower(c.nome)
               WHERE c.banco = ? AND c.tabela IN ({marca}) AND COALESCE(e.texto, g.texto) IS NOT NULL"""
     return {(r["tabela"], r["nome"]): r["texto"] for r in con.execute(sql, (modulo, banco, *tabelas))}
+
+
+if __name__ == "__main__":
+    # dentro do servidor, sem passar pelo login: python -m app.servicos.descricoes planilha.xlsx "Quem conferiu"
+    import json
+    import sys
+    from pathlib import Path
+
+    from ..db import conectar, migrar
+
+    con = conectar()
+    migrar(con)
+    print(json.dumps(importar(con, Path(sys.argv[1]).read_bytes(), sys.argv[2] if len(sys.argv) > 2 else ""), ensure_ascii=False))

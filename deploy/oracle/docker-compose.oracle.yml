@@ -26,6 +26,8 @@ services:
       NEXUS_EMAIL: "${NEXUS_EMAIL:?Defina NEXUS_EMAIL no .env (avisos do certificado)}"
       NEXUS_ACESSO_USUARIO: "${NEXUS_ACESSO_USUARIO:-equipe}"
       NEXUS_ACESSO_SENHA_HASH: "${NEXUS_ACESSO_SENHA_HASH:?Rode bash deploy/oracle/configurar.sh para criar a senha da entrada}"
+      # true: o login é do app (conta Microsoft) e a senha acima fica só no /grafana/. Mesma variável do app.
+      MICROSOFT_AUTH_ENABLED: "${MICROSOFT_AUTH_ENABLED:-false}"
     volumes:
       - ./deploy/oracle/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-dados:/data       # certificados HTTPS (guardar para não pedir de novo a cada recriação)

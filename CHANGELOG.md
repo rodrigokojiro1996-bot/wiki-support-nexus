@@ -5,12 +5,21 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 ## [Não publicado]
 
 ### Adicionado
+- Login com a conta Microsoft da empresa (Entra ID), ligado por `MICROSOFT_AUTH_ENABLED=true`. Só entram contas
+  @farmaciasassociadas.com.br do tenant da empresa (conferido no UPN; os outros domínios do tenant ficam de fora).
+  Fluxo de código com PKCE, state e nonce; assinatura do ID token conferida contra as chaves do tenant (PyJWT,
+  só RS256). Sessão de 12 horas no SQLite (só o hash do token), cookie HttpOnly/SameSite=Lax e Secure em HTTPS.
+  Guia em [docs/login-microsoft.md](docs/login-microsoft.md).
+- Tela "Entrar com a conta Microsoft", desenhada como um nó do mapa do sistema, com mensagens para cada recusa.
+- Topo com quem entrou e o botão "Sair". Sessão que termina com a tela aberta mostra um aviso e o login abre numa
+  nova aba, sem perder o que está em edição.
+- Migração `007_login` (tabelas `sessoes` e `logins_pendentes`).
 - Ligar colunas no diagrama: clique numa coluna e na coluna de outra tabela; o diagrama pergunta se estão
   relacionadas, com o sentido sugerido (a chave primária fica no lado 1, dá para inverter) e uma observação
   opcional. **Validar** grava a relação como documentada pela equipe, com quem ligou e quando, e o diagrama se
   redesenha com ela; **Descartar** (ou Esc) volta a navegar sem gravar nada. Se o catálogo já sugeria essa ligação,
   validar só confirma a sugestão; colunas já ligadas (pelo banco ou pela equipe) são recusadas. As relações ligadas
-  pela equipe ficam numa tabela própria (migração 007, `relacoes_equipe`) e sobrevivem a uma nova importação do
+  pela equipe ficam numa tabela própria (migração 008, `relacoes_equipe`) e sobrevivem a uma nova importação do
   catálogo; desfazer pela ficha apaga a ligação. Entram na cobertura e nas contribuições do Grafana.
 - Rodapé "+ N colunas" dos cartões do diagrama clicável: seleciona a tabela e mostra todas as colunas só dela (para
   ligar uma coluna que não é chave), centralizando o diagrama nela; "− recolher colunas" volta ao resumo.
@@ -19,8 +28,16 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   ("Armazena os dados de produtos do SPA PDV", "Código do produto"); a descrição da tabela também aparece na ficha.
   `coletor/rascunho_descricoes.py` gera a planilha de rascunho (Tabelas, Colunas por nome e Exceções por tabela) com
   uma sugestão e o grau de confiança em cada linha; a equipe confere e `POST /api/descricoes/importar` grava só as
-  linhas com Conferido = S. As descrições ficam numa tabela própria (migração 008, `descricoes`), por módulo, e
+  linhas com Conferido = S. As descrições ficam numa tabela própria (migração 009, `descricoes`), por módulo, e
   sobrevivem a uma nova importação do catálogo. Passo a passo em `docs/dicionario-de-dados.md`.
+
+### Alterado
+- Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser
+  quem entrou; o cabeçalho `X-Usuario` é ignorado. Desligado, nada muda.
+- O PDF leva uma sessão temporária (2 minutos, apagada ao terminar) para a página de impressão passar pelo login.
+- Servidor (Caddy): com `MICROSOFT_AUTH_ENABLED=true` a senha única sai da frente do app e fica só em `/grafana/`.
+  Um interruptor só para o app e o Caddy; valor diferente de `true`/`false` impede o Caddy de subir.
+- Com o login ligado e a configuração incompleta, o Support Nexus não sobe e o log diz o que falta.
 
 ## [0.4.0] - 2026-10-31
 
