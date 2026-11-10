@@ -9,3 +9,5 @@ python-docx==1.2.0
 pillow==13.0.0
 # fuso de Brasília (America/Sao_Paulo) nas datas dos manuais: o Windows não traz a base de fusos do sistema
 tzdata==2026.5
+# dicionário de dados: lê a planilha conferida pela equipe (POST /api/descricoes/importar)
+openpyxl==3.1.5

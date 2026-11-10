@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import ORIGENS_CORS, VERSAO
 from .db import conectar, migrar
 from .metricas import MetricasHTTP
-from .rotas import catalogo, frontend, manuais, menus, metricas, modulos, saude
+from .rotas import catalogo, descricoes, frontend, manuais, menus, metricas, modulos, saude
 
 
 @asynccontextmanager
@@ -37,7 +37,7 @@ async def fora_dos_buscadores(request: Request, chamar):
     resposta.headers["X-Robots-Tag"] = "noindex, nofollow"
     return resposta
 
-for r in (saude, metricas, modulos, menus, catalogo, manuais):
+for r in (saude, metricas, modulos, menus, catalogo, manuais, descricoes):
     app.include_router(r.router)
 
 # por último: o build do frontend (modo de produção) responde o que não for da API

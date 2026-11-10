@@ -11,7 +11,7 @@ const ESTADO_ROTULO: Record<EstadoRelacao, string> = { confirmada: 'Confirmada',
 
 type FichaTabela = {
   nome: string; engine: string; linhas: number | null; descricao: string;
-  colunas: { nome: string; tipo: string; pk: boolean }[];
+  colunas: { nome: string; tipo: string; pk: boolean; descricao: string }[];
   relacoes: Relacao[]; menus: { id: string; caminho: { titulo: string; atalho: string | null }[] }[];
   manuais: { codigo: string; titulo: string }[];
 };
@@ -344,6 +344,7 @@ export default function MapaSistema() {
               <button type="button" className="fechar" aria-label="Fechar ficha da tabela" onClick={() => setParams(comAba(selecionado ? { item: selecionado } : {}))}>×</button>
             </div>
             <div className="painel-corpo">
+              {fichaTabela.descricao && <p className="tabela-desc">{fichaTabela.descricao}</p>}
               <p className="meta">{fichaTabela.engine}{fichaTabela.linhas != null && ` · ~${fichaTabela.linhas.toLocaleString('pt-BR')} linhas`} · {fichaTabela.colunas.length} colunas</p>
               <div className="secao">
                 <h3>Telas que usam</h3>
@@ -363,7 +364,7 @@ export default function MapaSistema() {
               <div className="secao">
                 <h3>Colunas</h3>
                 <table className="colunas"><tbody>{fichaTabela.colunas.map(c => (
-                  <tr key={c.nome}><td><code>{c.nome}</code></td><td>{c.tipo}</td><td>{c.pk && <span className="pk">PK</span>}</td></tr>
+                  <tr key={c.nome} title={c.descricao || undefined}><td><code>{c.nome}</code></td><td>{c.tipo}</td><td>{c.pk && <span className="pk">PK</span>}</td></tr>
                 ))}</tbody></table>
               </div>
             </div>

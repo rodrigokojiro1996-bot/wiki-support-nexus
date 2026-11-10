@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from ..db import caminho_menu
-from ..servicos import relacoes
+from ..servicos import descricoes, relacoes
 from ..servicos.diagrama import recortar
 from . import banco_do_modulo, db, usuario
 
@@ -15,7 +15,9 @@ router = APIRouter(prefix="/api/modulos/{modulo}")
 def catalogo(modulo: str, con=Depends(db)):
     """Tabelas e relações para o grafo (sem colunas, para ficar leve)."""
     banco = banco_do_modulo(con, modulo)
-    tabelas = [dict(t) for t in con.execute("SELECT nome, engine, linhas, descricao FROM tabelas WHERE banco = ? ORDER BY nome", (banco,))]
+    desc = descricoes.das_tabelas(con, modulo)
+    tabelas = [dict(t) | {"descricao": desc.get(t["nome"], "")}
+               for t in con.execute("SELECT nome, engine, linhas FROM tabelas WHERE banco = ? ORDER BY nome", (banco,))]
     return {"banco": banco, "tabelas": tabelas, "relacoes": relacoes.listar(con, banco)}
 
 
@@ -34,8 +36,14 @@ def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con
     colunas: dict[str, list[dict]] = {n: [] for n in nomes}
     for c in con.execute(f"SELECT tabela, nome, tipo, pk FROM colunas WHERE banco = ? AND tabela IN ({marca}) ORDER BY tabela, ordem", (banco, *nomes)):
         colunas[c["tabela"]].append({"nome": c["nome"], "tipo": c["tipo"], "pk": bool(c["pk"])})
-    saida = [{"nome": n, "engine": info[n]["engine"], "linhas": info[n]["linhas"], "foco": n in foco, "apoio": n in rec.apoio, "colunas": colunas[n]}
-             for n in nomes]
+    # o balão do diagrama: o que a tabela e cada coluna guardam (dicionário de dados da equipe); só vai quando existe
+    desc_t, desc_c = descricoes.das_tabelas(con, modulo), descricoes.das_colunas(con, modulo, banco, nomes)
+    for n in nomes:
+        for c in colunas[n]:
+            if (n, c["nome"]) in desc_c:
+                c["descricao"] = desc_c[(n, c["nome"])]
+    saida = [{"nome": n, "engine": info[n]["engine"], "linhas": info[n]["linhas"], "foco": n in foco, "apoio": n in rec.apoio,
+              "descricao": desc_t.get(n, ""), "colunas": colunas[n]} for n in nomes]
     return {"foco": foco, "tabelas": saida, "relacoes": rec.arestas, "apoio_ocultas": rec.apoio_ocultas}
 
 
@@ -45,11 +53,13 @@ def tabela(modulo: str, nome: str, con=Depends(db)):
     t = con.execute("SELECT * FROM tabelas WHERE banco = ? AND nome = ?", (banco, nome)).fetchone()
     if not t:
         raise HTTPException(404, f"Tabela {nome} não existe em {banco}")
-    colunas = [dict(c) | {"pk": bool(c["pk"])} for c in con.execute("SELECT nome, tipo, pk FROM colunas WHERE banco = ? AND tabela = ? ORDER BY ordem", (banco, nome))]
+    desc_c = descricoes.das_colunas(con, modulo, banco, [nome])
+    colunas = [dict(c) | {"pk": bool(c["pk"]), "descricao": desc_c.get((nome, c["nome"]), "")}
+               for c in con.execute("SELECT nome, tipo, pk FROM colunas WHERE banco = ? AND tabela = ? ORDER BY ordem", (banco, nome))]
     rels = relacoes.listar(con, banco, " AND (r.origem = ? OR r.destino = ?)", (nome, nome))
     menus = [{"id": m["menu"], "caminho": caminho_menu(con, m["menu"])} for m in con.execute("SELECT menu FROM menu_tabelas WHERE tabela = ?", (nome,))]
     manuais = [dict(m) for m in con.execute("SELECT codigo, titulo FROM manuais WHERE modulo = ? AND tabelas LIKE ?", (modulo, f'%"{nome}"%'))]
-    return {**dict(t), "colunas": colunas, "relacoes": rels, "menus": menus, "manuais": manuais}
+    return {**dict(t), "descricao": descricoes.das_tabelas(con, modulo).get(nome, ""), "colunas": colunas, "relacoes": rels, "menus": menus, "manuais": manuais}
 
 
 class StatusRelacao(BaseModel):
