@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import Documento from './Documento';
@@ -11,7 +12,8 @@ type Props = {
   manuais: MenuFicha['manuais']; tabela: string; relacoes: Relacao[];
   onFicha: () => void; // alterna para a ficha técnica da tabela
 };
-type Selecao = { secao: number; bloco: number; texto: string } | { erro: string };
+// trecho selecionado no manual (rect: onde está na tela, para a pergunta abrir junto dele)
+type Selecao = { secao: number; bloco: number; texto: string; rect: DOMRect } | { erro: string };
 
 /** Acha `texto` (espaços normalizados) dentro de `raiz` e devolve o Range dele no DOM. */
 function acharTrecho(raiz: Element, texto: string): Range | null {
@@ -38,6 +40,34 @@ function acharTrecho(raiz: Element, texto: string): Range | null {
   return r;
 }
 
+/** Balão da pergunta: logo abaixo do trecho selecionado (acima, se não couber), sempre dentro da janela. */
+function PerguntaTrecho({ rect, children }: { rect: DOMRect; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: rect.left, top: rect.bottom + 10 });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const abaixo = rect.bottom + 10 + h <= window.innerHeight - 8;
+    setPos({
+      left: Math.max(8, Math.min(rect.left + rect.width / 2 - w / 2, window.innerWidth - w - 8)),
+      top: abaixo ? rect.bottom + 10 : Math.max(8, rect.top - 10 - h),
+    });
+  }, [rect]);
+  return (
+    <div ref={ref} className="mt-pergunta" role="dialog" aria-labelledby="mt-pergunta-titulo" style={pos}>{children}</div>
+  );
+}
+
+/** Rola só o painel (o primeiro ancestral com rolagem) até deixar `el` no meio; a página e o diagrama não se mexem. */
+function centralizarNoPainel(el: HTMLElement | null) {
+  let caixa = el?.parentElement ?? null;
+  while (caixa && !(/(auto|scroll)/.test(getComputedStyle(caixa).overflowY) && caixa.scrollHeight > caixa.clientHeight)) caixa = caixa.parentElement;
+  if (!el || !caixa) return;
+  const r = el.getBoundingClientRect(), c = caixa.getBoundingClientRect();
+  caixa.scrollTo({ top: caixa.scrollTop + r.top - c.top - (caixa.clientHeight - r.height) / 2, behavior: 'smooth' });
+}
+
 const blocoDe = (n: Node | null) => (n instanceof Element ? n : n?.parentElement)?.closest<HTMLElement>('[data-bloco]') ?? null;
 
 /**
@@ -56,6 +86,9 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
   const [erro, setErro] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [perdidos, setPerdidos] = useState<Set<number>>(new Set()); // trechos que o manual editado não tem mais
+  // a pergunta só abre quando a pessoa solta o mouse (não pisca enquanto ela ainda está arrastando a seleção)
+  const [pressionando, setPressionando] = useState(false);
+  const [aviso, setAviso] = useState('');
   const doc = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(0.6);
 
@@ -64,8 +97,12 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     setManual(null);
     api.manual(codigo).then(setManual).catch(e => setErro((e as Error).message));
   }, [codigo]);
+  // de qual manual/tabela são os trechos carregados: o painel só rola até o destaque quando eles são desta tabela
+  const [carregadoPara, setCarregadoPara] = useState('');
+  const rolado = useRef('');
   const recarregar = useCallback(() => {
-    if (codigo) api.trechos(codigo, tabela).then(setTrechos).catch(e => setErro((e as Error).message));
+    if (codigo) api.trechos(codigo, tabela).then(t => { setTrechos(t); setCarregadoPara(`${codigo}|${tabela}`); })
+      .catch(e => setErro((e as Error).message));
   }, [codigo, tabela]);
   useEffect(() => { setSelecao(null); setErro(''); recarregar(); }, [recarregar]);
 
@@ -80,20 +117,31 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
 
   // seleção dentro do manual: precisa ficar num bloco só (um passo, um parágrafo, uma observação)
   useEffect(() => {
+    const solto = () => setPressionando(false);
+    window.addEventListener('pointerup', solto);
+    return () => window.removeEventListener('pointerup', solto);
+  }, []);
+  useEffect(() => {
     const mudou = () => {
       const s = window.getSelection();
-      if (!s || !s.rangeCount || s.isCollapsed || !doc.current?.contains(s.anchorNode)) {
-        if (s && doc.current?.contains(s.anchorNode)) setSelecao(null);
-        return;
-      }
+      // clicou em outro lugar (seleção vazia): a pergunta fecha; seleção fora do manual não mexe na dele
+      if (!s || !s.rangeCount || s.isCollapsed) { setSelecao(null); return; }
+      if (!doc.current?.contains(s.anchorNode)) return;
       const a = blocoDe(s.anchorNode), b = blocoDe(s.focusNode);
       const texto = s.toString().replace(/\s+/g, ' ').trim();
       if (!texto) { setSelecao(null); return; }
       if (!a || a !== b) { setSelecao({ erro: 'Selecione dentro de um mesmo passo ou parágrafo do manual.' }); return; }
-      setSelecao({ secao: Number(a.dataset.secao), bloco: Number(a.dataset.bloco), texto });
+      setSelecao({ secao: Number(a.dataset.secao), bloco: Number(a.dataset.bloco), texto, rect: s.getRangeAt(0).getBoundingClientRect() });
     };
     document.addEventListener('selectionchange', mudou);
-    return () => document.removeEventListener('selectionchange', mudou);
+    // rolar o painel ou a página: a pergunta acompanha o trecho
+    window.addEventListener('scroll', mudou, true);
+    window.addEventListener('resize', mudou);
+    return () => {
+      document.removeEventListener('selectionchange', mudou);
+      window.removeEventListener('scroll', mudou, true);
+      window.removeEventListener('resize', mudou);
+    };
   }, []);
 
   // destaque dos trechos desta tabela (CSS Custom Highlight: não mexe no HTML do manual)
@@ -111,16 +159,24 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     setPerdidos(faltam);
     const Highlight = (window as unknown as { Highlight?: new (...r: Range[]) => unknown }).Highlight;
     if (destaques && Highlight) destaques.set(DESTAQUE, new Highlight(...ranges));
+    // ao abrir a tabela, o painel vai direto ao primeiro trecho destacado (uma vez; validar outro não faz pular)
+    const chave = `${codigo}|${tabela}`;
+    if (ranges.length && carregadoPara === chave && manual.codigo === codigo && rolado.current !== chave) {
+      rolado.current = chave;
+      centralizarNoPainel(blocoDe(ranges[0].startContainer));
+    }
     return () => { destaques?.delete(DESTAQUE); };
-  }, [manual, trechos]);
+  }, [manual, trechos, carregadoPara, codigo, tabela]);
 
   const validar = async () => {
     if (!selecao || 'erro' in selecao) return;
     setEnviando(true); setErro('');
     try {
-      await api.ligarTrecho(codigo, { tabela, ...selecao });
+      const { secao, bloco, texto } = selecao;
+      await api.ligarTrecho(codigo, { tabela, secao, bloco, texto });
       window.getSelection()?.removeAllRanges();
       setSelecao(null);
+      setAviso(`Trecho validado: fica em destaque sempre que alguém abrir ${tabela}.`);
       recarregar();
     } catch (e) {
       setErro((e as Error).message);
@@ -128,6 +184,21 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
       setEnviando(false);
     }
   };
+  // descartar: nada é gravado e a seleção some
+  const descartar = useCallback(() => {
+    window.getSelection()?.removeAllRanges();
+    setSelecao(null);
+    setErro('');
+  }, []);
+  const perguntando = !!selecao && !('erro' in selecao) && !pressionando;
+  useEffect(() => {
+    if (!perguntando) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') descartar(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [perguntando, descartar]);
+  useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(''), 4000); return () => clearTimeout(t); }, [aviso]);
+
   const desligar = async (t: TrechoManual) => {
     try { await api.desligarTrecho(codigo, t.id); recarregar(); } catch (e) { setErro((e as Error).message); }
   };
@@ -154,18 +225,31 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
         </span>
       </div>
 
-      {/* barra fixa: o trecho selecionado e o Validar (onMouseDown não tira a seleção do texto) */}
+      {/* barra fixa: a dica, o aviso de seleção em dois blocos e a confirmação depois de validar */}
       <div className="mt-acao" role="status">
         {selecao && 'erro' in selecao ? <span className="mt-aviso">{selecao.erro}</span>
-          : selecao ? (<>
-            <span className="mt-sel">“{selecao.texto.length > 140 ? `${selecao.texto.slice(0, 140)}…` : selecao.texto}”</span>
-            <button type="button" className="btn btn-primario" onMouseDown={e => e.preventDefault()} onClick={validar} disabled={enviando}>
-              {enviando ? 'Validando…' : <>Validar trecho para <code>{tabela}</code></>}</button>
-          </>) : <span className="mt-dica">Selecione no manual o trecho em que <code>{tabela}</code> age e clique em Validar.</span>}
-        {erro && <p className="erro" role="alert">{erro}</p>}
+          : aviso ? <span className="mt-ok">{aviso}</span>
+          : <span className="mt-dica">Selecione no manual o trecho em que <code>{tabela}</code> age: o Support Nexus pergunta se ele corresponde à tabela.</span>}
+        {erro && !perguntando && <p className="erro" role="alert">{erro}</p>}
       </div>
 
-      <div className="mt-doc" ref={doc}>
+      {/* a pergunta abre junto do trecho; os botões não tiram a seleção do texto (onMouseDown) */}
+      {perguntando && selecao && !('erro' in selecao) && createPortal(
+        <PerguntaTrecho rect={selecao.rect}>
+          <h3 id="mt-pergunta-titulo">Este trecho do material é correspondente à tabela <code>{tabela}</code>?</h3>
+          <blockquote>“{selecao.texto.length > 220 ? `${selecao.texto.slice(0, 220)}…` : selecao.texto}”</blockquote>
+          <p className="ajuda">Validando, o trecho fica em destaque sempre que alguém abrir esta tabela, com o seu nome.</p>
+          {erro && <p className="erro" role="alert">{erro}</p>}
+          <div className="acoes">
+            <button type="button" className="btn" onMouseDown={e => e.preventDefault()} onClick={descartar} disabled={enviando}>Descartar</button>
+            <button type="button" className="btn btn-primario" onMouseDown={e => e.preventDefault()} onClick={validar} disabled={enviando}>
+              {enviando ? 'Validando…' : 'Validar'}</button>
+          </div>
+        </PerguntaTrecho>,
+        document.body
+      )}
+
+      <div className="mt-doc" ref={doc} onPointerDown={() => { setPressionando(true); setAviso(''); }}>
         {manual ? <div style={{ zoom }}><Documento manual={manual} /></div> : <p className="vazio">Carregando o manual…</p>}
       </div>
 

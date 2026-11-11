@@ -137,12 +137,14 @@ a.topo-mod { text-decoration: none; }
 .toast.erro { background: var(--crit); color: #fff; cursor: pointer; }
 
 /* ---------- mapa do sistema ---------- */
-.mapa { flex: 1; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 14px; padding: 14px 20px 20px; height: calc(100vh - var(--topo-h)); }
+.mapa { flex: 1; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 14px; padding: 14px 20px 20px; height: calc(100vh - var(--topo-h));
+        grid-template-rows: minmax(0, 1fr); min-height: 0; /* cada painel rola por dentro; a página não cresce com o manual ao lado */ }
 .mapa.com-tabela { grid-template-columns: 330px minmax(0, 1fr) 400px; }
 .mapa.com-tabela.com-manual { grid-template-columns: 330px minmax(0, 1fr) clamp(440px, 34vw, 640px); }
 
 /* manual da tela ao lado do diagrama: selecionar o trecho em que a tabela age */
 .mt { display: flex; flex-direction: column; gap: 12px; }
+.mt > * { flex-shrink: 0; } /* o painel rola; o manual não encolhe para caber */
 .mt-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 .mt-topo select { max-width: 100%; }
 .mt-manual { font-weight: 700; }
@@ -151,10 +153,20 @@ a.topo-mod { text-decoration: none; }
            background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--marca); border-radius: 8px; font-size: 13px; }
 .mt-sel { flex: 1; min-width: 0; font-style: italic; }
 .mt-dica { color: var(--muted); }
+.mt-ok { color: var(--marca); font-weight: 600; }
+/* pergunta junto do trecho selecionado: "Este trecho do material é correspondente à tabela?" */
+.mt-pergunta { position: fixed; z-index: 1002; width: min(420px, calc(100vw - 16px)); padding: 14px 16px; background: var(--surface); color: var(--fg);
+               border: 1px solid var(--line); border-top: 3px solid var(--marca); border-radius: 10px; box-shadow: 0 10px 30px rgb(0 0 0 / 22%); font-size: 13px; }
+.mt-pergunta h3 { margin: 0 0 8px; font-size: 14px; line-height: 1.35; }
+.mt-pergunta blockquote { margin: 0 0 8px; padding: 6px 10px; border-left: 3px solid var(--marca); background: var(--surface-2); border-radius: 0 6px 6px 0; font-style: italic; max-height: 120px; overflow: auto; }
+.mt-pergunta .ajuda { margin: 0 0 10px; color: var(--muted); font-size: 12px; }
+.mt-pergunta .acoes { display: flex; justify-content: flex-end; gap: 8px; }
 .mt-aviso { color: var(--laranja); font-weight: 600; }
 .mt-doc { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); padding: 2px; overflow: hidden; }
 .mt-doc .doc { box-shadow: none; }
-::highlight(nexus-trecho) { background-color: rgb(0 178 169 / 30%); color: inherit; }
+/* marca-texto: amarelo dos post-its com o sublinhado turquesa da marca, para achar o trecho de longe */
+::highlight(nexus-trecho) { background-color: rgb(255 214 0 / 60%); color: inherit; text-decoration: underline 2px rgb(0 160 152); text-underline-offset: 3px; }
+:root[data-tema="escuro"] ::highlight(nexus-trecho) { background-color: rgb(255 200 0 / 38%); }
 .mt-trechos, .mt-notas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .mt-trechos li { position: relative; padding: 8px 30px 8px 10px; border: 1px solid var(--line); border-left: 3px solid var(--marca); border-radius: 7px; background: var(--surface-2); }
 .mt-trechos li.perdido { border-left-color: var(--laranja); opacity: .8; }
@@ -480,8 +492,13 @@ a.btn-primario { color: var(--sobre-accent); }
   .editor-previa .doc { zoom: .45; }
 }
 
+/* tela do mapa no computador: a página tem a altura da janela e cada painel rola por dentro (o manual ao lado do
+   diagrama não estica a página nem tira o diagrama do lugar) */
+@media (min-width: 1101px) {
+  .app:has(> .mapa) { height: 100vh; }
+}
 @media (max-width: 1100px) {
-  .mapa, .mapa.com-tabela, .mapa.com-tabela.com-manual { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .mapa, .mapa.com-tabela, .mapa.com-tabela.com-manual { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; min-height: auto; }
   .painel.arvore .painel-corpo { max-height: 50vh; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
