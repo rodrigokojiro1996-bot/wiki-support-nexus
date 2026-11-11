@@ -4,6 +4,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+## [0.5.0] - 2026-11-11
+
 ### Adicionado
 - Login com a conta Microsoft da empresa (Entra ID), ligado por `MICROSOFT_AUTH_ENABLED=true`. Só entram contas
   @farmaciasassociadas.com.br do tenant da empresa (conferido no UPN; os outros domínios do tenant ficam de fora).
@@ -87,6 +89,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Diagrama: validar uma ligação ou salvar um informativo não reenquadra mais a tela (o diagrama fica onde estava).
 
 ### Corrigido
+- Barra "Voltar ao mapa" do manual e do editor descolava do topo em telas a partir de 1800 px: o zoom dessas telas
+  também aumentava a distância do topo e abria um vão por onde aparecia o texto do manual. Agora ela encosta no topo
+  em qualquer largura.
 - Diagrama: as ligações das tabelas movidas pareciam sumir. Elas perdiam o trajeto do layout automático e passavam
   em linha reta por baixo dos cartões, e, com uma tabela selecionada, as outras ligações ficavam com 8% de opacidade.
   Agora:
@@ -305,7 +310,8 @@ Estrutura e boas práticas a partir do plano em [docs/ideias-melhorias.txt](docs
 Primeira versão: mapa do sistema, diagrama ER por tela, catálogo do banco com relações inferidas, manuais com
 exportação para PDF, importador de documentos e sistema de exemplo (demo_pdv).
 
-[Não publicado]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.4.0...HEAD
+[Não publicado]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rodrigokojiro1996-bot/wiki-support-nexus/compare/v0.1.0...v0.2.0
