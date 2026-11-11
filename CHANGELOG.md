@@ -4,6 +4,12 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Adicionado
+- Esc tira a seleção da tabela: o destaque no diagrama some e o painel que o clique abriu (manual ou ficha da tabela)
+  fecha, também na Visão geral. O que estiver aberto por cima fecha primeiro, num Esc só seu (pergunta de ligar,
+  informativo, menu do botão direito, pergunta do trecho do manual, coluna escolhida para ligar), e o Esc dentro de
+  um campo de texto não mexe na seleção.
+
 ### Alterado
 - Ficha da tela mais limpa: a **Visão geral** fica com os manuais da tela, os chamados frequentes e as opções da tela.
   Tudo o que é do banco passou para a aba **Tabelas**:

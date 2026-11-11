@@ -437,6 +437,14 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
     return () => window.removeEventListener('keydown', esc);
   }, [ponta, proposta, nota, cancelarLigacao]);
 
+  // Esc com uma tabela selecionada: tira a seleção (o que estiver aberto por cima fecha primeiro, num Esc só seu)
+  useEffect(() => {
+    if (!sel || ponta || proposta || nota || menu) return;
+    const esc = (e: KeyboardEvent) => { if (escDesseleciona(e)) setSel(null); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [sel, ponta, proposta, nota, menu]);
+
   const validar = async () => {
     if (!proposta) return;
     setEnviando(true); setErroLigar('');
@@ -920,6 +928,17 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       )}
     </div>
   );
+}
+
+/**
+ * Esc que tira a seleção da tabela? Só quando nada está aberto por cima (pergunta de ligar, informativo, menu do botão
+ * direito, pergunta do trecho do manual, coluna escolhida para ligar) e o foco não está num campo de texto: nesses
+ * casos o Esc é deles. Usado pelo diagrama (destaque) e pela página (painel ao lado).
+ */
+export function escDesseleciona(e: KeyboardEvent): boolean {
+  if (e.key !== 'Escape' || e.defaultPrevented) return false;
+  if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]')) return false;
+  return !document.querySelector('.diag-pergunta, .diag-menu, .mt-pergunta, .diag-ligando button');
 }
 
 /** Diagrama ER das tabelas de uma tela, com as ligações iluminadas. */
