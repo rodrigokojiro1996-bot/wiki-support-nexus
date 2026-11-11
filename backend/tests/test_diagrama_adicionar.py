@@ -58,3 +58,25 @@ def test_remover_tira_a_tabela_e_a_posicao(cliente):
 def test_recusa_tabela_inexistente(cliente):
     assert cliente.post(f"{URL}/tabelas", json={"chave": "vendas", "tabela": "nao_existe"}).status_code == 404
     assert cliente.post(f"{URL}/tabelas", json={"chave": "vendas", "tabela": ""}).status_code == 422
+
+
+def test_organizacao_pela_tela_sobrevive_a_vincular_e_migra_a_antiga(cliente, con):
+    """Com a chave da tela, posições e tabelas adicionadas não se perdem quando a lista de tabelas muda; o que estava
+    guardado pela lista antiga passa para a tela na primeira vez que ela abre."""
+    menu = con.execute("SELECT menu FROM menu_tabelas GROUP BY menu HAVING count(*) >= 2 LIMIT 1").fetchone()["menu"]
+    tabs = [r["tabela"] for r in con.execute("SELECT tabela FROM menu_tabelas WHERE menu = ? ORDER BY tabela", (menu,))]
+    antiga = ",".join(tabs)
+    # organização gravada do jeito antigo (pela lista de tabelas)
+    cliente.put(f"{URL}/posicoes", json={"chave": antiga, "posicoes": [{"tabela": tabs[0], "x": 5, "y": 6}]})
+    extra = fora_do_diagrama(cliente, antiga)
+    cliente.post(f"{URL}/tabelas", json={"chave": antiga, "tabela": extra})
+    d = cliente.get(URL, params={"tabelas": antiga, "nivel": 0, "chave": menu}).json()
+    assert d["posicoes"] == {tabs[0]: {"x": 5, "y": 6}} and any(t["nome"] == extra and t["adicionada"] for t in d["tabelas"])
+    # a lista de tabelas mudou (vinculou uma): com a chave da tela, a organização continua
+    nova = ",".join(tabs + ["lojas"]) if "lojas" not in tabs else ",".join(tabs[:-1])
+    d = cliente.get(URL, params={"tabelas": nova, "nivel": 0, "chave": menu}).json()
+    assert d["posicoes"][tabs[0]] == {"x": 5, "y": 6} and any(t["nome"] == extra for t in d["tabelas"])
+    # o histórico fala da tela pelo caminho dela
+    cliente.put(f"{URL}/posicoes", json={"chave": menu, "posicoes": [{"tabela": tabs[0], "x": 7, "y": 8}]}, headers=EU)
+    r = cliente.get("/api/registro", params={"area": "diagrama"}).json()["itens"][0]
+    assert r["resumo"].startswith("Organizou o diagrama da tela ")

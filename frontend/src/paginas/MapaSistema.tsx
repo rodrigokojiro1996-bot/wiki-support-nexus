@@ -83,11 +83,9 @@ export default function MapaSistema() {
   const MODULO = selecionado?.split('.')[0] || params.get('modulo') || MODULO_PADRAO;
   const tabelaSel = params.get('tabela');
   const [menus, setMenus] = useState<MenuNo[]>([]);
-  const [nomesTabelas, setNomesTabelas] = useState<string[]>([]);
   const [ficha, setFicha] = useState<MenuFicha | null>(null);
   const [fichaTabela, setFichaTabela] = useState<FichaTabela | null>(null);
   const [filtro, setFiltro] = useState('');
-  const [novaTabela, setNovaTabela] = useState('');
   const [aviso, setAviso] = useState('');
   const [erro, setErro] = useState('');
   const [exemplo, setExemplo] = useState(false);
@@ -99,7 +97,6 @@ export default function MapaSistema() {
   const recarregarMenus = useCallback(() => api.menus(MODULO).then(setMenus).catch(e => setErro(e.message)), [MODULO]);
   useEffect(() => {
     recarregarMenus();
-    api.catalogo(MODULO).then(c => setNomesTabelas(c.tabelas.map(t => t.nome))).catch(() => {});
     api.modulos().then(ms => {
       const m = ms.find(x => x.id === MODULO);
       setExemplo(!!m?.exemplo);
@@ -236,36 +233,14 @@ export default function MapaSistema() {
             </div>
             {aba === 'tabelas' ? (
               <div className="aba-tabelas">
-                {/* tudo o que é do banco fica nesta aba: as tabelas da tela (vincular/confirmar), o diagrama e as ligações */}
-                <div className="tabelas-tela">
-                  <span className="rotulo" title="O banco não sabe quais telas usam cada tabela; quem confirma é a equipe. Tracejado = vínculo sugerido.">
-                    Tabelas da tela ({ficha.tabelas.length})</span>
-                  <div className="chips">
-                    {ficha.tabelas.map(t => (
-                      <span key={t.tabela} className={`chip-tabela ${t.origem}`} title={t.origem === 'sugerido' ? 'Vínculo sugerido, ainda não confirmado pela equipe' : `Vínculo confirmado pela equipe ${autoria(t.por, t.em)}`.trim()}>
-                        <button type="button" onClick={() => abrirTabela(t.tabela)}><code>{t.tabela}</code></button>
-                        <button type="button" className="rm" aria-label={`Remover ${t.tabela}`} onClick={() => salvarVinculos(ficha.tabelas.filter(x => x.tabela !== t.tabela).map(x => x.tabela), `${t.tabela} removida desta tela.`)}>×</button>
-                      </span>
-                    ))}
-                    {!ficha.tabelas.length && <p className="vazio">Nenhuma tabela vinculada.</p>}
-                  </div>
-                  <form className="vincular" onSubmit={e => {
-                    e.preventDefault();
-                    const v = novaTabela.trim();
-                    if (!nomesTabelas.includes(v)) { avisar(`Essa tabela não existe no banco do ${nomeModulo}.`); return; }
-                    salvarVinculos([...ficha.tabelas.map(x => x.tabela), v], `${v} vinculada a esta tela.`); setNovaTabela('');
-                  }}>
-                    <input id="nova-tabela" list="lista-tabelas" placeholder="Vincular tabela…" value={novaTabela} onChange={e => setNovaTabela(e.target.value)} aria-label="Tabela para vincular" />
-                    <datalist id="lista-tabelas">{nomesTabelas.filter(n => !nomesFicha.has(n)).map(n => <option key={n} value={n} />)}</datalist>
-                    <button type="submit" className="btn">Vincular</button>
-                    {ficha.tabelas.some(t => t.origem === 'sugerido') && (
-                      <button type="button" className="btn" onClick={() => salvarVinculos(ficha.tabelas.map(x => x.tabela), 'Vínculos confirmados pela equipe.')}>Confirmar vínculos</button>
-                    )}
-                  </form>
-                </div>
+                {/* tudo o que é do banco fica nesta aba: o diagrama (vincular, desvincular e confirmar pelo botão direito) e as ligações */}
                 <div className="ficha-diagrama">
                   <Diagrama modulo={MODULO} tabelas={ficha.tabelas.map(t => t.tabela)} onAbrirTabela={abrirTabela} onLigou={recarregarFicha}
-                    onClicarTabela={abrirTabela} />
+                    onClicarTabela={abrirTabela} chave={ficha.id}
+                    vinculos={ficha.tabelas.map(t => ({ tabela: t.tabela, origem: t.origem }))}
+                    onVincular={nome => salvarVinculos([...ficha.tabelas.map(x => x.tabela), nome], `${nome} vinculada a esta tela.`)}
+                    onDesvincular={nome => salvarVinculos(ficha.tabelas.filter(x => x.tabela !== nome).map(x => x.tabela), `${nome} desvinculada desta tela.`)}
+                    onConfirmarVinculos={() => salvarVinculos(ficha.tabelas.map(x => x.tabela), 'Vínculos confirmados pela equipe.')} />
                 </div>
                 <details className="ligacoes-lista">
                   <summary>Ligações em lista ({internas.length}){externas.length > 0 && ` · também se ligam a ${externas.length} tabelas`}</summary>

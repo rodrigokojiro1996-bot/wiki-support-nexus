@@ -6,11 +6,19 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ### Alterado
 - Ficha da tela mais limpa: a **Visão geral** fica com os manuais da tela, os chamados frequentes e as opções da tela.
-  Tudo o que é do banco passou para a aba **Tabelas**:
-  - no alto, as tabelas da tela, com vincular, remover e confirmar os vínculos sugeridos;
-  - no meio, o diagrama;
-  - embaixo, recolhida, "Ligações em lista", com as ligações entre as tabelas da tela (validar ou descartar) e as
-    tabelas com que elas também se ligam.
+  Tudo o que é do banco passou para a aba **Tabelas**: o diagrama e, embaixo, recolhida, "Ligações em lista", com as
+  ligações entre as tabelas da tela (validar ou descartar) e as tabelas com que elas também se ligam.
+- Vincular tabelas à tela pelo botão direito do diagrama (sai a faixa de fichas com o campo "Vincular tabela"):
+  - no fundo, **Vincular tabela à tela…** abre a busca, e o cartão entra no ponto clicado; numa tela sem tabelas, a
+    busca aparece no lugar do diagrama, para vincular a primeira;
+  - numa tabela da tela, **Desvincular da tela** e, nas de vínculo sugerido (cartão tracejado com o selo
+    "sugerida"), **Confirmar vínculo**;
+  - numa tabela que veio pelas ligações, **Vincular à tela**.
+  O "Adicionar tabela" só no diagrama deu lugar ao vínculo; as tabelas adicionadas antes continuam, com o "Remover
+  do diagrama".
+- A organização do diagrama (posições e tabelas adicionadas) passa a ser guardada pela tela, não pela lista de
+  tabelas dela: vincular ou desvincular uma tabela não desfaz mais o que a equipe arrumou. O que estava guardado no
+  formato antigo passa para o novo sozinho na primeira vez que a tela abre (`GET /diagrama` aceita `chave`).
 
 ## [0.5.0] - 2026-11-11
 
