@@ -103,6 +103,17 @@ export const api = {
     const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes`, put({ chave, posicoes }));
     if (!r.ok) throw await erroDe(r);
   },
+  /** todas as tabelas do módulo (nome e descrição): a busca do "Adicionar tabela" do diagrama */
+  tabelasDoModulo: (modulo: string) => json<{ nome: string; descricao: string }[]>(`/api/modulos/${modulo}/tabelas`),
+  /** põe a tabela no diagrama da tela (para todos), no ponto clicado */
+  async adicionarTabela(modulo: string, chave: string, tabela: string, x: number, y: number) {
+    const r = await fetch(`/api/modulos/${modulo}/diagrama/tabelas`, enviar('POST', { chave, tabela, x, y }));
+    if (!r.ok) throw await erroDe(r);
+  },
+  async removerTabela(modulo: string, chave: string, tabela: string) {
+    const r = await fetch(`/api/modulos/${modulo}/diagrama/tabelas?chave=${enc(chave)}&tabela=${enc(tabela)}`, { method: 'DELETE' });
+    if (!r.ok) throw await erroDe(r);
+  },
   async reorganizar(modulo: string, chave: string) {
     const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes?chave=${enc(chave)}`, { method: 'DELETE' });
     if (!r.ok) throw await erroDe(r);

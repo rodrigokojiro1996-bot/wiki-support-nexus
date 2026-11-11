@@ -47,6 +47,13 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   versão do manual; trecho que sumir numa edição do manual aparece como "não encontrado". Embaixo, os informativos de
   incidentes das ligações da tabela. A ficha técnica da tabela também passa a trazer esses informativos.
   Migração 011 (`manual_trechos`); API em `/api/manuais/{codigo}/trechos`.
+- Adicionar tabela ao diagrama: botão direito no fundo do diagrama › **Adicionar tabela…** abre a busca das tabelas do
+  módulo (por nome ou descrição). A escolhida entra no ponto clicado, com todas as colunas à mostra, pronta para ligar
+  uma coluna dela à de outra tabela. Fica no diagrama daquela tela para toda a equipe, com o selo "adicionada", e traz
+  as ligações que já tem com as tabelas do diagrama. As outras tabelas não mudam de lugar. Botão direito numa tabela:
+  abrir a ficha, mostrar ou recolher as colunas e, na adicionada, **Remover do diagrama** (as ligações feitas com ela
+  continuam valendo). Migração 012 (`diagrama_tabelas`); API em `GET /api/modulos/{m}/tabelas` e
+  `POST/DELETE /api/modulos/{m}/diagrama/tabelas`.
 
 ### Alterado
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser
