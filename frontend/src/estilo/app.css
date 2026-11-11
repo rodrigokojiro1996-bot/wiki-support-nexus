@@ -318,14 +318,14 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
 .rel-aresta { stroke: var(--destaque) !important; stroke-width: 1.6 !important; opacity: .5; }
 .rel-aresta.rel-sugerida { stroke-dasharray: 5 4; }
 .rel-aresta.destaque { stroke-width: 2.4 !important; opacity: 1; stroke-dasharray: 7 4; animation: tracejar 1s linear infinite; }
-.rel-aresta.apagada { opacity: .08; }
+.rel-aresta.apagada { opacity: .3; } /* com uma tabela selecionada, as outras ligações recuam, mas continuam à vista */
 @keyframes tracejar { to { stroke-dashoffset: -22; } }
 .rel-ponto { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--destaque); border: 2px solid var(--surface); opacity: .55; pointer-events: all; }
 .rel-ponto.destaque { opacity: 1; width: 10px; height: 10px; }
-.rel-ponto.apagada { opacity: .08; }
+.rel-ponto.apagada { opacity: .3; }
 .rel-marca { position: absolute; pointer-events: all; font: 800 9px/1 var(--mono); padding: 2px 4px; border-radius: 3px; background: var(--destaque); color: #fff; opacity: .6; }
 .rel-marca.destaque { opacity: 1; }
-.rel-marca.apagada { opacity: .08; }
+.rel-marca.apagada { opacity: .3; }
 .rel-marca.estatica { position: static; display: inline-block; }
 .diag-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .diag-canvas { flex: 1; min-height: 0; position: relative; }
@@ -338,7 +338,8 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
 .diag-sep { width: 1px; height: 22px; background: var(--line); }
 .diag-check { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; white-space: nowrap; }
 .diag-check input { accent-color: var(--destaque); }
-.diag-legenda { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-size: 11.5px; color: var(--muted); max-width: calc(100% - 80px); }
+.diag-legenda { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 6px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; font-size: 11.5px; color: var(--muted); max-width: calc(100% - 80px);
+               pointer-events: none; opacity: .92; } /* só informa: o clique passa para a tabela que estiver embaixo */
 .diag-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .lg-foco { width: 12px; height: 12px; border: 2px solid var(--destaque); border-radius: 3px; background: var(--destaque-suave); }
 .lg-linha { stroke: var(--destaque); stroke-width: 2; }
@@ -392,15 +393,19 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
 
 /* ligação com informativo de incidentes: turquesa da marca (as outras são laranja) e o post-it em cima da linha */
 .rel-aresta.com-nota { stroke: var(--marca) !important; opacity: .85; }
-.rel-aresta.com-nota.apagada { opacity: .08; }
+.rel-aresta.com-nota.apagada { opacity: .35; }
 .lg-linha.nota { stroke: var(--marca); }
-.rel-postit { position: absolute; z-index: 5; max-width: 180px; padding: 6px 8px; border-radius: 3px 3px 10px 3px; cursor: grab; pointer-events: all;
+/* post-it por cima dos cartões, mas só a alça pega o mouse: o cabeçalho da tabela embaixo continua arrastável */
+.rel-postit-caixa { position: absolute; z-index: 5; pointer-events: none; display: flex; flex-direction: column; align-items: flex-start; }
+.rel-postit-alca { pointer-events: all; cursor: grab; border: 0; margin: 0 0 -1px 4px; padding: 1px 7px; border-radius: 5px 5px 0 0;
+                   background: var(--marca); color: #fff; font: 700 9.5px/1.4 var(--font); letter-spacing: .02em; box-shadow: 0 -1px 4px rgb(0 0 0 / 12%); }
+.rel-postit-alca:active { cursor: grabbing; }
+.rel-postit-alca:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
+.rel-postit-caixa.apagada { opacity: .45; }
+.rel-postit { max-width: 180px; padding: 6px 8px; border-radius: 3px 3px 10px 3px; pointer-events: none;
               background: #fff6b3; color: #3d3500; border: 1px solid #e6d36a; border-top: 3px solid var(--marca);
               box-shadow: 0 3px 10px rgb(0 0 0 / 18%); font-size: 11px; line-height: 1.35;
               display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
-.rel-postit:active { cursor: grabbing; }
-.rel-postit:focus-visible { outline: 2px solid var(--marca); outline-offset: 2px; }
-.rel-postit.apagada { opacity: .15; }
 .diag-nota textarea { width: 100%; margin-bottom: 10px; resize: vertical; font: inherit; padding: 8px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--fg); }
 .btn.btn-perigo { color: #b42318; border-color: color-mix(in srgb, #b42318 45%, var(--line)); margin-right: auto; }
 .btn.btn-perigo:hover { background: color-mix(in srgb, #b42318 8%, transparent); }
