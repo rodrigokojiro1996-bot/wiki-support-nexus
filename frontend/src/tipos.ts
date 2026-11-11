@@ -57,6 +57,9 @@ export type Manual = {
   relacionados?: { codigo: string; titulo: string; tipo: TipoManual }[]; // os outros manuais da mesma tela
 };
 
+/** trecho do manual da tela ligado a uma tabela (selecionado no painel ao lado do diagrama); secao 1.., bloco 0.. */
+export type TrechoManual = { id: number; tabela: string; secao: number; bloco: number; texto: string; versao: string; por: string; em: string };
+
 /** processo = o manual da tela (passo a passo e funcionalidades, um por tela); chamado = chamado frequente da tela */
 export type TipoManual = 'processo' | 'chamado';
 export const ROTULO_TIPO: Record<TipoManual, string> = { processo: 'Manual da tela', chamado: 'Chamado frequente' };

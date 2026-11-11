@@ -218,7 +218,10 @@ function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition,
 const tiposNo = { tabela: TabelaNo };
 const tiposAresta = { relacao: RelacaoAresta };
 
-type Props = { modulo: string; tabelas: string[]; onAbrirTabela: (nome: string) => void; onLigou?: () => void };
+type Props = {
+  modulo: string; tabelas: string[]; onAbrirTabela: (nome: string) => void; onLigou?: () => void;
+  onClicarTabela?: (nome: string) => void; // clique simples: abre o painel ao lado (manual da tela ou ficha)
+};
 
 /** Quem é o lado N (chave estrangeira) e quem é o lado 1: a chave primária fica no destino; sem pista, vale a ordem dos cliques. */
 function orientar(a: Ponta, b: Ponta): NovaRelacao {
@@ -226,7 +229,7 @@ function orientar(a: Ponta, b: Ponta): NovaRelacao {
   return { origem: o.tabela, coluna_origem: o.coluna, destino: d.tabela, coluna_destino: d.coluna };
 }
 
-function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
+function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Props) {
   const [resp, setResp] = useState<RespostaDiagrama | null>(null);
   const [erro, setErro] = useState('');
   const [nivel, setNivel] = useState(1);
@@ -627,7 +630,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         onNodesChange={onNodesChange} onNodeDragStop={soltarTabela} nodeDragThreshold={4}
         onEdgeClick={(_, e) => editarNota(e.data!.relId)}
         fitView fitViewOptions={{ padding: 0.12 }}
-        onNodeClick={(_, n) => setSel(n.id === sel ? null : n.id)}
+        onNodeClick={(_, n) => { setSel(n.id === sel ? null : n.id); onClicarTabela?.(n.id); }}
         onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}
         onPaneClick={() => { if (arrastou.current) return; setSel(null); if (!proposta) setPonta(null); }}
         onMoveStart={() => mostrarBalao(null)}

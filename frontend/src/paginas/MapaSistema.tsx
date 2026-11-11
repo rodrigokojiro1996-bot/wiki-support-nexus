@@ -5,6 +5,7 @@ import Diagrama from '../componentes/Diagrama';
 import MenuArvore from '../componentes/MenuArvore';
 import Topo from '../componentes/Topo';
 import type { EstadoRelacao, ManualResumo, MenuFicha, MenuNo, Relacao } from '../tipos';
+import ManualTabela from '../componentes/ManualTabela';
 
 const MODULO_PADRAO = 'pdv';
 const ESTADO_ROTULO: Record<EstadoRelacao, string> = { confirmada: 'Confirmada', documentada: 'Documentada', sugerida: 'Sugerida', descartada: 'Descartada' };
@@ -92,6 +93,8 @@ export default function MapaSistema() {
   const [exemplo, setExemplo] = useState(false);
   const [nomeModulo, setNomeModulo] = useState('PDV'); // nome do módulo no modulos.json do servidor
   const [semTela, setSemTela] = useState<ManualResumo[]>([]);
+  // aba Tabelas de uma tela com manual: a tabela aberta mostra o manual (trechos em que ela age); "Ficha técnica" alterna
+  const [verFicha, setVerFicha] = useState(false);
 
   const recarregarMenus = useCallback(() => api.menus(MODULO).then(setMenus).catch(e => setErro(e.message)), [MODULO]);
   useEffect(() => {
@@ -113,12 +116,14 @@ export default function MapaSistema() {
   useEffect(recarregarFicha, [recarregarFicha]);
 
   useEffect(() => {
+    setVerFicha(false);
     if (!tabelaSel) { setFichaTabela(null); return; }
     fetch(`/api/modulos/${MODULO}/tabelas/${encodeURIComponent(tabelaSel)}`).then(r => r.json()).then(setFichaTabela).catch(() => setFichaTabela(null));
   }, [tabelaSel]);
 
   const aba = params.get('aba') === 'tabelas' ? 'tabelas' : 'geral';
   const comAba = (p: Record<string, string>) => (aba === 'tabelas' ? { ...p, aba: 'tabelas' } : p);
+  const comManual = !!fichaTabela && aba === 'tabelas' && !verFicha && !!ficha && ficha.manuais.length > 0;
   const avisar = (m: string) => { setAviso(m); window.setTimeout(() => setAviso(''), 2600); };
   const escolher = (id: string) => setParams(comAba({ item: id }));
   const abrirTabela = (nome: string) => setParams(comAba(selecionado ? { item: selecionado, tabela: nome } : { tabela: nome }));
@@ -163,7 +168,7 @@ export default function MapaSistema() {
   return (
     <div className="app">
       <Topo modulo={MODULO} />
-      <main className={`mapa ${fichaTabela ? 'com-tabela' : ''}`}>
+      <main className={`mapa ${fichaTabela ? 'com-tabela' : ''} ${comManual ? 'com-manual' : ''}`}>
         <section className="painel arvore" aria-label={`Menus do ${nomeModulo}`}>
           <div className="painel-cab">
             <h2>Mapa do sistema</h2>
@@ -231,7 +236,8 @@ export default function MapaSistema() {
             </div>
             {aba === 'tabelas' ? (
               <div className="ficha-diagrama">
-                <Diagrama modulo={MODULO} tabelas={ficha.tabelas.map(t => t.tabela)} onAbrirTabela={abrirTabela} onLigou={recarregarFicha} />
+                <Diagrama modulo={MODULO} tabelas={ficha.tabelas.map(t => t.tabela)} onAbrirTabela={abrirTabela} onLigou={recarregarFicha}
+                  onClicarTabela={abrirTabela} />
               </div>
             ) : (
             <div className="painel-corpo">
@@ -337,13 +343,25 @@ export default function MapaSistema() {
           </>)}
         </section>
 
-        {fichaTabela && (
+        {comManual && fichaTabela && ficha && (
+          <section className="painel tabela painel-manual" aria-label={`Manual da tela e a tabela ${fichaTabela.nome}`}>
+            <div className="painel-cab">
+              <h2><code>{fichaTabela.nome}</code> no manual</h2>
+              <button type="button" className="fechar" aria-label="Fechar" onClick={() => setParams(comAba(selecionado ? { item: selecionado } : {}))}>×</button>
+            </div>
+            <ManualTabela manuais={ficha.manuais} tabela={fichaTabela.nome} relacoes={fichaTabela.relacoes} onFicha={() => setVerFicha(true)} />
+          </section>
+        )}
+        {fichaTabela && !comManual && (
           <section className="painel tabela" aria-label={`Tabela ${fichaTabela.nome}`}>
             <div className="painel-cab">
               <h2><code>{fichaTabela.nome}</code></h2>
               <button type="button" className="fechar" aria-label="Fechar ficha da tabela" onClick={() => setParams(comAba(selecionado ? { item: selecionado } : {}))}>×</button>
             </div>
             <div className="painel-corpo">
+              {aba === 'tabelas' && ficha && ficha.manuais.length > 0 && (
+                <button type="button" className="link" onClick={() => setVerFicha(false)}>← Voltar ao manual da tela</button>
+              )}
               {fichaTabela.descricao && <p className="tabela-desc">{fichaTabela.descricao}</p>}
               <p className="meta">{fichaTabela.engine}{fichaTabela.linhas != null && ` · ~${fichaTabela.linhas.toLocaleString('pt-BR')} linhas`} · {fichaTabela.colunas.length} colunas</p>
               <div className="secao">

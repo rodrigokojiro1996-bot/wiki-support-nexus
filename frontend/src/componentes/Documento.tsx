@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { cloneElement, type ReactElement } from 'react';
 import { caminhoTexto } from '../api';
 import type { Bloco, Manual } from '../tipos';
 import Marca from './Marca';
@@ -12,23 +12,25 @@ function Blocos({ secao, blocos }: { secao: number; blocos: Bloco[] }) {
   return (
     <>
       {blocos.map((b, i) => {
+        // onde o bloco está: o painel do manual ao lado do diagrama acha e destaca os trechos ligados às tabelas
+        const onde = { 'data-secao': secao, 'data-bloco': i };
         switch (b.tipo) {
           case 'passo':
             passo++;
-            return <p key={i} className="doc-passo"><span className="doc-passo-n">{b.rotulo ?? `${secao}.${passo}`}.</span><span>{linhas(b.texto)}</span></p>;
+            return <p key={i} className="doc-passo" {...onde}><span className="doc-passo-n">{b.rotulo ?? `${secao}.${passo}`}.</span><span>{linhas(b.texto)}</span></p>;
           case 'subtitulo':
-            return <h3 key={i} className="doc-subtitulo">{inline(b.texto)}</h3>;
+            return <h3 key={i} className="doc-subtitulo" {...onde}>{inline(b.texto)}</h3>;
           case 'sql':
-            return <pre key={i} className="doc-sql">{b.texto}</pre>;
+            return <pre key={i} className="doc-sql" {...onde}>{b.texto}</pre>;
           case 'obs':
-            return <p key={i} className="doc-obs">OBS{SOBRESCRITO[obs++] ?? ''}: {linhas(b.texto)}</p>;
+            return <p key={i} className="doc-obs" {...onde}>OBS{SOBRESCRITO[obs++] ?? ''}: {linhas(b.texto)}</p>;
           case 'nota':
-            return <aside key={i} className="doc-nota">{blocoRico(b.texto, 'doc-nota-corpo')}</aside>;
+            return <aside key={i} className="doc-nota" {...onde}>{blocoRico(b.texto, 'doc-nota-corpo')}</aside>;
           case 'texto':
-            return <Fragment key={i}>{blocoRico(b.texto, 'doc-texto')}</Fragment>;
+            return cloneElement(blocoRico(b.texto, 'doc-texto') as ReactElement<Record<string, unknown>>, { key: i, ...onde });
           case 'imagem':
             return (
-              <figure key={i} className="doc-figura">
+              <figure key={i} className="doc-figura" {...onde}>
                 {b.arquivo
                   ? <img src={`/api/imagens/${b.arquivo.split('/').map(encodeURIComponent).join('/')}`} alt={b.legenda || 'Print da tela'} loading="eager" />
                   : <div className="doc-figura-pendente"><b>Print pendente</b><span>{b.legenda}</span></div>}

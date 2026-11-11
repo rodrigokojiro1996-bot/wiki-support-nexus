@@ -41,6 +41,12 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
     post-it abre para incluir, editar ou apagar (migração 010, `relacao_notas`).
   - O balão da tabela passa a mostrar as telas que usam a tabela (a descrição continua na ficha e o balão das colunas
     segue com o dicionário de dados).
+- Manual da tela ao lado do diagrama: na aba Tabelas de uma tela com manual, clicar numa tabela abre o manual no painel
+  da direita (no lugar da ficha, que continua a um clique em "Ficha técnica"). Selecione o trecho do manual em que a
+  tabela age e clique em **Validar**: o trecho fica destacado sempre que alguém olhar essa tabela, com quem ligou e a
+  versão do manual; trecho que sumir numa edição do manual aparece como "não encontrado". Embaixo, os informativos de
+  incidentes das ligações da tabela. A ficha técnica da tabela também passa a trazer esses informativos.
+  Migração 011 (`manual_trechos`); API em `/api/manuais/{codigo}/trechos`.
 
 ### Alterado
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser

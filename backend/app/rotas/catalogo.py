@@ -137,6 +137,11 @@ def tabela(modulo: str, nome: str, con=Depends(db)):
     colunas = [dict(c) | {"pk": bool(c["pk"]), "descricao": desc_c.get((nome, c["nome"]), "")}
                for c in con.execute("SELECT nome, tipo, pk FROM colunas WHERE banco = ? AND tabela = ? ORDER BY ordem", (banco, nome))]
     rels = relacoes.listar(con, banco, " AND (r.origem = ? OR r.destino = ?)", (nome, nome))
+    # informativos de incidentes das ligações desta tabela (os post-its do diagrama)
+    notas = {r["id"]: dict(r) for r in con.execute("SELECT id, texto, posicao, por, em FROM relacao_notas WHERE banco = ?", (banco,))}
+    for r in rels:
+        if r["id"] in notas:
+            r["nota"] = {k: v for k, v in notas[r["id"]].items() if k != "id"}
     menus = [{"id": m["menu"], "caminho": caminho_menu(con, m["menu"])} for m in con.execute("SELECT menu FROM menu_tabelas WHERE tabela = ?", (nome,))]
     manuais = [dict(m) for m in con.execute("SELECT codigo, titulo FROM manuais WHERE modulo = ? AND tabelas LIKE ?", (modulo, f'%"{nome}"%'))]
     return {**dict(t), "descricao": descricoes.das_tabelas(con, modulo).get(nome, ""), "colunas": colunas, "relacoes": rels, "menus": menus, "manuais": manuais}

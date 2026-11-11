@@ -13,7 +13,7 @@ from starlette.concurrency import run_in_threadpool
 from .config import ORIGENS_CORS, VERSAO
 from .db import conectar, migrar
 from .metricas import MetricasHTTP
-from .rotas import auth, catalogo, descricoes, frontend, manuais, menus, metricas, modulos, saude
+from .rotas import auth, catalogo, descricoes, frontend, manuais, menus, metricas, modulos, saude, trechos
 from .servicos import entra, sessoes
 
 
@@ -76,7 +76,7 @@ async def fora_dos_buscadores(request: Request, chamar):
     resposta.headers["X-Robots-Tag"] = "noindex, nofollow"
     return resposta
 
-for r in (saude, auth, metricas, modulos, menus, catalogo, manuais, descricoes):
+for r in (saude, auth, metricas, modulos, menus, catalogo, manuais, descricoes, trechos):
     app.include_router(r.router)
 
 # por último: o build do frontend (modo de produção) responde o que não for da API
