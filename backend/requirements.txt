@@ -4,7 +4,7 @@ uvicorn[standard]==0.54.0
 playwright==1.64.1
 prometheus-client==0.26.0
 # importação de documentos em manuais (POST /api/manuais/importar e ferramentas/importar_processos.py)
-pypdf==6.21.2
+pypdf==6.21.4
 python-docx==1.2.0
 pillow==13.0.0
 # fuso de Brasília (America/Sao_Paulo) nas datas dos manuais: o Windows não traz a base de fusos do sistema
