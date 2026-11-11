@@ -781,7 +781,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
   const naTela = new Set(resp?.tabelas.map(t => t.nome) ?? []);
   const tabelaDoMenu = menu?.tabela ? resp?.tabelas.find(t => t.nome === menu.tabela) : undefined;
 
-  if (!tabelas.length) return <div className="diag-vazio">Nenhuma tabela vinculada a esta tela. Vincule tabelas na aba Visão geral.</div>;
+  if (!tabelas.length) return <div className="diag-vazio">Nenhuma tabela vinculada a esta tela. Vincule a primeira no campo acima do diagrama.</div>;
 
   return (
     <div className="diag-wrap">
