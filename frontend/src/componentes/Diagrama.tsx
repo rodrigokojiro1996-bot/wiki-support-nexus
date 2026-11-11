@@ -11,6 +11,7 @@ import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode } from 'elkjs/lib/elk-api';
 import type { NotaRelacao, NovaRelacao, Relacao } from '../tipos';
 import { afastar, type Ponto } from './afastar';
+import { atravessa, criarRoteador } from './rotear';
 
 const elk = new ELK();
 
@@ -152,7 +153,7 @@ function PostIt({ caminho, d }: { caminho: string; d: DadosRelacao }) {
   const { screenToFlowPosition } = useReactFlow();
 
   // arrastar: o post-it vai para o ponto da linha mais perto do cursor; clique sem arrastar abre para editar
-  const arrastar = (e: React.PointerEvent<HTMLDivElement>) => {
+  const arrastar = (e: React.PointerEvent<HTMLElement>) => {
     if (e.button !== 0 || !ref.current) return;
     e.stopPropagation();
     const el = ref.current, total = el.getTotalLength();
@@ -180,11 +181,14 @@ function PostIt({ caminho, d }: { caminho: string; d: DadosRelacao }) {
       <path ref={ref} d={caminho} fill="none" stroke="none" />
       {pt && (
         <EdgeLabelRenderer>
-          <div className={`rel-postit nodrag nopan ${d.apagada ? 'apagada' : ''}`} role="button" tabIndex={0}
-            style={{ transform: `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px)` }}
-            title={`Informativo de incidentes${nota.por ? ` · ${nota.por}` : ''}\nArraste ao longo da linha · clique para editar`}
-            onPointerDown={arrastar} onKeyDown={e => { if (e.key === 'Enter') d.onEditarNota?.(d.relId); }}>
-            {nota.texto}
+          {/* o corpo do post-it deixa o clique passar (a tabela embaixo continua arrastável); só a alça pega o mouse */}
+          <div className={`rel-postit-caixa ${d.apagada ? 'apagada' : ''}`}
+            style={{ transform: `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px)` }}>
+            <button type="button" className="rel-postit-alca nodrag nopan"
+              title={`Informativo de incidentes${nota.por ? ` · ${nota.por}` : ''}\nArraste para mover ao longo da linha · clique para editar`}
+              aria-label="Informativo de incidentes: arraste para mover, clique para editar"
+              onPointerDown={arrastar} onKeyDown={e => { if (e.key === 'Enter') d.onEditarNota?.(d.relId); }}>⠿ informativo</button>
+            <div className="rel-postit">{nota.texto}</div>
           </div>
         </EdgeLabelRenderer>
       )}
@@ -646,6 +650,26 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
   // posições na tela: as salvas/arrastadas e, por cima, os afastamentos para nenhuma tabela ficar sobre outra
   useLayoutEffect(() => { nosRef.current = base.nos; }, [base.nos]);
   const ajustes = useMemo(() => ajustar(base.nos, movidas, arrastando), [base.nos, movidas, arrastando]);
+  // tabelas movidas (pela equipe ou para abrir espaço): as ligações delas, e as do layout automático que uma tabela
+  // movida passou a cobrir, ganham um trajeto novo que contorna todos os cartões (recalculado a cada passo do arraste)
+  const rotas = useMemo(() => {
+    const saiu = new Set([...Object.keys(movidas), ...ajustes.keys()]);
+    const rotas = new Map<string, Ponto[]>();
+    if (!saiu.size) return rotas;
+    const pos = new Map(base.nos.map(n => [n.id, ajustes.get(n.id) ?? movidas[n.id] ?? n.position]));
+    const caixas = base.nos.map(n => ({ id: n.id, ...pos.get(n.id)!, w: LARGURA, h: n.height ?? 0 }));
+    const cobertas = caixas.filter(c => saiu.has(c.id));
+    const linha = new Map(base.nos.map(n => [n.id, new Map(n.data.colunas.map((c, i) => [c.nome, i]))]));
+    const alvo = base.arestas.filter(e => saiu.has(e.source) || saiu.has(e.target) || (e.data!.pontos && atravessa(e.data!.pontos, cobertas)));
+    const ligs = alvo.map(e => {
+      const a = pos.get(e.source)!, b = pos.get(e.target)!;
+      return { de: { x: a.x + LARGURA, y: a.y + yColuna(linha.get(e.source)!.get(e.data!.colOrigem)!) },
+               para: { x: b.x, y: b.y + yColuna(linha.get(e.target)!.get(e.data!.colDestino)!) } };
+    });
+    const rotear = criarRoteador(caixas, ligs);
+    alvo.forEach((e, k) => { const r = rotear(ligs[k]); if (r) rotas.set(e.id, r); });
+    return rotas;
+  }, [base, movidas, ajustes]);
   const { nos, arestas } = useMemo(() => {
     const marcadas = new Map<string, Set<string>>();
     const marcar = (t: string, c: string) => (marcadas.get(t) ?? marcadas.set(t, new Set()).get(t)!).add(c);
@@ -654,7 +678,8 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
     const foco = new Set(resp?.foco ?? []);
     // escolhendo colunas para ligar: nada fica apagado, para a segunda tabela estar à vista
     const ligando = !!ponta || !!proposta;
-    const apagar = !!sel && !ligando;
+    // arrastando uma tabela, nada fica apagado: as ligações dela (e das outras) continuam à vista
+    const apagar = !!sel && !ligando && !arrastando;
     const centro = sel ? new Set([sel]) : foco;
     const vizinhas = new Set<string>(centro);
     base.arestas.forEach(e => { if (centro.has(e.source)) vizinhas.add(e.target); if (centro.has(e.target)) vizinhas.add(e.source); });
@@ -676,14 +701,14 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
-        // tabela arrastada ou afastada: o trajeto do ELK não serve mais; a linha passa a seguir as tabelas
+        // tabela arrastada ou afastada: trajeto novo que contorna os cartões; sem caminho, o traçado simples
         const saiu = (id: string) => !!movidas[id] || ajustes.has(id);
-        const pontos = saiu(e.source) || saiu(e.target) ? undefined : e.data!.pontos;
+        const pontos = rotas.get(e.id) ?? (saiu(e.source) || saiu(e.target) ? undefined : e.data!.pontos);
         return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, pontos, destaque: toca, apagada: apagar && !toca,
                                                      onMoverNota: moverNota, onEditarNota: editarNota } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, ajustes, arrasto?.alvo, iniciarArrasto, moverNota, editarNota]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, ajustes, rotas, arrastando, arrasto?.alvo, iniciarArrasto, moverNota, editarNota]);
 
   useEffect(() => {
     if (!base.nos.length) return;
