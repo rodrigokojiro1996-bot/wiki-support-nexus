@@ -47,6 +47,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   **Descartar** (ou Esc) não grava nada e limpa a seleção; **Validar** grava, e o trecho fica destacado sempre que alguém olhar essa tabela, com quem ligou e a
   versão do manual; trecho que sumir numa edição do manual aparece como "não encontrado". Embaixo, os informativos de
   incidentes das ligações da tabela. A ficha técnica da tabela também passa a trazer esses informativos.
+  O destaque é de marca-texto (amarelo com sublinhado turquesa) e, ao clicar na tabela, o painel rola sozinho até o
+  primeiro trecho ligado; a página e o diagrama ficam onde estavam (no computador, cada painel do mapa rola por dentro).
   Migração 011 (`manual_trechos`); API em `/api/manuais/{codigo}/trechos`.
 - Adicionar tabela ao diagrama: botão direito no fundo do diagrama › **Adicionar tabela…** abre a busca das tabelas do
   módulo (por nome ou descrição). A escolhida entra no ponto clicado, com todas as colunas à mostra, pronta para ligar
