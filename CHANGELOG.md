@@ -57,6 +57,22 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   abrir a ficha, mostrar ou recolher as colunas e, na adicionada, **Remover do diagrama** (as ligações feitas com ela
   continuam valendo). Migração 012 (`diagrama_tabelas`); API em `GET /api/modulos/{m}/tabelas` e
   `POST/DELETE /api/modulos/{m}/diagrama/tabelas`.
+- **Histórico de alterações** (botão "Histórico" no topo, página `/historico`): tudo o que alguém valida, altera,
+  salva, move, importa, descarta ou exclui no Support Nexus fica registrado com o nome de quem fez, a data e a hora,
+  e uma frase clara do que mudou ("Alterou o informativo de incidentes da ligação vendas.id_cliente → clientes.id_cliente").
+  "Ver detalhes" mostra o antes e o depois. Num manual salvo, mostra a lista do que mudou ("seção 2 “Passo a passo”:
+  alterou o passo 3: “…” → “…”", "incluiu a seção …"). Entra no histórico:
+  - manuais criados e salvos;
+  - trechos do manual validados ou desligados;
+  - ligações entre colunas validadas, descartadas ou desfeitas;
+  - informativos de incidentes incluídos, alterados, movidos ou excluídos;
+  - diagrama organizado, reorganizado, com tabela adicionada ou removida;
+  - tabelas da tela alteradas;
+  - importação do dicionário de dados (descrições novas e alteradas).
+
+  Filtros por pessoa, área, ação e busca no texto, que ficam na URL e podem ser compartilhados. O histórico só cresce:
+  não há como editar nem apagar pela API. Migração 013 (`registro_alteracoes`); API em `GET /api/registro` e
+  `GET /api/registro/filtros`.
 
 ### Alterado
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser
@@ -71,6 +87,8 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Diagrama: validar uma ligação ou salvar um informativo não reenquadra mais a tela (o diagrama fica onde estava).
 
 ### Corrigido
+- Excluir um informativo, desligar um trecho do manual, tirar uma tabela adicionada e reorganizar o diagrama não
+  guardavam quem fez; agora vão com o nome para o histórico de alterações.
 - Diagrama: soltar uma tabela arrastada dava "Não foi possível salvar a posição (Input should be a valid number)".
   O nó entregue pelo React Flow no fim do arraste vinha sem posição (`x`/`y` nulos); agora vale a posição na tela.
 

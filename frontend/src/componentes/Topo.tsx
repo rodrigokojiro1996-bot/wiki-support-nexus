@@ -15,7 +15,7 @@ const PADRAO = [
 function SeuNome() {
   const [nome, setNome] = useState(usuario.ler);
   return (
-    <label className="topo-usuario" title="Fica registrado em quem validou relações e vinculou tabelas (guardado só neste navegador)">
+    <label className="topo-usuario" title="Vai para o Histórico de alterações em tudo o que você validar, alterar, salvar ou excluir (guardado só neste navegador)">
       <span>Seu nome</span>
       <input value={nome} placeholder="para a autoria" maxLength={80} aria-label="Seu nome, para registrar a autoria"
         onChange={e => setNome(e.target.value)} onBlur={() => usuario.gravar(nome)} />
@@ -87,7 +87,13 @@ export default function Topo({ children, modulo }: { children?: React.ReactNode;
           </span>
         ))}
       </nav>
-      <div className="topo-extra">{children}<BotaoTema /><Quem /></div>
+      <div className="topo-extra">
+        {children}
+        <Link to="/historico" className="topo-tema topo-historico" title="Quem validou, alterou, salvou ou excluiu o quê, e quando">
+          <span aria-hidden="true">↺</span><span className="topo-tema-txt">Histórico</span>
+        </Link>
+        <BotaoTema /><Quem />
+      </div>
     </header>
     <FaixaAmbiente />
     </>

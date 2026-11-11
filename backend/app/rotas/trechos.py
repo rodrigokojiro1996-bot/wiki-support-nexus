@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from ..servicos import registro
 from ..servicos.manuais import manual_completo
 from . import db, usuario
 
@@ -49,14 +50,23 @@ def ligar(codigo: str, corpo: NovoTrecho, con=Depends(db), por: str = Depends(us
         raise HTTPException(409, "Este trecho já está ligado a esta tabela")
     cur = con.execute("INSERT INTO manual_trechos (manual, tabela, secao, bloco, texto, versao, por) VALUES (?, ?, ?, ?, ?, ?, ?)",
                       (codigo, corpo.tabela, corpo.secao, corpo.bloco, texto, m["versao"], por))
+    registro.registrar(con, por, "validou", "trecho", f"Validou que o trecho do manual {codigo} (seção {corpo.secao}, versão {m['versao']}) "
+                       f"corresponde à tabela {corpo.tabela}: “{texto}”", alvo=f"{codigo} · {corpo.tabela}", modulo=m["modulo"],
+                       detalhe={"manual": codigo, "tabela": corpo.tabela, "secao": corpo.secao, "bloco": corpo.bloco, "texto": texto})
     con.commit()
     return dict(con.execute("SELECT id, tabela, secao, bloco, texto, versao, por, em FROM manual_trechos WHERE id = ?",
                             (cur.lastrowid,)).fetchone())
 
 
 @router.delete("/{trecho_id}")
-def desligar(codigo: str, trecho_id: int, con=Depends(db)):
-    if not con.execute("DELETE FROM manual_trechos WHERE manual = ? AND id = ?", (codigo, trecho_id)).rowcount:
+def desligar(codigo: str, trecho_id: int, con=Depends(db), por: str = Depends(usuario)):
+    t = con.execute("SELECT * FROM manual_trechos WHERE manual = ? AND id = ?", (codigo, trecho_id)).fetchone()
+    if not t:
         raise HTTPException(404, "Trecho não encontrado")
+    con.execute("DELETE FROM manual_trechos WHERE id = ?", (trecho_id,))
+    m = con.execute("SELECT modulo FROM manuais WHERE codigo = ?", (codigo,)).fetchone()
+    registro.registrar(con, por, "excluiu", "trecho", f"Desligou o trecho do manual {codigo} da tabela {t['tabela']}: “{t['texto']}” "
+                       f"(tinha sido validado por {t['por'] or 'alguém sem nome'})", alvo=f"{codigo} · {t['tabela']}",
+                       modulo=m["modulo"] if m else "", detalhe={k: t[k] for k in ("tabela", "secao", "bloco", "texto", "versao", "por", "em")})
     con.commit()
     return {"ok": True}

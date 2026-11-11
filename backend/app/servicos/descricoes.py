@@ -63,7 +63,18 @@ def importar(con: sqlite3.Connection, dados: bytes, por: str) -> dict:
             gravar.append((modulo, d["Tabela"], d["Coluna"].lower(), d[DESCRICAO]))
         else:
             fora.append(f"Exceções: linha incompleta ou módulo que não existe ({d['Tabela']}.{d['Coluna']})")
+    # o que muda de fato (novas e alteradas), para o histórico de alterações
+    atuais = {(r["modulo"], r["tabela"], r["coluna"]): r["texto"] for r in con.execute("SELECT modulo, tabela, coluna, texto FROM descricoes")}
+    novas = [g for g in gravar if (g[0], g[1], g[2]) not in atuais]
+    alteradas = [(g, atuais[(g[0], g[1], g[2])]) for g in gravar if (g[0], g[1], g[2]) in atuais and atuais[(g[0], g[1], g[2])] != g[3]]
     with con:
+        if novas or alteradas:
+            from . import registro
+            registro.registrar(con, por, "importou", "dicionario",
+                               f"Importou a planilha do dicionário de dados: {len(novas)} descrição(ões) nova(s) e {len(alteradas)} alterada(s) "
+                               f"({len(gravar) - len(novas) - len(alteradas)} sem mudança)",
+                               detalhe={"novas": [f"{m.upper()} {t}{'.' + c if c else ''}: “{x}”" for m, t, c, x in novas[:300]],
+                                        "alteradas": [f"{m.upper()} {t}{'.' + c if c else ''}: “{antes}” → “{x}”" for (m, t, c, x), antes in alteradas[:300]]})
         con.executemany("""INSERT INTO descricoes (modulo, tabela, coluna, texto, por) VALUES (?, ?, ?, ?, ?)
                            ON CONFLICT (modulo, tabela, coluna) DO UPDATE SET texto = excluded.texto, por = excluded.por,
                            em = datetime('now', 'localtime')""", [(*g, por) for g in gravar])

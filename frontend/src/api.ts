@@ -21,6 +21,10 @@ async function json<T>(url: string, init?: RequestInit): Promise<T> {
 const enc = encodeURIComponent;
 
 export type Usuario = { nome: string; email: string };
+/** uma linha do histórico de alterações */
+export type ItemRegistro = {
+  id: number; em: string; por: string; acao: string; area: string; modulo: string; alvo: string; resumo: string; detalhe: unknown;
+};
 /** login: o servidor exige a conta Microsoft; usuario: quem entrou (null = ainda não entrou) */
 export type Acesso = { login: boolean; usuario: Usuario | null };
 
@@ -50,6 +54,8 @@ const enviar = (method: 'PUT' | 'POST', body: unknown): RequestInit => ({
   body: JSON.stringify(body)
 });
 const put = (body: unknown) => enviar('PUT', body);
+/** DELETE com a autoria: o histórico de alterações registra quem excluiu */
+const apagar = (): RequestInit => ({ method: 'DELETE', headers: { 'X-Usuario': enc(usuario.ler()) } });
 
 /** frase para quando a resposta não traz o motivo (ex.: o proxy cortou um arquivo grande) */
 const SEM_DETALHE: Record<number, string> = {
@@ -95,7 +101,7 @@ export const api = {
     return r.json();
   },
   async apagarNota(modulo: string, id: string) {
-    const r = await fetch(`/api/modulos/${modulo}/relacoes/nota?id=${enc(id)}`, { method: 'DELETE' });
+    const r = await fetch(`/api/modulos/${modulo}/relacoes/nota?id=${enc(id)}`, apagar());
     if (!r.ok) throw await erroDe(r);
   },
   /** tabelas arrastadas: valem para todos que abrirem a tela (chave = tabelas da tela) */
@@ -103,6 +109,12 @@ export const api = {
     const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes`, put({ chave, posicoes }));
     if (!r.ok) throw await erroDe(r);
   },
+  /** histórico de alterações, mais recentes primeiro; `antes` = id da última linha recebida */
+  registro: (f: { por?: string; area?: string; acao?: string; busca?: string; antes?: number }) => {
+    const q = new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== '').map(([k, v]) => [k, String(v)]));
+    return json<{ itens: ItemRegistro[]; mais: boolean }>(`/api/registro?${q}`);
+  },
+  filtrosRegistro: () => json<{ pessoas: string[]; areas: Record<string, string>; acoes: string[] }>('/api/registro/filtros'),
   /** todas as tabelas do módulo (nome e descrição): a busca do "Adicionar tabela" do diagrama */
   tabelasDoModulo: (modulo: string) => json<{ nome: string; descricao: string }[]>(`/api/modulos/${modulo}/tabelas`),
   /** põe a tabela no diagrama da tela (para todos), no ponto clicado */
@@ -111,11 +123,11 @@ export const api = {
     if (!r.ok) throw await erroDe(r);
   },
   async removerTabela(modulo: string, chave: string, tabela: string) {
-    const r = await fetch(`/api/modulos/${modulo}/diagrama/tabelas?chave=${enc(chave)}&tabela=${enc(tabela)}`, { method: 'DELETE' });
+    const r = await fetch(`/api/modulos/${modulo}/diagrama/tabelas?chave=${enc(chave)}&tabela=${enc(tabela)}`, apagar());
     if (!r.ok) throw await erroDe(r);
   },
   async reorganizar(modulo: string, chave: string) {
-    const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes?chave=${enc(chave)}`, { method: 'DELETE' });
+    const r = await fetch(`/api/modulos/${modulo}/diagrama/posicoes?chave=${enc(chave)}`, apagar());
     if (!r.ok) throw await erroDe(r);
   },
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
@@ -126,7 +138,7 @@ export const api = {
     return r.json();
   },
   async desligarTrecho(codigo: string, id: number) {
-    const r = await fetch(`/api/manuais/${enc(codigo)}/trechos/${id}`, { method: 'DELETE' });
+    const r = await fetch(`/api/manuais/${enc(codigo)}/trechos/${id}`, apagar());
     if (!r.ok) throw await erroDe(r);
   },
   manuais: (modulo: string) => json<ManualResumo[]>(`/api/manuais?modulo=${enc(modulo)}`),

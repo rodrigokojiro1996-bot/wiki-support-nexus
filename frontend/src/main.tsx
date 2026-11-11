@@ -12,6 +12,7 @@ import { lerTema } from './tema';
 import ManualPagina from './paginas/ManualPagina';
 import ManualImpressao from './paginas/ManualImpressao';
 import ManualEditor from './paginas/ManualEditor';
+import Historico from './paginas/Historico';
 
 // antes de desenhar a primeira tela: sem isso, quem usa o escuro veria um clarão branco ao abrir
 document.documentElement.dataset.tema = lerTema();
@@ -26,6 +27,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="/manuais/:codigo" element={<ManualPagina />} />
           <Route path="/manuais/:codigo/editar" element={<ManualEditor />} />
           <Route path="/manuais/:codigo/imprimir" element={<ManualImpressao />} />
+          <Route path="/historico" element={<Historico />} />
         </Routes>
       </Acesso>
     </BrowserRouter>
