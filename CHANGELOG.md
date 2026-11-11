@@ -4,6 +4,14 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Alterado
+- Ficha da tela mais limpa: a **Visão geral** fica com os manuais da tela, os chamados frequentes e as opções da tela.
+  Tudo o que é do banco passou para a aba **Tabelas**:
+  - no alto, as tabelas da tela, com vincular, remover e confirmar os vínculos sugeridos;
+  - no meio, o diagrama;
+  - embaixo, recolhida, "Ligações em lista", com as ligações entre as tabelas da tela (validar ou descartar) e as
+    tabelas com que elas também se ligam.
+
 ## [0.5.0] - 2026-11-11
 
 ### Adicionado
@@ -77,12 +85,6 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   `GET /api/registro/filtros`.
 
 ### Alterado
-- Ficha da tela mais limpa: a **Visão geral** fica com os manuais da tela, os chamados frequentes e as opções da tela.
-  Tudo o que é do banco passou para a aba **Tabelas**:
-  - no alto, as tabelas da tela, com vincular, remover e confirmar os vínculos sugeridos;
-  - no meio, o diagrama;
-  - embaixo, recolhida, "Ligações em lista", com as ligações entre as tabelas da tela (validar ou descartar) e as
-    tabelas com que elas também se ligam.
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser
   quem entrou; o cabeçalho `X-Usuario` é ignorado. Desligado, nada muda.
 - O PDF leva uma sessão temporária (2 minutos, apagada ao terminar) para a página de impressão passar pelo login.
