@@ -14,9 +14,11 @@ def menu(menu_id: str, con=Depends(db)):
     if not r:
         raise HTTPException(404, "Item de menu não encontrado")
     banco = banco_do_modulo(con, r["modulo"])
-    tabelas = [dict(t) for t in con.execute("""SELECT mt.tabela, mt.origem, mt.por, mt.em, t.engine, t.linhas, t.descricao, (t.nome IS NOT NULL) AS existe
+    tabelas = [dict(t) for t in con.execute("""SELECT mt.tabela, mt.origem, mt.por, mt.em, t.engine, t.linhas, COALESCE(d.texto, '') AS descricao,
+                                              (t.nome IS NOT NULL) AS existe
                                               FROM menu_tabelas mt LEFT JOIN tabelas t ON t.banco = ? AND t.nome = mt.tabela
-                                              WHERE mt.menu = ? ORDER BY mt.tabela""", (banco, menu_id))]
+                                              LEFT JOIN descricoes d ON d.modulo = ? AND d.tabela = mt.tabela AND d.coluna = ''
+                                              WHERE mt.menu = ? ORDER BY mt.tabela""", (banco, r["modulo"], menu_id))]
     nomes = [t["tabela"] for t in tabelas]
     rels = []
     if nomes:

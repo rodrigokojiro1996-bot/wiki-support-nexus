@@ -18,8 +18,12 @@ export type EstadoRelacao = 'confirmada' | 'documentada' | 'sugerida' | 'descart
 export type Relacao = {
   id: string; origem: string; destino: string; colunas: [string, string][];
   estado: EstadoRelacao; regra: string | null; motivo: string | null;
+  equipe?: boolean; // ligada à mão pela equipe no diagrama (não veio do catálogo)
   por: string | null; em: string | null; // quem validou/descartou e quando
 };
+
+/** duas colunas que a equipe ligou no diagrama: origem = lado N (chave estrangeira), destino = lado 1 */
+export type NovaRelacao = { origem: string; coluna_origem: string; destino: string; coluna_destino: string; observacao?: string };
 
 export type MenuFicha = {
   id: string; modulo: string; titulo: string; atalho: string | null; tela_codigo: string | null; desabilitado: boolean;

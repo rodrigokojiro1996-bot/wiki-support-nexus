@@ -14,6 +14,22 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Topo com quem entrou e o botão "Sair". Sessão que termina com a tela aberta mostra um aviso e o login abre numa
   nova aba, sem perder o que está em edição.
 - Migração `007_login` (tabelas `sessoes` e `logins_pendentes`).
+- Ligar colunas no diagrama: clique numa coluna e na coluna de outra tabela; o diagrama pergunta se estão
+  relacionadas, com o sentido sugerido (a chave primária fica no lado 1, dá para inverter) e uma observação
+  opcional. **Validar** grava a relação como documentada pela equipe, com quem ligou e quando, e o diagrama se
+  redesenha com ela; **Descartar** (ou Esc) volta a navegar sem gravar nada. Se o catálogo já sugeria essa ligação,
+  validar só confirma a sugestão; colunas já ligadas (pelo banco ou pela equipe) são recusadas. As relações ligadas
+  pela equipe ficam numa tabela própria (migração 008, `relacoes_equipe`) e sobrevivem a uma nova importação do
+  catálogo; desfazer pela ficha apaga a ligação. Entram na cobertura e nas contribuições do Grafana.
+- Rodapé "+ N colunas" dos cartões do diagrama clicável: seleciona a tabela e mostra todas as colunas só dela (para
+  ligar uma coluna que não é chave), centralizando o diagrama nela; "− recolher colunas" volta ao resumo.
+  Enquanto as colunas são escolhidas, nenhuma tabela fica apagada, para a segunda estar à vista.
+- Dicionário de dados: ao parar o cursor numa tabela ou numa coluna do diagrama, um balão mostra o que ela guarda
+  ("Armazena os dados de produtos do SPA PDV", "Código do produto"); a descrição da tabela também aparece na ficha.
+  `coletor/rascunho_descricoes.py` gera a planilha de rascunho (Tabelas, Colunas por nome e Exceções por tabela) com
+  uma sugestão e o grau de confiança em cada linha; a equipe confere e `POST /api/descricoes/importar` grava só as
+  linhas com Conferido = S. As descrições ficam numa tabela própria (migração 009, `descricoes`), por módulo, e
+  sobrevivem a uma nova importação do catálogo. Passo a passo em `docs/dicionario-de-dados.md`.
 
 ### Alterado
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser

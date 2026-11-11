@@ -1,4 +1,4 @@
-import type { Catalogo, Manual, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
+import type { Catalogo, Manual, NovaRelacao, Relacao, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
 // login Microsoft: com ele ligado, a API responde 401 quando a sessão termina e quem estiver ouvindo é avisado
 // (a interface mostra "Sua sessão terminou" sem apagar o que está aberto, como um manual em edição)
@@ -83,6 +83,11 @@ export const api = {
   catalogo: (modulo: string) => json<Catalogo>(`/api/modulos/${modulo}/catalogo`),
   statusRelacao: (modulo: string, id: string, status: 'documentada' | 'descartada' | 'sugerida') =>
     json(`/api/modulos/${modulo}/relacoes/status`, put({ id, status })),
+  async ligarColunas(modulo: string, corpo: NovaRelacao): Promise<Relacao> {
+    const r = await fetch(`/api/modulos/${modulo}/relacoes`, enviar('POST', corpo));
+    if (!r.ok) throw await erroDe(r);
+    return r.json();
+  },
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
   manuais: (modulo: string) => json<ManualResumo[]>(`/api/manuais?modulo=${enc(modulo)}`),
   async salvarManual(corpo: ManualEntrada, codigo?: string): Promise<{ codigo: string; versao: string }> {

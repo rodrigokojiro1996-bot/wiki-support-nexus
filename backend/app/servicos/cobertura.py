@@ -14,6 +14,8 @@ Agrupado por módulo e menu principal (Cadastros, Vendas, Caixa…): poucos valo
 import sqlite3
 from dataclasses import dataclass, field
 
+from .relacoes import TODAS
+
 SEM_NOME = "(sem nome)"
 
 # telas (folhas da árvore) com o menu principal de cada uma
@@ -35,11 +37,12 @@ WHERE NOT EXISTS (SELECT 1 FROM menus f WHERE f.pai = a.id)
 GROUP BY a.modulo, a.raiz
 """
 
-_SQL_RELACOES = """
+# inclui as relações ligadas pela equipe no diagrama (documentadas)
+_SQL_RELACOES = f"""
 SELECT mo.id AS modulo,
        CASE WHEN r.tipo = 'fk' THEN 'confirmada' ELSE COALESCE(s.status, 'sugerida') END AS estado,
        COUNT(*) AS n
-FROM relacoes r JOIN modulos mo ON mo.banco = r.banco
+FROM ({TODAS}) r JOIN modulos mo ON mo.banco = r.banco
 LEFT JOIN relacao_status s ON s.banco = r.banco AND s.id = r.id
 GROUP BY 1, 2
 """
