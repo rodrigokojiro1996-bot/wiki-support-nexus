@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, caminhoTexto } from '../api';
-import Diagrama from '../componentes/Diagrama';
+import Diagrama, { escDesseleciona } from '../componentes/Diagrama';
 import MenuArvore from '../componentes/MenuArvore';
 import Topo from '../componentes/Topo';
 import type { EstadoRelacao, ManualResumo, MenuFicha, MenuNo, Relacao } from '../tipos';
@@ -121,7 +121,20 @@ export default function MapaSistema() {
     fetch(`/api/modulos/${MODULO}/tabelas/${encodeURIComponent(tabelaSel)}`).then(r => r.json()).then(setFichaTabela).catch(() => setFichaTabela(null));
   }, [tabelaSel]);
 
-  const aba = params.get('aba') === 'tabelas' ? 'tabelas' : 'geral';
+  // Esc com uma tabela selecionada: fecha o painel dela (manual ou ficha), como o × do painel
+  useEffect(() => {
+    if (!tabelaSel) return;
+    const esc = (e: KeyboardEvent) => {
+      if (!escDesseleciona(e)) return;
+      const p = new URLSearchParams(params);
+      p.delete('tabela');
+      setParams(p);
+    };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [tabelaSel, params, setParams]);
+
+  const aba =params.get('aba') === 'tabelas' ? 'tabelas' : 'geral';
   const comAba = (p: Record<string, string>) => (aba === 'tabelas' ? { ...p, aba: 'tabelas' } : p);
   const comManual = !!fichaTabela && aba === 'tabelas' && !verFicha && !!ficha && ficha.manuais.length > 0;
   const avisar = (m: string) => { setAviso(m); window.setTimeout(() => setAviso(''), 2600); };
