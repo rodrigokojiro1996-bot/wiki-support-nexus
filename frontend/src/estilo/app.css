@@ -281,6 +281,13 @@ a.topo-mod { text-decoration: none; }
 .abas button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
 .abas .qtd { font-size: 11px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 0 6px; }
 .ficha-diagrama { flex: 1; min-height: 420px; position: relative; }
+/* aba Tabelas: o diagrama e, embaixo, as ligações em lista (recolhidas) */
+.aba-tabelas { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.aba-tabelas .ficha-diagrama { min-height: 300px; } /* em janela baixa, o diagrama cede espaço para a lista de ligações continuar à vista */
+.ligacoes-lista { border-top: 1px solid var(--line); }
+.ligacoes-lista > summary { cursor: pointer; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.ligacoes-lista > summary:hover { color: var(--accent); }
+.ligacoes-corpo { max-height: 38vh; overflow: auto; padding: 0 16px 12px; }
 
 /* ---------- diagrama ER ---------- */
 /* destaque do diagrama no laranja da marca (contrasta com o turquesa da interface) */
@@ -342,6 +349,7 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
                pointer-events: none; opacity: .92; } /* só informa: o clique passa para a tabela que estiver embaixo */
 .diag-legenda span { display: inline-flex; align-items: center; gap: 6px; }
 .lg-foco { width: 12px; height: 12px; border: 2px solid var(--destaque); border-radius: 3px; background: var(--destaque-suave); }
+.lg-foco.lg-sugerida { border-style: dashed; }
 .lg-linha { stroke: var(--destaque); stroke-width: 2; }
 .lg-linha.sug { stroke-dasharray: 5 4; }
 .lg-ocultas { font-style: italic; }
@@ -385,6 +393,11 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
 .dm-busca button code { font-weight: 700; }
 .dm-busca button small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tb-cab em.tb-adicionada { color: var(--marca); border-color: var(--marca); }
+/* vínculo sugerido pelo catálogo (ainda não confirmado pela equipe): cabeçalho tracejado e o selo "sugerida" */
+.tb.tb-sugerida { border-style: dashed; }
+.tb-cab em.tb-sugerida-selo { color: var(--laranja); border-color: var(--laranja); border-style: dashed; }
+.diag-vazio { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.diag-vazio-busca { width: min(360px, 100%); padding: 6px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); text-align: left; }
 .diag-arrasto { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 999; pointer-events: none; overflow: visible; }
 .diag-arrasto line { stroke: var(--laranja); stroke-width: 2.5; stroke-dasharray: 6 4; }
 .diag-arrasto circle { fill: var(--laranja); }
