@@ -1,37 +1,47 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Background, BaseEdge, EdgeLabelRenderer, Handle, Panel, Position, ReactFlow, ReactFlowProvider, getSmoothStepPath, useReactFlow,
-  type Edge, type EdgeProps, type Node, type NodeProps
+  type Edge, type EdgeProps, type Node, type NodeChange, type NodeProps
 } from '@xyflow/react';
 import { api } from '../api';
 import { useTema } from '../tema';
 import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode } from 'elkjs/lib/elk-api';
-import type { NovaRelacao, Relacao } from '../tipos';
+import type { NotaRelacao, NovaRelacao, Relacao } from '../tipos';
 
 const elk = new ELK();
 
 type Coluna = { nome: string; tipo: string; pk: boolean; descricao?: string };
-type TabelaDiag = { nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; descricao?: string; colunas: Coluna[] };
-/** balão do cursor: o que a tabela ou a coluna guarda (dicionário de dados da equipe) */
-type Balao = { titulo: string; detalhe: string; texto: string; dica?: string; rect: DOMRect };
-type RespostaDiagrama = { foco: string[]; tabelas: TabelaDiag[]; relacoes: Relacao[]; apoio_ocultas: string[] };
+type TabelaDiag = {
+  nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; colunas: Coluna[];
+  telas?: string[][]; // caminho de cada tela que usa a tabela (menu › submenu › tela)
+};
+type Ponto = { x: number; y: number };
+type RespostaDiagrama = {
+  foco: string[]; tabelas: TabelaDiag[]; relacoes: Relacao[]; apoio_ocultas: string[];
+  posicoes?: Record<string, Ponto>; // tabelas que a equipe arrastou nesta tela
+};
+/** balão do cursor: na coluna, o que ela guarda (dicionário de dados); na tabela, as telas que a usam */
+type Balao = { titulo: string; detalhe: string; texto?: string; lista?: { rotulo: string; itens: string[]; vazio: string }; dica?: string; rect: DOMRect };
 
 type DadosTabela = {
   nome: string; engine: string; foco: boolean; apoio: boolean; colunas: Coluna[]; ocultas: number;
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
   marcadas: Set<string>; onColuna: (tabela: string, coluna: string) => void; // colunas escolhidas para ligar
   expandida: boolean; onExpandir: (tabela: string) => void; // todas as colunas só desta tabela
-  descricao: string; onBalao: (b: Balao | null) => void;
+  telas: string[][]; onBalao: (b: Balao | null) => void;
+  // arrastar uma coluna até a coluna de outra tabela; alvo = coluna desta tabela sob o cursor durante o arraste
+  onArrastarColuna: (tabela: string, coluna: string, e: React.PointerEvent<HTMLElement>) => void; alvo: string | null;
 };
 type Ponta = { tabela: string; coluna: string; pk: boolean };
-// uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação
-type Ponto = { x: number; y: number };
+// uma aresta por par de colunas; "primeira" leva as marcas N/1 da relação e o post-it
 type DadosRelacao = {
   estado: Relacao['estado']; destaque: boolean; apagada: boolean; juncao: string; primeira: boolean; colOrigem: string; colDestino: string;
-  pontos?: Ponto[]; // trajeto calculado pelo ELK (contorna os cartões)
+  pontos?: Ponto[]; // trajeto calculado pelo ELK (contorna os cartões); some quando uma das tabelas foi arrastada
+  relId: string; nota?: NotaRelacao; // informativo de incidentes: a linha fica turquesa e o post-it vai na primeira
+  onMoverNota?: (relId: string, posicao: number) => void; onEditarNota?: (relId: string) => void;
 };
 
 // medidas fixas do cartão (iguais ao CSS .tb / .tb-cab / .tb-col / .tb-mais)
@@ -67,16 +77,22 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
   const sair = () => data.onBalao(null);
   return (
     <div className={`tb ${data.foco ? 'tb-foco' : ''} ${data.selecionada ? 'tb-sel' : ''} tb-${data.estado}`}>
-      <div className="tb-cab" onMouseEnter={e => balao(e, { titulo: data.nome, detalhe: `tabela · ${data.engine}`, texto: data.descricao })} onMouseLeave={sair}>
+      <div className="tb-cab" title="Arraste para organizar o diagrama"
+        onMouseEnter={e => balao(e, { titulo: data.nome, detalhe: `tabela · ${data.engine}`,
+          lista: { rotulo: `Telas que usam (${data.telas.length})`, itens: data.telas.map(t => t.join(' › ')), vazio: 'Nenhuma tela usa esta tabela ainda.' } })}
+        onMouseLeave={sair}>
         <span className={b && data.nome.toLowerCase().includes(b) ? 'achou' : undefined}>{data.nome}</span>
         {data.apoio && <em title="Tabela de apoio: muitas outras tabelas apontam para ela">apoio</em>}
         <small>{data.engine}</small>
       </div>
       {data.colunas.map(c => (
-        <div key={c.nome} className={`tb-col ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${data.acesas.has(c.nome) ? 'ligada' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''} ${data.marcadas.has(c.nome) ? 'marcada' : ''}`}
+        // nodrag/nopan: arrastar a coluna liga colunas (não move a tabela nem o diagrama)
+        <div key={c.nome} data-tabela={data.nome} data-coluna={c.nome}
+          className={`tb-col nodrag nopan ${c.pk ? 'pk' : ''} ${data.chaves.has(c.nome) ? 'fk' : ''} ${data.acesas.has(c.nome) ? 'ligada' : ''} ${b && c.nome.toLowerCase().includes(b) ? 'achou' : ''} ${data.marcadas.has(c.nome) ? 'marcada' : ''} ${data.alvo === c.nome ? 'alvo' : ''}`}
           onMouseEnter={e => balao(e, { titulo: c.nome, detalhe: `${c.tipo}${c.pk ? ' · chave primária' : ''}`, texto: c.descricao ?? '',
-                                        dica: 'Clique para ligar esta coluna à coluna de outra tabela' })}
+                                        dica: 'Arraste até a coluna de outra tabela (ou clique numa e depois na outra) para ligar' })}
           onMouseLeave={sair}
+          onPointerDown={e => { if (e.button === 0) { sair(); data.onArrastarColuna(data.nome, c.nome, e); } }}
           onClick={e => { e.stopPropagation(); sair(); data.onColuna(data.nome, c.nome); }}>
           <Handle type="target" position={Position.Left} id={`${c.nome}-t`} className="tb-alca" isConnectable={false} />
           <i className="tb-ic">{icone(c.tipo)}</i>
@@ -104,7 +120,13 @@ function BalaoFlutuante({ b }: { b: Balao }) {
   return createPortal(
     <div className="diag-balao" role="tooltip" style={style}>
       <div className="diag-balao-cab"><b>{b.titulo}</b><small>{b.detalhe}</small></div>
-      {b.texto ? <p>{b.texto}</p> : <p className="sem">Descrição ainda não cadastrada.</p>}
+      {b.lista ? (<>
+        <small className="rotulo">{b.lista.rotulo}</small>
+        {b.lista.itens.length ? (
+          <ul>{b.lista.itens.slice(0, 8).map(i => <li key={i}>{i}</li>)}
+            {b.lista.itens.length > 8 && <li className="mais">+ {b.lista.itens.length - 8} outras</li>}</ul>
+        ) : <p className="sem">{b.lista.vazio}</p>}
+      </>) : b.texto ? <p>{b.texto}</p> : <p className="sem">Descrição ainda não cadastrada.</p>}
       {b.dica && <small className="dica">{b.dica}</small>}
     </div>,
     document.body
@@ -112,6 +134,62 @@ function BalaoFlutuante({ b }: { b: Balao }) {
 }
 
 /* ---------- ligação com marcas N (lado da chave estrangeira) e 1 (lado referenciado) ---------- */
+/** Post-it do informativo de incidentes: fica sobre a linha e desliza ao longo dela (posição de 0 a 1). */
+function PostIt({ caminho, d }: { caminho: string; d: DadosRelacao }) {
+  const ref = useRef<SVGPathElement>(null);
+  const nota = d.nota!;
+  const [t, setT] = useState(nota.posicao);
+  useEffect(() => { setT(nota.posicao); }, [nota.posicao]);
+  const [pt, setPt] = useState<Ponto | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const p = el.getPointAtLength(el.getTotalLength() * t);
+    setPt({ x: p.x, y: p.y });
+  }, [caminho, t]);
+  const { screenToFlowPosition } = useReactFlow();
+
+  // arrastar: o post-it vai para o ponto da linha mais perto do cursor; clique sem arrastar abre para editar
+  const arrastar = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || !ref.current) return;
+    e.stopPropagation();
+    const el = ref.current, total = el.getTotalLength();
+    const amostras = Array.from({ length: 121 }, (_, i) => { const p = el.getPointAtLength((total * i) / 120); return { t: i / 120, x: p.x, y: p.y }; });
+    const x0 = e.clientX, y0 = e.clientY;
+    let moveu = false, ultimo = t;
+    const mover = (ev: PointerEvent) => {
+      if (!moveu && Math.hypot(ev.clientX - x0, ev.clientY - y0) < 4) return;
+      moveu = true;
+      const f = screenToFlowPosition({ x: ev.clientX, y: ev.clientY });
+      ultimo = amostras.reduce((m, a) => ((a.x - f.x) ** 2 + (a.y - f.y) ** 2 < (m.x - f.x) ** 2 + (m.y - f.y) ** 2 ? a : m)).t;
+      setT(ultimo);
+    };
+    const soltar = () => {
+      window.removeEventListener('pointermove', mover);
+      window.removeEventListener('pointerup', soltar);
+      if (moveu) d.onMoverNota?.(d.relId, ultimo); else d.onEditarNota?.(d.relId);
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+  };
+
+  return (
+    <>
+      <path ref={ref} d={caminho} fill="none" stroke="none" />
+      {pt && (
+        <EdgeLabelRenderer>
+          <div className={`rel-postit nodrag nopan ${d.apagada ? 'apagada' : ''}`} role="button" tabIndex={0}
+            style={{ transform: `translate(-50%, -50%) translate(${pt.x}px, ${pt.y}px)` }}
+            title={`Informativo de incidentes${nota.por ? ` · ${nota.por}` : ''}\nArraste ao longo da linha · clique para editar`}
+            onPointerDown={arrastar} onKeyDown={e => { if (e.key === 'Enter') d.onEditarNota?.(d.relId); }}>
+            {nota.texto}
+          </div>
+        </EdgeLabelRenderer>
+      )}
+    </>
+  );
+}
+
 function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }: EdgeProps<Edge<DadosRelacao>>) {
   const d = data!;
   // trajeto do ELK quando existe; senão, o traçado padrão do React Flow
@@ -119,10 +197,11 @@ function RelacaoAresta({ id, sourceX, sourceY, targetX, targetY, sourcePosition,
   const caminho = p && p.length > 1 ? caminhoArredondado(p)
     : getSmoothStepPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, borderRadius: 8, offset: 22 })[0];
   if (p && p.length > 1) { sourceX = p[0].x; sourceY = p[0].y; targetX = p[p.length - 1].x; targetY = p[p.length - 1].y; }
-  const est = `${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''}`;
+  const est = `${d.destaque ? 'destaque' : ''} ${d.apagada ? 'apagada' : ''} ${d.nota ? 'com-nota' : ''}`;
   return (
     <>
-      <BaseEdge id={id} path={caminho} className={`rel-aresta ${est} rel-${d.estado}`} />
+      <BaseEdge id={id} path={caminho} className={`rel-aresta ${est} rel-${d.estado}`} interactionWidth={14} />
+      {d.primeira && d.nota && <PostIt caminho={caminho} d={d} />}
       <EdgeLabelRenderer>
         {/* pontos de encaixe exatamente na linha de cada coluna */}
         <div className={`rel-ponto ${est}`} style={{ transform: `translate(-50%, -50%) translate(${sourceX}px, ${sourceY}px)` }} title={d.juncao} />
@@ -176,6 +255,17 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     else setBalao(null);
   }, []);
   useEffect(() => () => clearTimeout(esperaBalao.current), []);
+  // tabelas arrastadas pela equipe nesta tela (salvas no servidor; valem para todos)
+  const [movidas, setMovidas] = useState<Record<string, Ponto>>({});
+  // arrastar uma coluna até outra: a linha segue o cursor; soltar numa coluna de outra tabela abre a pergunta
+  type Arrasto = { de: Ponta; ox: number; oy: number; x0: number; y0: number; x: number; y: number; ativo: boolean; alvo: { tabela: string; coluna: string } | null };
+  const [arrasto, setArrasto] = useState<Arrasto | null>(null);
+  const arrastoRef = useRef<Arrasto | null>(null);
+  const arrastou = useRef(false); // o clique que vem logo depois de um arraste não conta como clique
+  // informativo de incidentes (post-it): a pergunta depois de validar e o editor ao clicar numa ligação
+  const [nota, setNota] = useState<{ relId: string; juncao: string; texto: string; existe: boolean; nova: boolean } | null>(null);
+  const [salvandoNota, setSalvandoNota] = useState(false);
+  const [erroNota, setErroNota] = useState('');
   const { fitView, zoomIn, zoomOut, setCenter, getZoom } = useReactFlow();
   const tema = useTema();
 
@@ -186,7 +276,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     setErro('');
     fetch(`/api/modulos/${modulo}/diagrama?tabelas=${encodeURIComponent(chave)}&nivel=${nivel}&apoio=${apoio}`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
-      .then((d: RespostaDiagrama) => { setResp(d); if (!recarga) setSel(null); })
+      .then((d: RespostaDiagrama) => { setResp(d); setMovidas(d.posicoes ?? {}); if (!recarga) setSel(null); })
       .catch(e => setErro(`Não foi possível carregar o diagrama (${e.message}).`));
     // recarga só pede os dados de novo (depois de ligar colunas), sem perder a tabela selecionada
   }, [modulo, chave, nivel, apoio, recarga]);
@@ -198,22 +288,60 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
 
   // 1º clique marca a coluna; clique na mesma desmarca; na mesma tabela troca; na coluna de outra tabela pergunta
   const escolherColuna = useCallback((tabela: string, coluna: string) => {
-    if (proposta) return;
+    if (proposta || nota) return;
+    if (arrastou.current) { arrastou.current = false; return; }
     const nova = { tabela, coluna, pk: ehPk(tabela, coluna) };
     if (!ponta || ponta.tabela === tabela) { setPonta(ponta?.tabela === tabela && ponta.coluna === coluna ? null : nova); return; }
     setProposta(orientar(ponta, nova));
-  }, [ponta, proposta, ehPk]);
+  }, [ponta, proposta, nota, ehPk]);
+
+  const iniciarArrasto = useCallback((tabela: string, coluna: string, e: React.PointerEvent<HTMLElement>) => {
+    if (proposta || nota) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const a: Arrasto = { de: { tabela, coluna, pk: ehPk(tabela, coluna) }, ox: r.right, oy: r.top + r.height / 2,
+                         x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, ativo: false, alvo: null };
+    arrastoRef.current = a;
+    setArrasto(a);
+  }, [proposta, nota, ehPk]);
+  const emArrasto = !!arrasto;
+  useEffect(() => {
+    if (!emArrasto) return;
+    const mover = (e: PointerEvent) => {
+      const a = arrastoRef.current;
+      if (!a) return;
+      const ativo = a.ativo || Math.hypot(e.clientX - a.x0, e.clientY - a.y0) > 6;
+      let alvo: Arrasto['alvo'] = null;
+      if (ativo) {
+        const el = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('.tb-col[data-tabela]');
+        if (el && el.dataset.tabela !== a.de.tabela) alvo = { tabela: el.dataset.tabela!, coluna: el.dataset.coluna! };
+      }
+      arrastoRef.current = { ...a, x: e.clientX, y: e.clientY, ativo, alvo };
+      setArrasto(arrastoRef.current);
+    };
+    const soltar = () => {
+      const a = arrastoRef.current;
+      arrastoRef.current = null;
+      setArrasto(null);
+      if (!a?.ativo) return;
+      arrastou.current = true;
+      window.setTimeout(() => { arrastou.current = false; }, 0); // o click (se vier) chega antes disso
+      if (a.alvo) { setPonta(null); setProposta(orientar(a.de, { ...a.alvo, pk: ehPk(a.alvo.tabela, a.alvo.coluna) })); }
+    };
+    window.addEventListener('pointermove', mover);
+    window.addEventListener('pointerup', soltar);
+    return () => { window.removeEventListener('pointermove', mover); window.removeEventListener('pointerup', soltar); };
+  }, [emArrasto, ehPk]);
 
   // foco no Validar ao abrir a pergunta, sem rolar o diagrama (autoFocus rola o canvas e corta o topo)
   const abriu = !!proposta;
   useEffect(() => { if (abriu) botaoValidar.current?.focus({ preventScroll: true }); }, [abriu]);
 
   useEffect(() => {
-    if (!ponta && !proposta) return;
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') cancelarLigacao(); };
+    if (!ponta && !proposta && !nota) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') { cancelarLigacao(); setNota(null); setErroNota(''); } };
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
-  }, [ponta, proposta, cancelarLigacao]);
+  }, [ponta, proposta, nota, cancelarLigacao]);
 
   const validar = async () => {
     if (!proposta) return;
@@ -221,7 +349,9 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     try {
       const rel = await api.ligarColunas(modulo, { ...proposta, observacao: obs });
       cancelarLigacao();
-      setAviso(`Ligação validada: ${rel.colunas.map(([a, b]) => `${rel.origem}.${a} → ${rel.destino}.${b}`).join(', ')}`);
+      const juncao = rel.colunas.map(([a, b]) => `${rel.origem}.${a} → ${rel.destino}.${b}`).join(', ');
+      setAviso(`Ligação validada: ${juncao}`);
+      setNota({ relId: rel.id, juncao, texto: rel.nota?.texto ?? '', existe: !!rel.nota, nova: true });
       setRecarga(n => n + 1);
       onLigou?.();
     } catch (e) {
@@ -231,6 +361,67 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     }
   };
   useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(''), 4000); return () => clearTimeout(t); }, [aviso]);
+
+  const editarNota = useCallback((relId: string) => {
+    const r = resp?.relacoes.find(x => x.id === relId);
+    if (!r || proposta) return;
+    setErroNota('');
+    setNota({ relId, juncao: r.colunas.map(([a, b]) => `${r.origem}.${a} → ${r.destino}.${b}`).join(', '),
+              texto: r.nota?.texto ?? '', existe: !!r.nota, nova: false });
+  }, [resp, proposta]);
+  const moverNota = useCallback((relId: string, posicao: number) => {
+    api.notaRelacao(modulo, relId, { posicao }).catch(e => setErro(`Não foi possível mover o informativo (${(e as Error).message}).`));
+  }, [modulo]);
+  const salvarNota = async () => {
+    if (!nota) return;
+    setSalvandoNota(true); setErroNota('');
+    try {
+      await api.notaRelacao(modulo, nota.relId, { texto: nota.texto });
+      setNota(null);
+      setAviso('Informativo de incidentes salvo: arraste o post-it ao longo da linha para posicionar.');
+      setRecarga(n => n + 1);
+    } catch (e) {
+      setErroNota((e as Error).message);
+    } finally {
+      setSalvandoNota(false);
+    }
+  };
+  const apagarNota = async () => {
+    if (!nota) return;
+    setSalvandoNota(true); setErroNota('');
+    try {
+      await api.apagarNota(modulo, nota.relId);
+      setNota(null);
+      setRecarga(n => n + 1);
+    } catch (e) {
+      setErroNota((e as Error).message);
+    } finally {
+      setSalvandoNota(false);
+    }
+  };
+  const abriuNota = !!nota;
+  const campoNota = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => { if (abriuNota) campoNota.current?.focus({ preventScroll: true }); }, [abriuNota]);
+
+  // mover tabelas: a posição acompanha o arraste e é salva ao soltar
+  const onNodesChange = useCallback((mudancas: NodeChange<Node<DadosTabela>>[]) => {
+    const novas: Record<string, Ponto> = {};
+    mudancas.forEach(m => { if (m.type === 'position' && m.position) novas[m.id] = m.position; });
+    if (Object.keys(novas).length) setMovidas(atual => ({ ...atual, ...novas }));
+  }, []);
+  const soltarTabela = useCallback((_: unknown, __: Node, arrastados: Node[]) => {
+    api.salvarPosicoes(modulo, chave, arrastados.map(n => ({ tabela: n.id, x: n.position.x, y: n.position.y })))
+      .catch(e => setErro(`Não foi possível salvar a posição (${(e as Error).message}).`));
+  }, [modulo, chave]);
+  const reorganizar = async () => {
+    try {
+      await api.reorganizar(modulo, chave);
+      setMovidas({});
+      requestAnimationFrame(() => fitView({ padding: 0.12, duration: 300 }));
+    } catch (e) {
+      setErro(`Não foi possível reorganizar (${(e as Error).message}).`);
+    }
+  };
 
   // colunas que participam de ligações (lado de cada tabela)
   const chavesPorTabela = useMemo(() => {
@@ -261,7 +452,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
                 chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '',
                 marcadas: new Set<string>(), onColuna: () => {}, expandida, onExpandir: () => {},
-                descricao: t.descricao ?? '', onBalao: () => {} }
+                telas: t.telas ?? [], onBalao: () => {}, onArrastarColuna: () => {}, alvo: null }
       } as Node<DadosTabela>;
     });
     const linhaDe = new Map(nos.map(n => [n.id, new Map(n.data.colunas.map((c, i) => [c.nome, i]))]));
@@ -274,7 +465,8 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         .map(([a, b], i) => ({
           id: `${r.id}#${i}`, source: r.origem, target: r.destino, type: 'relacao',
           sourceHandle: `${a}-s`, targetHandle: `${b}-t`,
-          data: { estado: r.estado, destaque: false, apagada: false, juncao, primeira: i === 0, colOrigem: a, colDestino: b }
+          data: { estado: r.estado, destaque: false, apagada: false, juncao, primeira: i === 0, colOrigem: a, colDestino: b,
+                  relId: r.id, nota: r.nota }
         } as Edge<DadosRelacao>));
     });
 
@@ -356,19 +548,25 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
     base.arestas.forEach(e => {
       if (centro.has(e.source) || centro.has(e.target)) { acender(e.source, e.data!.colOrigem); acender(e.target, e.data!.colDestino); }
     });
+    const alvo = arrasto?.alvo;
     return {
       nos: base.nos.map(n => ({
         ...n,
+        position: movidas[n.id] ?? n.position,
         data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
                 estado: apagar ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
-                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir, onBalao: mostrarBalao }
+                marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir, onBalao: mostrarBalao,
+                onArrastarColuna: iniciarArrasto, alvo: alvo?.tabela === n.id ? alvo.coluna : null }
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
-        return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, destaque: toca, apagada: apagar && !toca } };
+        // tabela arrastada: o trajeto do ELK não serve mais; a linha passa a seguir as tabelas
+        const pontos = movidas[e.source] || movidas[e.target] ? undefined : e.data!.pontos;
+        return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, pontos, destaque: toca, apagada: apagar && !toca,
+                                                     onMoverNota: moverNota, onEditarNota: editarNota } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, arrasto?.alvo, iniciarArrasto, moverNota, editarNota]);
 
   useEffect(() => {
     if (!base.nos.length) return;
@@ -417,16 +615,21 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         <label className="diag-check"><input id="diag-apoio" type="checkbox" checked={apoio} onChange={e => setApoio(e.target.checked)} /> Tabelas de apoio</label>
         <input id="diag-busca" type="search" placeholder="Buscar tabela ou coluna (Enter)" value={busca}
           onChange={e => setBusca(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') buscar(); }} />
-        <span className="diag-dica">Clique numa tabela para iluminar as ligações · duplo clique abre a ficha · clique numa coluna e na de outra tabela para ligar</span>
+        {Object.keys(movidas).length > 0 && (
+          <button type="button" className="diag-reorganizar" onClick={reorganizar} title="Desfaz as posições arrastadas desta tela (para todos)">Reorganizar</button>
+        )}
+        <span className="diag-dica">Arraste a tabela pelo nome para organizar · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
       </div>
       <div className="diag-canvas" ref={setCanvas}>
       <ReactFlow
         nodes={nos} edges={arestas} nodeTypes={tiposNo} edgeTypes={tiposAresta}
         nodesConnectable={false} edgesFocusable={false} minZoom={0.15} maxZoom={1.6} colorMode={tema === 'escuro' ? 'dark' : 'light'}
+        onNodesChange={onNodesChange} onNodeDragStop={soltarTabela} nodeDragThreshold={4}
+        onEdgeClick={(_, e) => editarNota(e.data!.relId)}
         fitView fitViewOptions={{ padding: 0.12 }}
         onNodeClick={(_, n) => setSel(n.id === sel ? null : n.id)}
         onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}
-        onPaneClick={() => { setSel(null); if (!proposta) setPonta(null); }}
+        onPaneClick={() => { if (arrastou.current) return; setSel(null); if (!proposta) setPonta(null); }}
         onMoveStart={() => mostrarBalao(null)}
         proOptions={{ hideAttribution: true }}
       >
@@ -435,6 +638,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
         <span><i className="lg-foco" />Tabela da tela</span>
         <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha" /></svg>Confirmada / documentada</span>
         <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha sug" /></svg>Sugerida</span>
+        <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha nota" /></svg>Com informativo de incidentes</span>
         <span><b className="rel-marca estatica">N</b>→<b className="rel-marca estatica">1</b> muitas para uma</span>
         {resp && resp.apoio_ocultas.length > 0 && !apoio && <span className="lg-ocultas">Ocultas: {resp.apoio_ocultas.join(', ')}</span>}
       </Panel>
@@ -465,8 +669,27 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
           </div>
         </Panel>
       )}
-      {aviso && <Panel position="top-center" className="diag-ligando" role="status">{aviso}</Panel>}
-      {sel && !ponta && !proposta && (
+      {nota && (
+        <Panel position="top-center" className="diag-pergunta diag-nota" role="dialog" aria-labelledby="diag-nota-titulo">
+          <h3 id="diag-nota-titulo">{nota.nova ? 'Adicionar um informativo de incidentes?' : 'Informativo de incidentes'}</h3>
+          <p className="juncao"><code>{nota.juncao}</code></p>
+          <p className="ajuda">O que acontece com as tabelas ligadas se, num atendimento, o valor desta coluna for apagado ou alterado?
+            Fica como um post-it em cima da linha.</p>
+          <textarea ref={campoNota} value={nota.texto} maxLength={1000} rows={4} aria-label="Informativo de incidentes"
+            onChange={e => setNota({ ...nota, texto: e.target.value })}
+            placeholder="Ex.: se o código do cliente for apagado na venda, o crediário perde a ligação com o cadastro e a venda some do extrato." />
+          {erroNota && <p className="erro" role="alert">{erroNota}</p>}
+          <div className="acoes">
+            {nota.existe && <button type="button" className="btn btn-perigo" onClick={apagarNota} disabled={salvandoNota}>Apagar</button>}
+            <button type="button" className="btn" onClick={() => { setNota(null); setErroNota(''); }} disabled={salvandoNota}>
+              {nota.nova ? 'Agora não' : 'Fechar'}</button>
+            <button type="button" className="btn btn-primario" onClick={salvarNota} disabled={salvandoNota || !nota.texto.trim()}>
+              {salvandoNota ? 'Salvando…' : nota.existe ? 'Salvar' : 'Adicionar informativo'}</button>
+          </div>
+        </Panel>
+      )}
+      {aviso && !nota && <Panel position="top-center" className="diag-ligando" role="status">{aviso}</Panel>}
+      {sel && !ponta && !proposta && !nota && (
         <Panel position="top-left" className="diag-sel">
           <b>{sel}</b> · {arestas.filter(e => e.data!.destaque).length} ligações
           <button type="button" className="link" onClick={() => onAbrirTabela(sel)}>Abrir ficha</button>
@@ -475,7 +698,14 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou }: Props) {
       {erro && <Panel position="top-center" className="diag-erro">{erro}</Panel>}
       </ReactFlow>
       </div>
-      {balao && <BalaoFlutuante b={balao} />}
+      {balao && !arrasto?.ativo && <BalaoFlutuante b={balao} />}
+      {arrasto?.ativo && createPortal(
+        <svg className="diag-arrasto" aria-hidden="true">
+          <line x1={arrasto.ox} y1={arrasto.oy} x2={arrasto.x} y2={arrasto.y} className={arrasto.alvo ? 'no-alvo' : ''} />
+          <circle cx={arrasto.x} cy={arrasto.y} r={5} className={arrasto.alvo ? 'no-alvo' : ''} />
+        </svg>,
+        document.body
+      )}
     </div>
   );
 }

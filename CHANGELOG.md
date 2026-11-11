@@ -30,6 +30,17 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   uma sugestão e o grau de confiança em cada linha; a equipe confere e `POST /api/descricoes/importar` grava só as
   linhas com Conferido = S. As descrições ficam numa tabela própria (migração 009, `descricoes`), por módulo, e
   sobrevivem a uma nova importação do catálogo. Passo a passo em `docs/dicionario-de-dados.md`.
+- Diagrama interativo:
+  - **Organizar:** arraste a tabela pelo nome para onde ficar mais fácil de entender. As ligações acompanham, e a posição
+    fica salva por tela, para toda a equipe (migração 010, `posicoes_diagrama`). "Reorganizar" volta ao layout automático.
+  - **Ligar arrastando:** pressione uma coluna e solte na coluna de outra tabela; a linha segue o cursor e abre a mesma
+    pergunta Validar/Descartar. O clique numa coluna e depois na outra continua valendo.
+  - **Informativo de incidentes:** depois de validar, o diagrama pergunta se quer anotar o impacto (ex.: o que acontece
+    com as tabelas ligadas se o valor da coluna for apagado num atendimento). A anotação vira um post-it em cima da
+    linha, que desliza ao longo dela, e a ligação fica turquesa (as outras seguem laranja). Clicar numa ligação ou no
+    post-it abre para incluir, editar ou apagar (migração 010, `relacao_notas`).
+  - O balão da tabela passa a mostrar as telas que usam a tabela (a descrição continua na ficha e o balão das colunas
+    segue com o dicionário de dados).
 
 ### Alterado
 - Com o login ligado, toda a API pede sessão (menos `/api/saude` e as rotas do login) e a autoria passa a ser
