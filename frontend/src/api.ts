@@ -1,4 +1,4 @@
-import type { Catalogo, Manual, NotaRelacao, NovaRelacao, Relacao, TrechoManual, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
+import type { Catalogo, Manual, NotaRelacao, NovaRelacao, ParteTrecho, Relacao, TrechoManual, ManualEntrada, ManualResumo, MenuFicha, MenuNo, Modulo, Rascunho } from './tipos';
 
 // login Microsoft: com ele ligado, a API responde 401 quando a sessão termina e quem estiver ouvindo é avisado
 // (a interface mostra "Sua sessão terminou" sem apagar o que está aberto, como um manual em edição)
@@ -132,7 +132,8 @@ export const api = {
   },
   manual: (codigo: string) => json<Manual>(`/api/manuais/${enc(codigo)}`),
   trechos: (codigo: string, tabela: string) => json<TrechoManual[]>(`/api/manuais/${enc(codigo)}/trechos?tabela=${enc(tabela)}`),
-  async ligarTrecho(codigo: string, trecho: { tabela: string; secao: number; bloco: number; texto: string }): Promise<TrechoManual> {
+  /** um trecho pode pegar vários blocos do manual (uma parte por bloco) */
+  async ligarTrecho(codigo: string, trecho: { tabela: string; partes: ParteTrecho[] }): Promise<TrechoManual> {
     const r = await fetch(`/api/manuais/${enc(codigo)}/trechos`, enviar('POST', trecho));
     if (!r.ok) throw await erroDe(r);
     return r.json();
