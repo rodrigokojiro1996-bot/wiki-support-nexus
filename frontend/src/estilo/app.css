@@ -358,6 +358,20 @@ button.tb-mais:hover { color: var(--accent); background: color-mix(in srgb, var(
 .tb-cab { cursor: grab; }
 .react-flow__node.dragging .tb-cab { cursor: grabbing; }
 .tb-col.alvo { background: color-mix(in srgb, var(--marca) 22%, transparent); box-shadow: inset 3px 0 0 var(--marca), inset -3px 0 0 var(--marca); }
+/* menu do botão direito do diagrama: adicionar tabela, ações da tabela */
+.diag-menu { position: fixed; z-index: 1001; min-width: 220px; padding: 5px; background: var(--surface); color: var(--fg);
+             border: 1px solid var(--line); border-radius: 9px; box-shadow: 0 10px 28px rgb(0 0 0 / 20%); font-size: 13px; display: flex; flex-direction: column; }
+.diag-menu.buscando { width: 340px; }
+.diag-menu button { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.diag-menu button:hover, .diag-menu button:focus-visible { background: var(--surface-2); }
+.diag-menu button.perigo { color: var(--laranja); font-weight: 600; }
+.diag-menu .dm-titulo { padding: 6px 10px 4px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.diag-menu .dm-nota { display: block; padding: 6px 10px; margin: 0; color: var(--muted); font-size: 12px; }
+.dm-busca input { width: 100%; box-sizing: border-box; margin-bottom: 4px; }
+.dm-busca ul { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow: auto; }
+.dm-busca button code { font-weight: 700; }
+.dm-busca button small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-cab em.tb-adicionada { color: var(--marca); border-color: var(--marca); }
 .diag-arrasto { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 999; pointer-events: none; overflow: visible; }
 .diag-arrasto line { stroke: var(--laranja); stroke-width: 2.5; stroke-dasharray: 6 4; }
 .diag-arrasto circle { fill: var(--laranja); }

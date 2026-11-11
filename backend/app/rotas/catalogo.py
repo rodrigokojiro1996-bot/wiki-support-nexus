@@ -21,6 +21,15 @@ def catalogo(modulo: str, con=Depends(db)):
     return {"banco": banco, "tabelas": tabelas, "relacoes": relacoes.listar(con, banco)}
 
 
+@router.get("/tabelas")
+def tabelas_do_modulo(modulo: str, con=Depends(db)):
+    """Nome e descrição de todas as tabelas do módulo (a busca do "Adicionar tabela" do diagrama)."""
+    banco = banco_do_modulo(con, modulo)
+    desc = descricoes.das_tabelas(con, modulo)
+    return [{"nome": t["nome"], "descricao": desc.get(t["nome"], "")}
+            for t in con.execute("SELECT nome FROM tabelas WHERE banco = ? ORDER BY nome", (banco,))]
+
+
 @router.get("/diagrama")
 def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con=Depends(db)):
     """Diagrama ER em volta das tabelas de uma tela: as tabelas da tela, as vizinhas até `nivel` e as ligações entre todas."""
@@ -29,6 +38,14 @@ def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con
     foco = [t for t in dict.fromkeys(tabelas.split(",")) if t in existentes]
     rels = [x for x in relacoes.listar(con, banco) if x["estado"] != "descartada"]
     rec = recortar(foco, rels, nivel, apoio)
+    # tabelas que a equipe adicionou à mão nesta tela: entram sempre, com as ligações delas com as que já estão
+    extras = [r["tabela"] for r in con.execute(
+        "SELECT tabela FROM diagrama_tabelas WHERE modulo = ? AND chave = ? ORDER BY em, tabela", (modulo, tabelas))
+        if r["tabela"] in existentes]
+    if set(extras) - rec.incluidas:
+        rec.incluidas |= set(extras)
+        rec.arestas = [r for r in rels if r["origem"] in rec.incluidas and r["destino"] in rec.incluidas]
+        rec.apoio_ocultas = [t for t in rec.apoio_ocultas if t not in rec.incluidas]
     # uma consulta para as tabelas e uma para as colunas (não duas por tabela)
     nomes = sorted(rec.incluidas)
     marca = ",".join("?" * len(nomes))
@@ -48,7 +65,7 @@ def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con
                              WHERE m.modulo = ? AND mt.tabela IN ({marca}) ORDER BY mt.menu""", (modulo, *nomes)):
         telas[m["tabela"]].append([p["titulo"] for p in caminho_menu(con, m["menu"])])
     saida = [{"nome": n, "engine": info[n]["engine"], "linhas": info[n]["linhas"], "foco": n in foco, "apoio": n in rec.apoio,
-              "descricao": desc_t.get(n, ""), "telas": telas[n], "colunas": colunas[n]} for n in nomes]
+              "adicionada": n in extras and n not in foco, "descricao": desc_t.get(n, ""), "telas": telas[n], "colunas": colunas[n]} for n in nomes]
     # o que a equipe organizou: posições arrastadas desta tela e o informativo (post-it) de cada ligação
     posicoes = {r["tabela"]: {"x": r["x"], "y": r["y"]} for r in con.execute(
         "SELECT tabela, x, y FROM posicoes_diagrama WHERE modulo = ? AND chave = ?", (modulo, tabelas))}
@@ -78,6 +95,42 @@ def salvar_posicoes(modulo: str, corpo: Posicoes, con=Depends(db), por: str = De
                        ON CONFLICT(modulo, chave, tabela) DO UPDATE SET x = excluded.x, y = excluded.y, por = excluded.por,
                        em = datetime('now', 'localtime')""",
                     [(modulo, corpo.chave, p.tabela, p.x, p.y, por) for p in corpo.posicoes])
+    con.commit()
+    return {"ok": True}
+
+
+class TabelaAdicionada(BaseModel):
+    chave: str = Field(max_length=20000)  # as tabelas da tela, exatamente como o GET /diagrama recebe
+    tabela: str = Field(min_length=1, max_length=200)
+    x: float | None = None  # onde a pessoa clicou com o botão direito (coordenadas do diagrama)
+    y: float | None = None
+
+
+@router.post("/diagrama/tabelas", status_code=201)
+def adicionar_tabela(modulo: str, corpo: TabelaAdicionada, con=Depends(db), por: str = Depends(usuario)):
+    """Põe uma tabela no diagrama da tela (para todos), no ponto em que a pessoa clicou, para ligar colunas com ela."""
+    banco = banco_do_modulo(con, modulo)
+    if not con.execute("SELECT 1 FROM tabelas WHERE banco = ? AND nome = ?", (banco, corpo.tabela)).fetchone():
+        raise HTTPException(404, f"Tabela {corpo.tabela} não existe em {banco}")
+    con.execute("INSERT OR IGNORE INTO diagrama_tabelas (modulo, chave, tabela, por) VALUES (?, ?, ?, ?)",
+                (modulo, corpo.chave, corpo.tabela, por))
+    if corpo.x is not None and corpo.y is not None:
+        con.execute("""INSERT INTO posicoes_diagrama (modulo, chave, tabela, x, y, por) VALUES (?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(modulo, chave, tabela) DO UPDATE SET x = excluded.x, y = excluded.y, por = excluded.por,
+                       em = datetime('now', 'localtime')""",
+                    (modulo, corpo.chave, corpo.tabela, round(corpo.x), round(corpo.y), por))
+    con.commit()
+    return {"ok": True}
+
+
+@router.delete("/diagrama/tabelas")
+def remover_tabela(modulo: str, chave: str, tabela: str, con=Depends(db)):
+    """Tira do diagrama da tela uma tabela adicionada à mão (as ligações feitas com ela continuam valendo)."""
+    banco_do_modulo(con, modulo)
+    apagou = con.execute("DELETE FROM diagrama_tabelas WHERE modulo = ? AND chave = ? AND tabela = ?", (modulo, chave, tabela)).rowcount
+    if not apagou:
+        raise HTTPException(404, f"{tabela} não foi adicionada a este diagrama")
+    con.execute("DELETE FROM posicoes_diagrama WHERE modulo = ? AND chave = ? AND tabela = ?", (modulo, chave, tabela))
     con.commit()
     return {"ok": True}
 

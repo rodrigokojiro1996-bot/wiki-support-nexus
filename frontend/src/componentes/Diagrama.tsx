@@ -17,6 +17,7 @@ const elk = new ELK();
 type Coluna = { nome: string; tipo: string; pk: boolean; descricao?: string };
 type TabelaDiag = {
   nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; colunas: Coluna[];
+  adicionada?: boolean; // posta à mão neste diagrama (botão direito no fundo › Adicionar tabela)
   telas?: string[][]; // caminho de cada tela que usa a tabela (menu › submenu › tela)
 };
 type RespostaDiagrama = {
@@ -27,7 +28,7 @@ type RespostaDiagrama = {
 type Balao = { titulo: string; detalhe: string; texto?: string; lista?: { rotulo: string; itens: string[]; vazio: string }; dica?: string; rect: DOMRect };
 
 type DadosTabela = {
-  nome: string; engine: string; foco: boolean; apoio: boolean; colunas: Coluna[]; ocultas: number;
+  nome: string; engine: string; foco: boolean; apoio: boolean; adicionada: boolean; colunas: Coluna[]; ocultas: number;
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
   marcadas: Set<string>; onColuna: (tabela: string, coluna: string) => void; // colunas escolhidas para ligar
   expandida: boolean; onExpandir: (tabela: string) => void; // todas as colunas só desta tabela
@@ -83,6 +84,7 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
         onMouseLeave={sair}>
         <span className={b && data.nome.toLowerCase().includes(b) ? 'achou' : undefined}>{data.nome}</span>
         {data.apoio && <em title="Tabela de apoio: muitas outras tabelas apontam para ela">apoio</em>}
+        {data.adicionada && <em className="tb-adicionada" title="Adicionada à mão neste diagrama (botão direito para remover)">adicionada</em>}
         <small>{data.engine}</small>
       </div>
       {data.colunas.map(c => (
@@ -223,6 +225,62 @@ type Props = {
   onClicarTabela?: (nome: string) => void; // clique simples: abre o painel ao lado (manual da tela ou ficha)
 };
 
+type MenuDiagrama = { x: number; y: number; flow: Ponto; tabela?: string; buscando: boolean };
+
+/** Menu do botão direito: fica onde o cursor estava (dentro da janela); fecha com Esc ou clicando fora. */
+function MenuContexto({ m, onFechar, children }: { m: MenuDiagrama; onFechar: () => void; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ left: m.x, top: m.y });
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setPos({ left: Math.max(8, Math.min(m.x, window.innerWidth - r.width - 8)), top: Math.max(8, Math.min(m.y, window.innerHeight - r.height - 8)) });
+  }, [m.x, m.y, m.buscando]);
+  useEffect(() => {
+    const fora = (e: PointerEvent) => { if (!ref.current?.contains(e.target as HTMLElement)) onFechar(); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onFechar(); };
+    window.addEventListener('pointerdown', fora, true);
+    window.addEventListener('keydown', esc);
+    return () => { window.removeEventListener('pointerdown', fora, true); window.removeEventListener('keydown', esc); };
+  }, [onFechar]);
+  return createPortal(
+    <div ref={ref} className={`diag-menu ${m.buscando ? 'buscando' : ''}`} role="menu" style={pos} onContextMenu={e => e.preventDefault()}>
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+/** Busca de tabela do módulo para pôr no diagrama: por nome ou descrição; Enter escolhe a primeira. */
+function BuscaTabela({ lista, naTela, onEscolher }: {
+  lista: { nome: string; descricao: string }[] | null; naTela: Set<string>; onEscolher: (nome: string) => void;
+}) {
+  const [termo, setTermo] = useState('');
+  const t = termo.trim().toLowerCase();
+  const achadas = useMemo(() => (lista ?? [])
+    .filter(x => !naTela.has(x.nome) && (!t || x.nome.toLowerCase().includes(t) || x.descricao.toLowerCase().includes(t)))
+    // quem começa com o termo vem antes
+    .sort((a, b) => Number(!a.nome.toLowerCase().startsWith(t)) - Number(!b.nome.toLowerCase().startsWith(t)))
+    .slice(0, 60), [lista, naTela, t]);
+  return (
+    <div className="dm-busca">
+      <input autoFocus type="search" value={termo} onChange={e => setTermo(e.target.value)} placeholder="Nome ou descrição da tabela"
+        aria-label="Buscar tabela para adicionar" onKeyDown={e => { if (e.key === 'Enter' && achadas[0]) onEscolher(achadas[0].nome); }} />
+      {!lista ? <p className="dm-nota">Carregando as tabelas…</p>
+        : achadas.length ? (
+          <ul>{achadas.map(x => (
+            <li key={x.nome}>
+              <button type="button" role="menuitem" onClick={() => onEscolher(x.nome)}>
+                <code>{x.nome}</code>{x.descricao && <small>{x.descricao}</small>}
+              </button>
+            </li>
+          ))}</ul>
+        ) : <p className="dm-nota">Nenhuma tabela {t ? `com “${termo}”` : ''} fora do diagrama.</p>}
+    </div>
+  );
+}
+
 /**
  * Onde cada tabela precisa ir para nenhuma ficar por cima de outra. As que estão sendo arrastadas ficam firmes;
  * as que a equipe posicionou cedem menos que as do layout automático.
@@ -285,6 +343,10 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
   // recarregar depois de validar uma ligação ou salvar um informativo não reenquadra o diagrama
   const manterVista = useRef(false);
   const nosRef = useRef<Node<DadosTabela>[]>([]); // cartões do layout, para o soltar calcular os afastamentos
+  // botão direito: no fundo, adicionar tabela (no ponto clicado); numa tabela, ficha, colunas e remover
+  const [menu, setMenu] = useState<MenuDiagrama | null>(null);
+  const fecharMenu = useCallback(() => setMenu(null), []);
+  const [todasTabelas, setTodasTabelas] = useState<{ modulo: string; lista: { nome: string; descricao: string }[] } | null>(null);
   // arrastar uma coluna até outra: a linha segue o cursor; soltar numa coluna de outra tabela abre a pergunta
   type Arrasto = { de: Ponta; ox: number; oy: number; x0: number; y0: number; x: number; y: number; ativo: boolean; alvo: { tabela: string; coluna: string } | null };
   const [arrasto, setArrasto] = useState<Arrasto | null>(null);
@@ -294,7 +356,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
   const [nota, setNota] = useState<{ relId: string; juncao: string; texto: string; existe: boolean; nova: boolean } | null>(null);
   const [salvandoNota, setSalvandoNota] = useState(false);
   const [erroNota, setErroNota] = useState('');
-  const { fitView, zoomIn, zoomOut, setCenter, getZoom } = useReactFlow();
+  const { fitView, zoomIn, zoomOut, setCenter, getZoom, screenToFlowPosition } = useReactFlow();
   const tema = useTema();
 
   const chave = tabelas.join(',');
@@ -495,7 +557,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       const altura = BORDA * 2 + CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length || expandida ? RODAPE : 0);
       return {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
-        data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
+        data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, adicionada: !!t.adicionada, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
                 chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '',
                 marcadas: new Set<string>(), onColuna: () => {}, expandida, onExpandir: () => {},
                 telas: t.telas ?? [], onBalao: () => {}, onArrastarColuna: () => {}, alvo: null }
@@ -515,6 +577,10 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
                   relId: r.id, nota: r.nota }
         } as Edge<DadosRelacao>));
     });
+
+    // tabela adicionada à mão que já tem lugar salvo fica fora do layout automático: assim, pôr (ou expandir) uma
+    // tabela no diagrama não faz as outras mudarem de lugar
+    const foraDoLayout = new Set(resp.tabelas.filter(t => t.adicionada && resp.posicoes?.[t.nome]).map(t => t.nome));
 
     // portas: saída à direita na coluna de origem (FK), entrada à esquerda na coluna de destino (PK)
     const portas = new Map<string, { id: string; x: number; y: number; width: number; height: number; layoutOptions: Record<string, string> }[]>();
@@ -542,10 +608,11 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
         'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
         'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES'
       },
-      edges: arestas.map(e => ({ id: e.id, sources: [porta(e.source, e.data!.colOrigem, 'E')], targets: [porta(e.target, e.data!.colDestino, 'W')] })),
+      edges: arestas.filter(e => !foraDoLayout.has(e.source) && !foraDoLayout.has(e.target))
+        .map(e => ({ id: e.id, sources: [porta(e.source, e.data!.colOrigem, 'E')], targets: [porta(e.target, e.data!.colDestino, 'W')] })),
       children: []
     };
-    grafo.children = nos.map(n => ({ id: n.id, width: LARGURA, height: n.height!, ports: portas.get(n.id) ?? [],
+    grafo.children = nos.filter(n => !foraDoLayout.has(n.id)).map(n => ({ id: n.id, width: LARGURA, height: n.height!, ports: portas.get(n.id) ?? [],
                                      layoutOptions: { 'elk.portConstraints': 'FIXED_POS' } }));
 
     elk.layout(grafo).then(res => {
@@ -645,6 +712,50 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
     if (achados.length) fitView({ nodes: achados.map(n => ({ id: n.id })), padding: 0.3, duration: 400 });
   }, [termo, base, fitView]);
 
+  // botão direito no fundo: adicionar tabela no ponto clicado; numa tabela: ações dela
+  const abrirMenu = (e: React.MouseEvent | MouseEvent, tabela?: string) => {
+    e.preventDefault();
+    if (proposta || nota) return;
+    mostrarBalao(null);
+    const flow = screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setMenu({ x: e.clientX, y: e.clientY, flow, tabela, buscando: false });
+  };
+  const buscarParaAdicionar = () => {
+    setMenu(m => (m ? { ...m, buscando: true } : m));
+    if (todasTabelas?.modulo !== modulo) {
+      api.tabelasDoModulo(modulo).then(lista => setTodasTabelas({ modulo, lista }))
+        .catch(e => setErro(`Não foi possível listar as tabelas (${(e as Error).message}).`));
+    }
+  };
+  const adicionarTabela = async (nome: string) => {
+    if (!menu) return;
+    const { flow } = menu;
+    setMenu(null);
+    try {
+      // o cartão fica com o cabeçalho no ponto clicado
+      await api.adicionarTabela(modulo, chave, nome, flow.x - LARGURA / 2, flow.y - CAB / 2);
+      setExpandidas(atual => new Set(atual).add(nome)); // todas as colunas à mostra, para escolher qual ligar
+      manterVista.current = true;
+      setRecarga(n => n + 1);
+      setAviso(`${nome} adicionada: arraste uma coluna dela até a coluna de outra tabela para ligar.`);
+    } catch (e) {
+      setErro(`Não foi possível adicionar ${nome} (${(e as Error).message}).`);
+    }
+  };
+  const removerTabela = async (nome: string) => {
+    setMenu(null);
+    try {
+      await api.removerTabela(modulo, chave, nome);
+      if (sel === nome) setSel(null);
+      manterVista.current = true;
+      setRecarga(n => n + 1);
+    } catch (e) {
+      setErro(`Não foi possível remover ${nome} (${(e as Error).message}).`);
+    }
+  };
+  const naTela = new Set(resp?.tabelas.map(t => t.nome) ?? []);
+  const tabelaDoMenu = menu?.tabela ? resp?.tabelas.find(t => t.nome === menu.tabela) : undefined;
+
   if (!tabelas.length) return <div className="diag-vazio">Nenhuma tabela vinculada a esta tela. Vincule tabelas na aba Visão geral.</div>;
 
   return (
@@ -669,7 +780,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
         {Object.keys(movidas).length > 0 && (
           <button type="button" className="diag-reorganizar" onClick={reorganizar} title="Desfaz as posições arrastadas desta tela (para todos)">Reorganizar</button>
         )}
-        <span className="diag-dica">Arraste a tabela pelo nome para organizar (as outras abrem espaço) · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
+        <span className="diag-dica">Botão direito no fundo para adicionar uma tabela · arraste a tabela pelo nome para organizar (as outras abrem espaço) · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
       </div>
       <div className="diag-canvas" ref={setCanvas}>
       <ReactFlow
@@ -681,7 +792,9 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
         onNodeClick={(_, n) => { setSel(n.id === sel ? null : n.id); onClicarTabela?.(n.id); }}
         onNodeDoubleClick={(_, n) => onAbrirTabela(n.id)}
         onPaneClick={() => { if (arrastou.current) return; setSel(null); if (!proposta) setPonta(null); }}
-        onMoveStart={() => mostrarBalao(null)}
+        onMoveStart={() => { mostrarBalao(null); setMenu(null); }}
+        onPaneContextMenu={e => abrirMenu(e)}
+        onNodeContextMenu={(e, n) => abrirMenu(e, n.id)}
         proOptions={{ hideAttribution: true }}
       >
       <Background gap={22} size={1.2} />
@@ -749,7 +862,30 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       {erro && <Panel position="top-center" className="diag-erro">{erro}</Panel>}
       </ReactFlow>
       </div>
-      {balao && !arrasto?.ativo && <BalaoFlutuante b={balao} />}
+      {balao && !arrasto?.ativo && !menu && <BalaoFlutuante b={balao} />}
+      {menu && (
+        <MenuContexto m={menu} onFechar={fecharMenu}>
+          {menu.buscando ? (
+            <BuscaTabela lista={todasTabelas?.modulo === modulo ? todasTabelas.lista : null} naTela={naTela} onEscolher={adicionarTabela} />
+          ) : menu.tabela ? (<>
+            <div className="dm-titulo"><code>{menu.tabela}</code></div>
+            <button type="button" role="menuitem" onClick={() => { setMenu(null); onAbrirTabela(menu.tabela!); }}>Abrir ficha</button>
+            {!todas && (
+              <button type="button" role="menuitem" onClick={() => { setMenu(null); expandir(menu.tabela!); }}>
+                {expandidas.has(menu.tabela) ? 'Recolher colunas' : 'Mostrar todas as colunas'}</button>
+            )}
+            {tabelaDoMenu?.adicionada
+              ? <button type="button" role="menuitem" className="perigo" onClick={() => removerTabela(menu.tabela!)}>Remover do diagrama</button>
+              : <small className="dm-nota">{tabelaDoMenu?.foco ? 'Tabela da tela' : 'Veio pelas ligações'}: não sai do diagrama.</small>}
+          </>) : (<>
+            <button type="button" role="menuitem" onClick={buscarParaAdicionar}>Adicionar tabela…</button>
+            <button type="button" role="menuitem" onClick={() => { setMenu(null); fitView({ padding: 0.12, duration: 300 }); }}>Enquadrar tudo</button>
+            {Object.keys(movidas).length > 0 && (
+              <button type="button" role="menuitem" onClick={() => { setMenu(null); reorganizar(); }}>Reorganizar</button>
+            )}
+          </>)}
+        </MenuContexto>
+      )}
       {arrasto?.ativo && createPortal(
         <svg className="diag-arrasto" aria-hidden="true">
           <line x1={arrasto.ox} y1={arrasto.oy} x2={arrasto.x} y2={arrasto.y} className={arrasto.alvo ? 'no-alvo' : ''} />
