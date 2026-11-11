@@ -10,6 +10,7 @@ import '@xyflow/react/dist/style.css';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode } from 'elkjs/lib/elk-api';
 import type { NotaRelacao, NovaRelacao, Relacao } from '../tipos';
+import { afastar, type Ponto } from './afastar';
 
 const elk = new ELK();
 
@@ -18,7 +19,6 @@ type TabelaDiag = {
   nome: string; engine: string; linhas: number | null; foco: boolean; apoio: boolean; colunas: Coluna[];
   telas?: string[][]; // caminho de cada tela que usa a tabela (menu › submenu › tela)
 };
-type Ponto = { x: number; y: number };
 type RespostaDiagrama = {
   foco: string[]; tabelas: TabelaDiag[]; relacoes: Relacao[]; apoio_ocultas: string[];
   posicoes?: Record<string, Ponto>; // tabelas que a equipe arrastou nesta tela
@@ -223,6 +223,23 @@ type Props = {
   onClicarTabela?: (nome: string) => void; // clique simples: abre o painel ao lado (manual da tela ou ficha)
 };
 
+/**
+ * Onde cada tabela precisa ir para nenhuma ficar por cima de outra. As que estão sendo arrastadas ficam firmes;
+ * as que a equipe posicionou cedem menos que as do layout automático.
+ */
+function ajustar(nos: Node<DadosTabela>[], movidas: Record<string, Ponto>, fixas: Set<string> | null): Map<string, Ponto> {
+  if (nos.length < 2) return new Map();
+  const caixas = nos.map(n => {
+    const p = movidas[n.id] ?? n.position;
+    return { id: n.id, x: p.x, y: p.y, w: LARGURA, h: n.height ?? 0 };
+  });
+  const firmes = caixas.filter(c => fixas?.has(c.id));
+  const ancora = firmes.length
+    ? { x: firmes.reduce((t, c) => t + c.x + c.w / 2, 0) / firmes.length, y: firmes.reduce((t, c) => t + c.y + c.h / 2, 0) / firmes.length }
+    : undefined;
+  return afastar(caixas, id => (fixas?.has(id) ? 0 : movidas[id] ? 1 : 2), ancora);
+}
+
 /** Quem é o lado N (chave estrangeira) e quem é o lado 1: a chave primária fica no destino; sem pista, vale a ordem dos cliques. */
 function orientar(a: Ponta, b: Ponta): NovaRelacao {
   const [o, d] = a.pk && !b.pk ? [b, a] : [a, b];
@@ -258,8 +275,16 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
     else setBalao(null);
   }, []);
   useEffect(() => () => clearTimeout(esperaBalao.current), []);
-  // tabelas arrastadas pela equipe nesta tela (salvas no servidor; valem para todos)
-  const [movidas, setMovidas] = useState<Record<string, Ponto>>({});
+  // tabelas arrastadas pela equipe nesta tela (salvas no servidor; valem para todos). O ref acompanha cada passo do
+  // arraste, para o soltar salvar a posição que está na tela (o nó que o React Flow entrega no fim vem sem posição)
+  const [movidas, setMovidasEstado] = useState<Record<string, Ponto>>({});
+  const movidasRef = useRef<Record<string, Ponto>>({});
+  const setMovidas = useCallback((m: Record<string, Ponto>) => { movidasRef.current = m; setMovidasEstado(m); }, []);
+  // tabelas sendo arrastadas agora: ficam firmes; as outras saem da frente e voltam quando ela passa
+  const [arrastando, setArrastando] = useState<Set<string> | null>(null);
+  // recarregar depois de validar uma ligação ou salvar um informativo não reenquadra o diagrama
+  const manterVista = useRef(false);
+  const nosRef = useRef<Node<DadosTabela>[]>([]); // cartões do layout, para o soltar calcular os afastamentos
   // arrastar uma coluna até outra: a linha segue o cursor; soltar numa coluna de outra tabela abre a pergunta
   type Arrasto = { de: Ponta; ox: number; oy: number; x0: number; y0: number; x: number; y: number; ativo: boolean; alvo: { tabela: string; coluna: string } | null };
   const [arrasto, setArrasto] = useState<Arrasto | null>(null);
@@ -355,6 +380,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       const juncao = rel.colunas.map(([a, b]) => `${rel.origem}.${a} → ${rel.destino}.${b}`).join(', ');
       setAviso(`Ligação validada: ${juncao}`);
       setNota({ relId: rel.id, juncao, texto: rel.nota?.texto ?? '', existe: !!rel.nota, nova: true });
+      manterVista.current = true;
       setRecarga(n => n + 1);
       onLigou?.();
     } catch (e) {
@@ -382,6 +408,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       await api.notaRelacao(modulo, nota.relId, { texto: nota.texto });
       setNota(null);
       setAviso('Informativo de incidentes salvo: arraste o post-it ao longo da linha para posicionar.');
+      manterVista.current = true;
       setRecarga(n => n + 1);
     } catch (e) {
       setErroNota((e as Error).message);
@@ -395,6 +422,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
     try {
       await api.apagarNota(modulo, nota.relId);
       setNota(null);
+      manterVista.current = true;
       setRecarga(n => n + 1);
     } catch (e) {
       setErroNota((e as Error).message);
@@ -406,16 +434,31 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
   const campoNota = useRef<HTMLTextAreaElement>(null);
   useEffect(() => { if (abriuNota) campoNota.current?.focus({ preventScroll: true }); }, [abriuNota]);
 
-  // mover tabelas: a posição acompanha o arraste e é salva ao soltar
+  // mover tabelas: a posição acompanha o arraste; as vizinhas no caminho se afastam; ao soltar, salva a arrastada
+  // e as que precisaram sair do lugar
   const onNodesChange = useCallback((mudancas: NodeChange<Node<DadosTabela>>[]) => {
     const novas: Record<string, Ponto> = {};
-    mudancas.forEach(m => { if (m.type === 'position' && m.position) novas[m.id] = m.position; });
-    if (Object.keys(novas).length) setMovidas(atual => ({ ...atual, ...novas }));
-  }, []);
+    mudancas.forEach(m => {
+      if (m.type === 'position' && m.position && Number.isFinite(m.position.x) && Number.isFinite(m.position.y)) novas[m.id] = m.position;
+    });
+    if (Object.keys(novas).length) setMovidas({ ...movidasRef.current, ...novas });
+  }, [setMovidas]);
+  const pegarTabela = useCallback((_: unknown, __: Node, arrastados: Node[]) => {
+    mostrarBalao(null);
+    setArrastando(new Set(arrastados.map(n => n.id)));
+  }, [mostrarBalao]);
   const soltarTabela = useCallback((_: unknown, __: Node, arrastados: Node[]) => {
-    api.salvarPosicoes(modulo, chave, arrastados.map(n => ({ tabela: n.id, x: n.position.x, y: n.position.y })))
+    const fixas = new Set(arrastados.map(n => n.id));
+    setArrastando(null);
+    const atuais = movidasRef.current;
+    const novas: Record<string, Ponto> = {};
+    fixas.forEach(id => { if (atuais[id]) novas[id] = atuais[id]; });
+    ajustar(nosRef.current, atuais, fixas).forEach((p, id) => { novas[id] = p; });
+    if (!Object.keys(novas).length) return;
+    setMovidas({ ...atuais, ...novas });
+    api.salvarPosicoes(modulo, chave, Object.entries(novas).map(([tabela, p]) => ({ tabela, x: Math.round(p.x), y: Math.round(p.y) })))
       .catch(e => setErro(`Não foi possível salvar a posição (${(e as Error).message}).`));
-  }, [modulo, chave]);
+  }, [modulo, chave, setMovidas]);
   const reorganizar = async () => {
     try {
       await api.reorganizar(modulo, chave);
@@ -533,6 +576,9 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       return novo;
     });
   }, []);
+  // posições na tela: as salvas/arrastadas e, por cima, os afastamentos para nenhuma tabela ficar sobre outra
+  useLayoutEffect(() => { nosRef.current = base.nos; }, [base.nos]);
+  const ajustes = useMemo(() => ajustar(base.nos, movidas, arrastando), [base.nos, movidas, arrastando]);
   const { nos, arestas } = useMemo(() => {
     const marcadas = new Map<string, Set<string>>();
     const marcar = (t: string, c: string) => (marcadas.get(t) ?? marcadas.set(t, new Set()).get(t)!).add(c);
@@ -555,7 +601,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
     return {
       nos: base.nos.map(n => ({
         ...n,
-        position: movidas[n.id] ?? n.position,
+        position: ajustes.get(n.id) ?? movidas[n.id] ?? n.position,
         data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
                 estado: apagar ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
                 marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir, onBalao: mostrarBalao,
@@ -563,16 +609,18 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       })) as Node<DadosTabela>[],
       arestas: base.arestas.map(e => {
         const toca = centro.has(e.source) || centro.has(e.target);
-        // tabela arrastada: o trajeto do ELK não serve mais; a linha passa a seguir as tabelas
-        const pontos = movidas[e.source] || movidas[e.target] ? undefined : e.data!.pontos;
+        // tabela arrastada ou afastada: o trajeto do ELK não serve mais; a linha passa a seguir as tabelas
+        const saiu = (id: string) => !!movidas[id] || ajustes.has(id);
+        const pontos = saiu(e.source) || saiu(e.target) ? undefined : e.data!.pontos;
         return { ...e, zIndex: toca ? 2 : 0, data: { ...e.data!, pontos, destaque: toca, apagada: apagar && !toca,
                                                      onMoverNota: moverNota, onEditarNota: editarNota } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, arrasto?.alvo, iniciarArrasto, moverNota, editarNota]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, ajustes, arrasto?.alvo, iniciarArrasto, moverNota, editarNota]);
 
   useEffect(() => {
     if (!base.nos.length) return;
+    if (manterVista.current) { manterVista.current = false; return; }
     const alvo = centralizar.current;
     centralizar.current = null;
     const no = alvo ? base.nos.find(n => n.id === alvo) : undefined;
@@ -621,13 +669,13 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
         {Object.keys(movidas).length > 0 && (
           <button type="button" className="diag-reorganizar" onClick={reorganizar} title="Desfaz as posições arrastadas desta tela (para todos)">Reorganizar</button>
         )}
-        <span className="diag-dica">Arraste a tabela pelo nome para organizar · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
+        <span className="diag-dica">Arraste a tabela pelo nome para organizar (as outras abrem espaço) · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
       </div>
       <div className="diag-canvas" ref={setCanvas}>
       <ReactFlow
         nodes={nos} edges={arestas} nodeTypes={tiposNo} edgeTypes={tiposAresta}
         nodesConnectable={false} edgesFocusable={false} minZoom={0.15} maxZoom={1.6} colorMode={tema === 'escuro' ? 'dark' : 'light'}
-        onNodesChange={onNodesChange} onNodeDragStop={soltarTabela} nodeDragThreshold={4}
+        onNodesChange={onNodesChange} onNodeDragStart={pegarTabela} onNodeDragStop={soltarTabela} nodeDragThreshold={4}
         onEdgeClick={(_, e) => editarNota(e.data!.relId)}
         fitView fitViewOptions={{ padding: 0.12 }}
         onNodeClick={(_, n) => { setSel(n.id === sel ? null : n.id); onClicarTabela?.(n.id); }}
