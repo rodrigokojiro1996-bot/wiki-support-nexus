@@ -29,7 +29,7 @@ type RespostaDiagrama = {
 type Balao = { titulo: string; detalhe: string; texto?: string; lista?: { rotulo: string; itens: string[]; vazio: string }; dica?: string; rect: DOMRect };
 
 type DadosTabela = {
-  nome: string; engine: string; foco: boolean; apoio: boolean; adicionada: boolean; colunas: Coluna[]; ocultas: number;
+  nome: string; engine: string; foco: boolean; apoio: boolean; adicionada: boolean; sugerida: boolean; colunas: Coluna[]; ocultas: number;
   chaves: Set<string>; acesas: Set<string>; estado: 'normal' | 'ativo' | 'apagado'; selecionada: boolean; busca: string;
   marcadas: Set<string>; onColuna: (tabela: string, coluna: string) => void; // colunas escolhidas para ligar
   expandida: boolean; onExpandir: (tabela: string) => void; // todas as colunas só desta tabela
@@ -78,13 +78,14 @@ function TabelaNo({ data }: NodeProps<Node<DadosTabela>>) {
   const balao = (e: React.MouseEvent<HTMLElement>, x: Omit<Balao, 'rect'>) => data.onBalao({ ...x, rect: e.currentTarget.getBoundingClientRect() });
   const sair = () => data.onBalao(null);
   return (
-    <div className={`tb ${data.foco ? 'tb-foco' : ''} ${data.selecionada ? 'tb-sel' : ''} tb-${data.estado}`}>
+    <div className={`tb ${data.foco ? 'tb-foco' : ''} ${data.sugerida ? 'tb-sugerida' : ''} ${data.selecionada ? 'tb-sel' : ''} tb-${data.estado}`}>
       <div className="tb-cab" title="Arraste para organizar o diagrama"
         onMouseEnter={e => balao(e, { titulo: data.nome, detalhe: `tabela · ${data.engine}`,
           lista: { rotulo: `Telas que usam (${data.telas.length})`, itens: data.telas.map(t => t.join(' › ')), vazio: 'Nenhuma tela usa esta tabela ainda.' } })}
         onMouseLeave={sair}>
         <span className={b && data.nome.toLowerCase().includes(b) ? 'achou' : undefined}>{data.nome}</span>
         {data.apoio && <em title="Tabela de apoio: muitas outras tabelas apontam para ela">apoio</em>}
+        {data.sugerida && <em className="tb-sugerida-selo" title="Vínculo sugerido: ainda não confirmado pela equipe (botão direito para confirmar)">sugerida</em>}
         {data.adicionada && <em className="tb-adicionada" title="Adicionada à mão neste diagrama (botão direito para remover)">adicionada</em>}
         <small>{data.engine}</small>
       </div>
@@ -227,6 +228,10 @@ const tiposAresta = { relacao: RelacaoAresta };
 type Props = {
   modulo: string; tabelas: string[]; onAbrirTabela: (nome: string) => void; onLigou?: () => void;
   onClicarTabela?: (nome: string) => void; // clique simples: abre o painel ao lado (manual da tela ou ficha)
+  chave?: string; // a tela (id do menu): a organização fica com ela e sobrevive a vincular/desvincular tabelas
+  // vínculos da tela pelo botão direito: vincular (no fundo), desvincular e confirmar os sugeridos (na tabela)
+  vinculos?: { tabela: string; origem: string }[];
+  onVincular?: (tabela: string) => Promise<void>; onDesvincular?: (tabela: string) => void; onConfirmarVinculos?: () => void;
 };
 
 type MenuDiagrama = { x: number; y: number; flow: Ponto; tabela?: string; buscando: boolean };
@@ -308,7 +313,8 @@ function orientar(a: Ponta, b: Ponta): NovaRelacao {
   return { origem: o.tabela, coluna_origem: o.coluna, destino: d.tabela, coluna_destino: d.coluna };
 }
 
-function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Props) {
+function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela, chave: chaveTela, vinculos = [], onVincular,
+                  onDesvincular, onConfirmarVinculos }: Props) {
   const [resp, setResp] = useState<RespostaDiagrama | null>(null);
   const [erro, setErro] = useState('');
   const [nivel, setNivel] = useState(1);
@@ -363,17 +369,19 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
   const { fitView, zoomIn, zoomOut, setCenter, getZoom, screenToFlowPosition } = useReactFlow();
   const tema = useTema();
 
-  const chave = tabelas.join(',');
+  const lista = tabelas.join(',');
+  const chave = chaveTela ?? lista;
+  const origemDe = useMemo(() => new Map(vinculos.map(v => [v.tabela, v.origem])), [vinculos]);
   useEffect(() => { setExpandidas(new Set()); }, [modulo, chave]);
   useEffect(() => {
-    if (!chave) { setResp(null); return; }
+    if (!lista) { setResp(null); return; }
     setErro('');
-    fetch(`/api/modulos/${modulo}/diagrama?tabelas=${encodeURIComponent(chave)}&nivel=${nivel}&apoio=${apoio}`)
+    fetch(`/api/modulos/${modulo}/diagrama?tabelas=${encodeURIComponent(lista)}&chave=${encodeURIComponent(chave)}&nivel=${nivel}&apoio=${apoio}`)
       .then(r => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
       .then((d: RespostaDiagrama) => { setResp(d); setMovidas(d.posicoes ?? {}); if (!recarga) setSel(null); })
       .catch(e => setErro(`Não foi possível carregar o diagrama (${e.message}).`));
     // recarga só pede os dados de novo (depois de ligar colunas), sem perder a tabela selecionada
-  }, [modulo, chave, nivel, apoio, recarga]);
+  }, [modulo, lista, chave, nivel, apoio, recarga]);
 
   const ehPk = useCallback((tabela: string, coluna: string) =>
     !!resp?.tabelas.find(t => t.nome === tabela)?.colunas.find(c => c.nome === coluna)?.pk, [resp]);
@@ -569,7 +577,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       const altura = BORDA * 2 + CAB + visiveis.length * LINHA + (t.colunas.length > visiveis.length || expandida ? RODAPE : 0);
       return {
         id: t.nome, type: 'tabela', position: { x: 0, y: 0 }, width: LARGURA, height: altura,
-        data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, adicionada: !!t.adicionada, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
+        data: { nome: t.nome, engine: t.engine, foco: t.foco, apoio: t.apoio, adicionada: !!t.adicionada, sugerida: false, colunas: visiveis, ocultas: t.colunas.length - visiveis.length,
                 chaves, acesas: new Set<string>(), estado: 'normal', selecionada: false, busca: '',
                 marcadas: new Set<string>(), onColuna: () => {}, expandida, onExpandir: () => {},
                 telas: t.telas ?? [], onBalao: () => {}, onArrastarColuna: () => {}, alvo: null }
@@ -702,7 +710,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       nos: base.nos.map(n => ({
         ...n,
         position: ajustes.get(n.id) ?? movidas[n.id] ?? n.position,
-        data: { ...n.data, selecionada: n.id === sel, busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
+        data: { ...n.data, selecionada: n.id === sel, sugerida: origemDe.get(n.id) === 'sugerido', busca: termo, acesas: acesas.get(n.id) ?? new Set<string>(),
                 estado: apagar ? (vizinhas.has(n.id) ? 'ativo' : 'apagado') : 'normal',
                 marcadas: marcadas.get(n.id) ?? new Set<string>(), onColuna: escolherColuna, onExpandir: expandir, onBalao: mostrarBalao,
                 onArrastarColuna: iniciarArrasto, alvo: alvo?.tabela === n.id ? alvo.coluna : null }
@@ -716,7 +724,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
                                                      onMoverNota: moverNota, onEditarNota: editarNota } };
       }) as Edge<DadosRelacao>[]
     };
-  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, ajustes, rotas, arrastando, arrasto?.alvo, iniciarArrasto, moverNota, editarNota]);
+  }, [base, sel, resp, termo, ponta, proposta, escolherColuna, expandir, mostrarBalao, movidas, ajustes, rotas, arrastando, arrasto?.alvo, iniciarArrasto, moverNota, editarNota, origemDe]);
 
   useEffect(() => {
     if (!base.nos.length) return;
@@ -760,21 +768,25 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
         .catch(e => setErro(`Não foi possível listar as tabelas (${(e as Error).message}).`));
     }
   };
-  const adicionarTabela = async (nome: string) => {
-    if (!menu) return;
-    const { flow } = menu;
+  // vincular pelo botão direito: a tabela passa a ser da tela e o cartão fica no ponto clicado
+  const vincularTabela = async (nome: string, onde?: Ponto) => {
     setMenu(null);
+    if (!onVincular) return;
     try {
-      // o cartão fica com o cabeçalho no ponto clicado
-      await api.adicionarTabela(modulo, chave, nome, flow.x - LARGURA / 2, flow.y - CAB / 2);
-      setExpandidas(atual => new Set(atual).add(nome)); // todas as colunas à mostra, para escolher qual ligar
+      if (onde) await api.salvarPosicoes(modulo, chave, [{ tabela: nome, x: Math.round(onde.x - LARGURA / 2), y: Math.round(onde.y - CAB / 2) }]);
       manterVista.current = true;
-      setRecarga(n => n + 1);
-      setAviso(`${nome} adicionada: arraste uma coluna dela até a coluna de outra tabela para ligar.`);
+      await onVincular(nome);
+      setAviso(`${nome} vinculada a esta tela: arraste uma coluna dela até a coluna de outra tabela para ligar.`);
     } catch (e) {
-      setErro(`Não foi possível adicionar ${nome} (${(e as Error).message}).`);
+      setErro(`Não foi possível vincular ${nome} (${(e as Error).message}).`);
     }
   };
+  const sugeridas = vinculos.filter(v => v.origem === 'sugerido').length;
+  // sem tabela nenhuma: a busca já aparece no lugar do diagrama, para vincular a primeira
+  useEffect(() => {
+    if (tabelas.length || !onVincular || todasTabelas?.modulo === modulo) return;
+    api.tabelasDoModulo(modulo).then(l => setTodasTabelas({ modulo, lista: l })).catch(() => {});
+  }, [tabelas.length, onVincular, todasTabelas, modulo]);
   const removerTabela = async (nome: string) => {
     setMenu(null);
     try {
@@ -786,10 +798,19 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       setErro(`Não foi possível remover ${nome} (${(e as Error).message}).`);
     }
   };
-  const naTela = new Set(resp?.tabelas.map(t => t.nome) ?? []);
+  const naTela = new Set(vinculos.map(v => v.tabela)); // a busca de vincular mostra só as que ainda não são da tela
   const tabelaDoMenu = menu?.tabela ? resp?.tabelas.find(t => t.nome === menu.tabela) : undefined;
 
-  if (!tabelas.length) return <div className="diag-vazio">Nenhuma tabela vinculada a esta tela. Vincule a primeira no campo acima do diagrama.</div>;
+  if (!tabelas.length) {
+    return (
+      <div className="diag-vazio">
+        <p>Nenhuma tabela vinculada a esta tela. Vincule a primeira:</p>
+        {onVincular && <div className="diag-vazio-busca">
+          <BuscaTabela lista={todasTabelas?.modulo === modulo ? todasTabelas.lista : null} naTela={naTela} onEscolher={n => vincularTabela(n)} />
+        </div>}
+      </div>
+    );
+  }
 
   return (
     <div className="diag-wrap">
@@ -813,7 +834,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
         {Object.keys(movidas).length > 0 && (
           <button type="button" className="diag-reorganizar" onClick={reorganizar} title="Desfaz as posições arrastadas desta tela (para todos)">Reorganizar</button>
         )}
-        <span className="diag-dica">Botão direito no fundo para adicionar uma tabela · arraste a tabela pelo nome para organizar (as outras abrem espaço) · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
+        <span className="diag-dica">Botão direito no fundo para vincular uma tabela à tela (numa tabela: desvincular, confirmar) · arraste a tabela pelo nome para organizar (as outras abrem espaço) · arraste uma coluna até a de outra tabela para ligar · clique numa ligação para o informativo de incidentes</span>
       </div>
       <div className="diag-canvas" ref={setCanvas}>
       <ReactFlow
@@ -833,6 +854,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       <Background gap={22} size={1.2} />
       <Panel position="bottom-left" className="diag-legenda">
         <span><i className="lg-foco" />Tabela da tela</span>
+        {sugeridas > 0 && <span><i className="lg-foco lg-sugerida" />Vínculo sugerido</span>}
         <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha" /></svg>Confirmada / documentada</span>
         <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha sug" /></svg>Sugerida</span>
         <span><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" className="lg-linha nota" /></svg>Com informativo de incidentes</span>
@@ -899,7 +921,7 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
       {menu && (
         <MenuContexto m={menu} onFechar={fecharMenu}>
           {menu.buscando ? (
-            <BuscaTabela lista={todasTabelas?.modulo === modulo ? todasTabelas.lista : null} naTela={naTela} onEscolher={adicionarTabela} />
+            <BuscaTabela lista={todasTabelas?.modulo === modulo ? todasTabelas.lista : null} naTela={naTela} onEscolher={n => vincularTabela(n, menu.flow)} />
           ) : menu.tabela ? (<>
             <div className="dm-titulo"><code>{menu.tabela}</code></div>
             <button type="button" role="menuitem" onClick={() => { setMenu(null); onAbrirTabela(menu.tabela!); }}>Abrir ficha</button>
@@ -907,11 +929,19 @@ function Interno({ modulo, tabelas, onAbrirTabela, onLigou, onClicarTabela }: Pr
               <button type="button" role="menuitem" onClick={() => { setMenu(null); expandir(menu.tabela!); }}>
                 {expandidas.has(menu.tabela) ? 'Recolher colunas' : 'Mostrar todas as colunas'}</button>
             )}
-            {tabelaDoMenu?.adicionada
-              ? <button type="button" role="menuitem" className="perigo" onClick={() => removerTabela(menu.tabela!)}>Remover do diagrama</button>
-              : <small className="dm-nota">{tabelaDoMenu?.foco ? 'Tabela da tela' : 'Veio pelas ligações'}: não sai do diagrama.</small>}
+            {origemDe.get(menu.tabela) === 'sugerido' && onConfirmarVinculos && (
+              <button type="button" role="menuitem" onClick={() => { setMenu(null); onConfirmarVinculos(); }}
+                title="O vínculo foi sugerido pelo catálogo; confirmar diz que a equipe conferiu">
+                {sugeridas > 1 ? `Confirmar os vínculos sugeridos (${sugeridas})` : 'Confirmar vínculo'}</button>
+            )}
+            {origemDe.has(menu.tabela)
+              ? onDesvincular && <button type="button" role="menuitem" className="perigo" onClick={() => { setMenu(null); onDesvincular(menu.tabela!); }}>Desvincular da tela</button>
+              : onVincular && <button type="button" role="menuitem" onClick={() => vincularTabela(menu.tabela!)}>Vincular à tela</button>}
+            {tabelaDoMenu?.adicionada && (
+              <button type="button" role="menuitem" className="perigo" onClick={() => removerTabela(menu.tabela!)}>Remover do diagrama</button>
+            )}
           </>) : (<>
-            <button type="button" role="menuitem" onClick={buscarParaAdicionar}>Adicionar tabela…</button>
+            {onVincular && <button type="button" role="menuitem" onClick={buscarParaAdicionar}>Vincular tabela à tela…</button>}
             <button type="button" role="menuitem" onClick={() => { setMenu(null); fitView({ padding: 0.12, duration: 300 }); }}>Enquadrar tudo</button>
             {Object.keys(movidas).length > 0 && (
               <button type="button" role="menuitem" onClick={() => { setMenu(null); reorganizar(); }}>Reorganizar</button>
