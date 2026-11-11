@@ -87,6 +87,17 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Diagrama: validar uma ligação ou salvar um informativo não reenquadra mais a tela (o diagrama fica onde estava).
 
 ### Corrigido
+- Diagrama: as ligações das tabelas movidas pareciam sumir. Elas perdiam o trajeto do layout automático e passavam
+  em linha reta por baixo dos cartões, e, com uma tabela selecionada, as outras ligações ficavam com 8% de opacidade.
+  Agora:
+  - ao mover uma tabela, as ligações dela, e as que uma tabela movida passou a cobrir, ganham um trajeto novo em
+    ângulos retos que contorna todos os cartões, recalculado a cada passo do arraste;
+  - com uma tabela selecionada, as outras ligações recuam para 30% e continuam à vista;
+  - durante o arraste, nada fica apagado.
+- Diagrama: dava para organizar só uma vez em alguns casos, porque o post-it do informativo ou a legenda ficavam por
+  cima do cabeçalho da tabela e pegavam o clique. A legenda deixa o clique passar. O post-it ganhou uma alça
+  ("⠿ informativo") que é a única parte que pega o mouse: arrastar a alça move o post-it ao longo da linha e clicar
+  nela abre o editor. O resto do post-it deixa a tabela embaixo ser arrastada.
 - Excluir um informativo, desligar um trecho do manual, tirar uma tabela adicionada e reorganizar o diagrama não
   guardavam quem fez; agora vão com o nome para o histórico de alterações.
 - Diagrama: soltar uma tabela arrastada dava "Não foi possível salvar a posição (Input should be a valid number)".
