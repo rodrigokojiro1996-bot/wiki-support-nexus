@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .. import pdf
 from ..metricas import IMPORTACAO_DURACAO, IMPORTACOES, PDF_DURACAO, PDF_FALHAS
-from ..servicos import entra, importacao, sessoes
+from ..servicos import entra, importacao, registro, sessoes
 from ..servicos import manuais as servico
 from ..servicos.manuais import manual_completo
 from . import db, usuario
@@ -134,15 +134,36 @@ def _conferir_destino(con, corpo: ManualEntrada, codigo: str | None = None) -> N
 def criar_manual(corpo: ManualEntrada, con=Depends(db), por: str = Depends(usuario)):
     _conferir_destino(con, corpo)
     m = servico.salvar(con, corpo.model_dump(), por)
+    _registrar_manual(con, por, None, m)
     return {"codigo": m["codigo"], "versao": m["versao"]}
 
 
 @router.put("/manuais/{codigo}")
 def editar_manual(codigo: str, corpo: ManualEntrada, con=Depends(db), por: str = Depends(usuario)):
-    _manual(con, codigo)
+    anterior = _manual(con, codigo)
     _conferir_destino(con, corpo, codigo)
     m = servico.salvar(con, corpo.model_dump(), por, codigo)
+    _registrar_manual(con, por, anterior, m)
     return {"codigo": m["codigo"], "versao": m["versao"]}
+
+
+def _registrar_manual(con, por: str, anterior: dict | None, m: dict) -> None:
+    mudancas = registro.mudancas_manual(con, anterior, m)
+    nome = f"{m['codigo']} · {m['titulo']}"
+    if not anterior:
+        tipo = "chamado frequente" if m["tipo"] == "chamado" else "manual da tela"
+        resumo = f"Criou o manual {nome} ({tipo}, tela {registro.caminho_da_tela(con, m['menu'])})"
+        acao = "criou"
+    else:
+        quantas = f"{len(mudancas)} mudança{'s' if len(mudancas) != 1 else ''}" if mudancas else "sem mudança no conteúdo"
+        resumo = f"Alterou o manual {nome} (versão {anterior['versao']} → {m['versao']}): {quantas}"
+        if len(mudancas) == 1:
+            resumo += f": {mudancas[0]}"
+        acao = "alterou"
+    registro.registrar(con, por, acao, "manual", resumo, alvo=m["codigo"], modulo=m["modulo"],
+                       detalhe={"versao": {"antes": anterior["versao"] if anterior else None, "depois": m["versao"]},
+                                "mudancas": mudancas[:200]})
+    con.commit()
 
 
 async def _documento(request: Request) -> bytes:

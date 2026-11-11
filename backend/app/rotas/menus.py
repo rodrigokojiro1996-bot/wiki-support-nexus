@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ..db import caminho_menu
-from ..servicos import relacoes
+from ..servicos import registro, relacoes
 from . import banco_do_modulo, db, usuario
 
 router = APIRouter(prefix="/api/menus")
@@ -38,7 +38,8 @@ class VinculoTabelas(BaseModel):
 
 @router.put("/{menu_id}/tabelas")
 def salvar_tabelas(menu_id: str, corpo: VinculoTabelas, con=Depends(db), por: str = Depends(usuario)):
-    if not con.execute("SELECT 1 FROM menus WHERE id = ?", (menu_id,)).fetchone():
+    tela = con.execute("SELECT modulo FROM menus WHERE id = ?", (menu_id,)).fetchone()
+    if not tela:
         raise HTTPException(404, "Item de menu não encontrado")
     linhas = {r["tabela"]: r for r in con.execute("SELECT tabela, origem, por, em FROM menu_tabelas WHERE menu = ?", (menu_id,))}
     con.execute("DELETE FROM menu_tabelas WHERE menu = ?", (menu_id,))
@@ -47,5 +48,12 @@ def salvar_tabelas(menu_id: str, corpo: VinculoTabelas, con=Depends(db), por: st
     con.executemany("INSERT INTO menu_tabelas (menu, tabela, origem, por, em) VALUES (?, ?, 'equipe', ?, ?)",
                     [(menu_id, t, *((linhas[t]["por"], linhas[t]["em"]) if t in linhas and linhas[t]["origem"] == "equipe" else (por, agora)))
                      for t in dict.fromkeys(corpo.tabelas)])
+    incluidas = [t for t in dict.fromkeys(corpo.tabelas) if t not in linhas]
+    tiradas = [t for t in linhas if t not in corpo.tabelas]
+    if incluidas or tiradas:
+        partes = ([f"incluiu {', '.join(incluidas)}"] if incluidas else []) + ([f"tirou {', '.join(tiradas)}"] if tiradas else [])
+        registro.registrar(con, por, "alterou", "tela", f"Alterou as tabelas da tela {registro.caminho_da_tela(con, menu_id)}: "
+                           + "; ".join(partes), alvo=menu_id, modulo=tela["modulo"],
+                           detalhe={"antes": sorted(linhas), "depois": list(dict.fromkeys(corpo.tabelas)), "incluidas": incluidas, "tiradas": tiradas})
     con.commit()
     return {"ok": True, "antes": {t: r["origem"] for t, r in linhas.items()}}
