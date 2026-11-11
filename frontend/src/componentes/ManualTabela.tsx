@@ -59,6 +59,15 @@ function PerguntaTrecho({ rect, children }: { rect: DOMRect; children: React.Rea
   );
 }
 
+/** Rola só o painel (o primeiro ancestral com rolagem) até deixar `el` no meio; a página e o diagrama não se mexem. */
+function centralizarNoPainel(el: HTMLElement | null) {
+  let caixa = el?.parentElement ?? null;
+  while (caixa && !(/(auto|scroll)/.test(getComputedStyle(caixa).overflowY) && caixa.scrollHeight > caixa.clientHeight)) caixa = caixa.parentElement;
+  if (!el || !caixa) return;
+  const r = el.getBoundingClientRect(), c = caixa.getBoundingClientRect();
+  caixa.scrollTo({ top: caixa.scrollTop + r.top - c.top - (caixa.clientHeight - r.height) / 2, behavior: 'smooth' });
+}
+
 const blocoDe = (n: Node | null) => (n instanceof Element ? n : n?.parentElement)?.closest<HTMLElement>('[data-bloco]') ?? null;
 
 /**
@@ -88,8 +97,12 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     setManual(null);
     api.manual(codigo).then(setManual).catch(e => setErro((e as Error).message));
   }, [codigo]);
+  // de qual manual/tabela são os trechos carregados: o painel só rola até o destaque quando eles são desta tabela
+  const [carregadoPara, setCarregadoPara] = useState('');
+  const rolado = useRef('');
   const recarregar = useCallback(() => {
-    if (codigo) api.trechos(codigo, tabela).then(setTrechos).catch(e => setErro((e as Error).message));
+    if (codigo) api.trechos(codigo, tabela).then(t => { setTrechos(t); setCarregadoPara(`${codigo}|${tabela}`); })
+      .catch(e => setErro((e as Error).message));
   }, [codigo, tabela]);
   useEffect(() => { setSelecao(null); setErro(''); recarregar(); }, [recarregar]);
 
@@ -146,8 +159,14 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     setPerdidos(faltam);
     const Highlight = (window as unknown as { Highlight?: new (...r: Range[]) => unknown }).Highlight;
     if (destaques && Highlight) destaques.set(DESTAQUE, new Highlight(...ranges));
+    // ao abrir a tabela, o painel vai direto ao primeiro trecho destacado (uma vez; validar outro não faz pular)
+    const chave = `${codigo}|${tabela}`;
+    if (ranges.length && carregadoPara === chave && manual.codigo === codigo && rolado.current !== chave) {
+      rolado.current = chave;
+      centralizarNoPainel(blocoDe(ranges[0].startContainer));
+    }
     return () => { destaques?.delete(DESTAQUE); };
-  }, [manual, trechos]);
+  }, [manual, trechos, carregadoPara, codigo, tabela]);
 
   const validar = async () => {
     if (!selecao || 'erro' in selecao) return;

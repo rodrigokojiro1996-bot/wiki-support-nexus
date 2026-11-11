@@ -137,12 +137,14 @@ a.topo-mod { text-decoration: none; }
 .toast.erro { background: var(--crit); color: #fff; cursor: pointer; }
 
 /* ---------- mapa do sistema ---------- */
-.mapa { flex: 1; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 14px; padding: 14px 20px 20px; height: calc(100vh - var(--topo-h)); }
+.mapa { flex: 1; display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 14px; padding: 14px 20px 20px; height: calc(100vh - var(--topo-h));
+        grid-template-rows: minmax(0, 1fr); min-height: 0; /* cada painel rola por dentro; a página não cresce com o manual ao lado */ }
 .mapa.com-tabela { grid-template-columns: 330px minmax(0, 1fr) 400px; }
 .mapa.com-tabela.com-manual { grid-template-columns: 330px minmax(0, 1fr) clamp(440px, 34vw, 640px); }
 
 /* manual da tela ao lado do diagrama: selecionar o trecho em que a tabela age */
 .mt { display: flex; flex-direction: column; gap: 12px; }
+.mt > * { flex-shrink: 0; } /* o painel rola; o manual não encolhe para caber */
 .mt-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; }
 .mt-topo select { max-width: 100%; }
 .mt-manual { font-weight: 700; }
@@ -162,7 +164,9 @@ a.topo-mod { text-decoration: none; }
 .mt-aviso { color: var(--laranja); font-weight: 600; }
 .mt-doc { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); padding: 2px; overflow: hidden; }
 .mt-doc .doc { box-shadow: none; }
-::highlight(nexus-trecho) { background-color: rgb(0 178 169 / 30%); color: inherit; }
+/* marca-texto: amarelo dos post-its com o sublinhado turquesa da marca, para achar o trecho de longe */
+::highlight(nexus-trecho) { background-color: rgb(255 214 0 / 60%); color: inherit; text-decoration: underline 2px rgb(0 160 152); text-underline-offset: 3px; }
+:root[data-tema="escuro"] ::highlight(nexus-trecho) { background-color: rgb(255 200 0 / 38%); }
 .mt-trechos, .mt-notas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .mt-trechos li { position: relative; padding: 8px 30px 8px 10px; border: 1px solid var(--line); border-left: 3px solid var(--marca); border-radius: 7px; background: var(--surface-2); }
 .mt-trechos li.perdido { border-left-color: var(--laranja); opacity: .8; }
@@ -488,8 +492,13 @@ a.btn-primario { color: var(--sobre-accent); }
   .editor-previa .doc { zoom: .45; }
 }
 
+/* tela do mapa no computador: a página tem a altura da janela e cada painel rola por dentro (o manual ao lado do
+   diagrama não estica a página nem tira o diagrama do lugar) */
+@media (min-width: 1101px) {
+  .app:has(> .mapa) { height: 100vh; }
+}
 @media (max-width: 1100px) {
-  .mapa, .mapa.com-tabela, .mapa.com-tabela.com-manual { grid-template-columns: minmax(0, 1fr); height: auto; }
+  .mapa, .mapa.com-tabela, .mapa.com-tabela.com-manual { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; height: auto; min-height: auto; }
   .painel.arvore .painel-corpo { max-height: 50vh; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
