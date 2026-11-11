@@ -55,6 +55,14 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 - Servidor (Caddy): com `MICROSOFT_AUTH_ENABLED=true` a senha única sai da frente do app e fica só em `/grafana/`.
   Um interruptor só para o app e o Caddy; valor diferente de `true`/`false` impede o Caddy de subir.
 - Com o login ligado e a configuração incompleta, o Support Nexus não sobe e o log diz o que falta.
+- Diagrama: ao arrastar uma tabela, as outras abrem espaço na hora (nenhuma fica por cima de outra) e voltam ao lugar
+  quando ela passa. Ao soltar, a arrastada e as que precisaram sair da frente ficam salvas para a equipe. As tabelas
+  posicionadas pela equipe cedem menos que as do layout automático.
+- Diagrama: validar uma ligação ou salvar um informativo não reenquadra mais a tela (o diagrama fica onde estava).
+
+### Corrigido
+- Diagrama: soltar uma tabela arrastada dava "Não foi possível salvar a posição (Input should be a valid number)".
+  O nó entregue pelo React Flow no fim do arraste vinha sem posição (`x`/`y` nulos); agora vale a posição na tela.
 
 ## [0.4.0] - 2026-10-31
 
