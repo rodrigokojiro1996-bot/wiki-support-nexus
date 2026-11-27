@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import Documento from './Documento';
-import type { Manual, MenuFicha, Relacao, TrechoManual } from '../tipos';
+import type { Manual, MenuFicha, ParteTrecho, Relacao, TrechoManual } from '../tipos';
 
 const LARGURA_DOC = 794; // 210 mm do .doc em px: o manual encolhe para caber no painel
 const DESTAQUE = 'nexus-trecho';
@@ -12,8 +12,42 @@ type Props = {
   manuais: MenuFicha['manuais']; tabela: string; relacoes: Relacao[];
   onFicha: () => void; // alterna para a ficha técnica da tabela
 };
-// trecho selecionado no manual (rect: onde está na tela, para a pergunta abrir junto dele)
-type Selecao = { secao: number; bloco: number; texto: string; rect: DOMRect } | { erro: string };
+// trecho selecionado no manual: uma parte por bloco que a seleção pega (rect: onde está, para a pergunta abrir junto)
+type Selecao = { partes: ParteTrecho[]; texto: string; rect: DOMRect } | { erro: string };
+
+/**
+ * Divide a seleção pelos blocos do manual (passos, parágrafos, observações...): cada bloco que ela toca vira uma parte
+ * com o pedaço selecionado dele. Texto fora dos blocos (títulos de seção, capa) não entra.
+ */
+function partesDaSelecao(selecao: Range, raiz: HTMLElement): ParteTrecho[] {
+  const partes: ParteTrecho[] = [];
+  raiz.querySelectorAll<HTMLElement>('[data-bloco]').forEach(el => {
+    if (!selecao.intersectsNode(el)) return;
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    if (selecao.compareBoundaryPoints(Range.START_TO_START, r) > 0) r.setStart(selecao.startContainer, selecao.startOffset);
+    if (selecao.compareBoundaryPoints(Range.END_TO_END, r) < 0) r.setEnd(selecao.endContainer, selecao.endOffset);
+    // o número do passo ("1.2.") fica de fora: se o manual for renumerado, o trecho continua sendo achado
+    const numero = el.querySelector('.doc-passo-n');
+    if (numero?.nextSibling) {
+      const texto = document.createRange();
+      texto.setStartBefore(numero.nextSibling);
+      if (r.compareBoundaryPoints(Range.START_TO_START, texto) < 0) {
+        if (r.comparePoint(texto.startContainer, texto.startOffset) > 0) return; // só o número foi selecionado
+        r.setStart(texto.startContainer, texto.startOffset);
+      }
+    }
+    const texto = r.toString().replace(/\s+/g, ' ').trim();
+    if (texto) partes.push({ secao: Number(el.dataset.secao), bloco: Number(el.dataset.bloco), texto });
+  });
+  return partes;
+}
+
+const juntar = (partes: { texto: string }[]) => partes.map(p => p.texto).join(' … ');
+const onde = (partes: { secao: number }[]) => {
+  const s = [...new Set(partes.map(p => p.secao))].sort((a, b) => a - b);
+  return s.length === 1 ? `seção ${s[0]}` : `seções ${s[0]} a ${s[s.length - 1]}`;
+};
 
 /** Acha `texto` (espaços normalizados) dentro de `raiz` e devolve o Range dele no DOM. */
 function acharTrecho(raiz: Element, texto: string): Range | null {
@@ -115,7 +149,7 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     return () => ro.disconnect();
   }, []);
 
-  // seleção dentro do manual: precisa ficar num bloco só (um passo, um parágrafo, uma observação)
+  // seleção dentro do manual: pode pegar quantos passos, parágrafos e seções a pessoa quiser
   useEffect(() => {
     const solto = () => setPressionando(false);
     window.addEventListener('pointerup', solto);
@@ -126,12 +160,13 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
       const s = window.getSelection();
       // clicou em outro lugar (seleção vazia): a pergunta fecha; seleção fora do manual não mexe na dele
       if (!s || !s.rangeCount || s.isCollapsed) { setSelecao(null); return; }
-      if (!doc.current?.contains(s.anchorNode)) return;
-      const a = blocoDe(s.anchorNode), b = blocoDe(s.focusNode);
-      const texto = s.toString().replace(/\s+/g, ' ').trim();
-      if (!texto) { setSelecao(null); return; }
-      if (!a || a !== b) { setSelecao({ erro: 'Selecione dentro de um mesmo passo ou parágrafo do manual.' }); return; }
-      setSelecao({ secao: Number(a.dataset.secao), bloco: Number(a.dataset.bloco), texto, rect: s.getRangeAt(0).getBoundingClientRect() });
+      const raiz = doc.current;
+      if (!raiz || !(raiz.contains(s.anchorNode) || raiz.contains(s.focusNode))) return;
+      if (!s.toString().trim()) { setSelecao(null); return; }
+      const range = s.getRangeAt(0);
+      const partes = partesDaSelecao(range, raiz);
+      if (!partes.length) { setSelecao({ erro: 'Selecione o texto dos passos, parágrafos ou observações do manual.' }); return; }
+      setSelecao({ partes, texto: juntar(partes), rect: range.getBoundingClientRect() });
     };
     document.addEventListener('selectionchange', mudou);
     // rolar o painel ou a página: a pergunta acompanha o trecho
@@ -172,8 +207,7 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     if (!selecao || 'erro' in selecao) return;
     setEnviando(true); setErro('');
     try {
-      const { secao, bloco, texto } = selecao;
-      await api.ligarTrecho(codigo, { tabela, secao, bloco, texto });
+      await api.ligarTrecho(codigo, { tabela, partes: selecao.partes });
       window.getSelection()?.removeAllRanges();
       setSelecao(null);
       setAviso(`Trecho validado: fica em destaque sempre que alguém abrir ${tabela}.`);
@@ -198,6 +232,13 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
     return () => window.removeEventListener('keydown', esc);
   }, [perguntando, descartar]);
   useEffect(() => { if (!aviso) return; const t = window.setTimeout(() => setAviso(''), 4000); return () => clearTimeout(t); }, [aviso]);
+
+  // as partes da mesma seleção formam um trecho só na lista (desliga de uma vez)
+  const grupos = useMemo(() => {
+    const m = new Map<number, TrechoManual[]>();
+    trechos.forEach(t => { const g = t.grupo ?? t.id; (m.get(g) ?? m.set(g, []).get(g)!).push(t); });
+    return [...m.values()];
+  }, [trechos]);
 
   const desligar = async (t: TrechoManual) => {
     try { await api.desligarTrecho(codigo, t.id); recarregar(); } catch (e) { setErro((e as Error).message); }
@@ -229,7 +270,7 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
       <div className="mt-acao" role="status">
         {selecao && 'erro' in selecao ? <span className="mt-aviso">{selecao.erro}</span>
           : aviso ? <span className="mt-ok">{aviso}</span>
-          : <span className="mt-dica">Selecione no manual o trecho em que <code>{tabela}</code> age: o Support Nexus pergunta se ele corresponde à tabela.</span>}
+          : <span className="mt-dica">Selecione no manual o trecho em que <code>{tabela}</code> age (pode pegar vários passos, parágrafos e seções): o Support Nexus pergunta se ele corresponde à tabela.</span>}
         {erro && !perguntando && <p className="erro" role="alert">{erro}</p>}
       </div>
 
@@ -237,8 +278,10 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
       {perguntando && selecao && !('erro' in selecao) && createPortal(
         <PerguntaTrecho rect={selecao.rect}>
           <h3 id="mt-pergunta-titulo">Este trecho do material é correspondente à tabela <code>{tabela}</code>?</h3>
-          <blockquote>“{selecao.texto.length > 220 ? `${selecao.texto.slice(0, 220)}…` : selecao.texto}”</blockquote>
-          <p className="ajuda">Validando, o trecho fica em destaque sempre que alguém abrir esta tabela, com o seu nome.</p>
+          <blockquote>“{selecao.texto.length > 320 ? `${selecao.texto.slice(0, 320)}…` : selecao.texto}”</blockquote>
+          <p className="ajuda">
+            {selecao.partes.length > 1 && <>{selecao.partes.length} partes do manual ({onde(selecao.partes)}), validadas como um trecho só. </>}
+            Validando, o trecho fica em destaque sempre que alguém abrir esta tabela, com o seu nome.</p>
           {erro && <p className="erro" role="alert">{erro}</p>}
           <div className="acoes">
             <button type="button" className="btn" onMouseDown={e => e.preventDefault()} onClick={descartar} disabled={enviando}>Descartar</button>
@@ -254,18 +297,22 @@ export default function ManualTabela({ manuais, tabela, relacoes, onFicha }: Pro
       </div>
 
       <div className="secao">
-        <h3>Trechos ligados a <code>{tabela}</code> ({trechos.length})</h3>
-        {trechos.length ? (
-          <ul className="mt-trechos">{trechos.map(t => (
-            <li key={t.id} className={perdidos.has(t.id) ? 'perdido' : ''}>
-              <button type="button" className="link mt-trecho" onClick={() => irPara(t)}>“{t.texto}”</button>
-              <small>
-                seção {t.secao}{t.por ? ` · ${t.por}` : ''}{t.versao ? ` · versão ${t.versao}` : ''}
-                {perdidos.has(t.id) && ' · não encontrado nesta versão do manual'}
-              </small>
-              <button type="button" className="fechar" aria-label="Desligar este trecho" title="Desligar este trecho" onClick={() => desligar(t)}>×</button>
-            </li>
-          ))}</ul>
+        <h3>Trechos ligados a <code>{tabela}</code> ({grupos.length})</h3>
+        {grupos.length ? (
+          <ul className="mt-trechos">{grupos.map(g => {
+            const t = g[0];
+            const faltam = g.filter(x => perdidos.has(x.id)).length;
+            return (
+              <li key={t.id} className={faltam ? 'perdido' : ''}>
+                <button type="button" className="link mt-trecho" onClick={() => irPara(t)}>“{juntar(g)}”</button>
+                <small>
+                  {onde(g)}{g.length > 1 ? ` · ${g.length} partes` : ''}{t.por ? ` · ${t.por}` : ''}{t.versao ? ` · versão ${t.versao}` : ''}
+                  {faltam > 0 && (faltam === g.length ? ' · não encontrado nesta versão do manual' : ` · ${faltam} parte(s) não encontrada(s) nesta versão`)}
+                </small>
+                <button type="button" className="fechar" aria-label="Desligar este trecho" title="Desligar este trecho" onClick={() => desligar(t)}>×</button>
+              </li>
+            );
+          })}</ul>
         ) : <p className="vazio">Nenhum trecho ligado ainda.</p>}
       </div>
 

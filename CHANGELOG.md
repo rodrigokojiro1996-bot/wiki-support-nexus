@@ -33,6 +33,12 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   sobe do rodapé. A troca de tema se abre num círculo a partir do botão (onde o navegador suporta). Tudo desliga
   com "reduzir movimento" do sistema.
 - Botão de tema com ícones em SVG no lugar dos caracteres ☀/☾.
+- Trecho do manual ligado à tabela pode ter o tamanho que a pessoa quiser: a seleção pega vários passos,
+  parágrafos, observações, SQL e até seções diferentes (antes, só um passo ou parágrafo). Ao validar, o trecho é
+  guardado em partes, uma por bloco do manual, para o destaque continuar achando o texto depois de edições; na tela é
+  um trecho só: um item na lista ("seções 1 a 2 · 5 partes"), desliga de uma vez e vira uma linha no histórico. O
+  número do passo ("1.2.") fica de fora do texto guardado. Migração 014 (`manual_trechos.grupo`); o
+  `POST /api/manuais/{codigo}/trechos` aceita `partes` (e continua aceitando o formato de um bloco só).
 
 ## [0.5.0] - 2026-11-11
 

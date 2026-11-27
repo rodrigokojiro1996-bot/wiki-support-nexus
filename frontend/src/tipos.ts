@@ -58,7 +58,9 @@ export type Manual = {
 };
 
 /** trecho do manual da tela ligado a uma tabela (selecionado no painel ao lado do diagrama); secao 1.., bloco 0.. */
-export type TrechoManual = { id: number; tabela: string; secao: number; bloco: number; texto: string; versao: string; por: string; em: string };
+// uma linha por bloco do manual; as partes da mesma seleção têm o mesmo grupo (o id da primeira)
+export type TrechoManual = { id: number; grupo: number | null; tabela: string; secao: number; bloco: number; texto: string; versao: string; por: string; em: string };
+export type ParteTrecho = { secao: number; bloco: number; texto: string };
 
 /** processo = o manual da tela (passo a passo e funcionalidades, um por tela); chamado = chamado frequente da tela */
 export type TipoManual = 'processo' | 'chamado';
