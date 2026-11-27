@@ -39,10 +39,10 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   um trecho só: um item na lista ("seções 1 a 2 · 5 partes"), desliga de uma vez e vira uma linha no histórico. O
   número do passo ("1.2.") fica de fora do texto guardado. Migração 014 (`manual_trechos.grupo`); o
   `POST /api/manuais/{codigo}/trechos` aceita `partes` (e continua aceitando o formato de um bloco só).
-
 - Submenu "a detalhar" (tem opções no sistema que ainda não foram mapeadas) passa a abrir a ficha como uma tela: dá
   para criar o manual, importar documento, registrar chamado frequente e vincular tabelas. A ficha avisa que as
   opções ainda não foram mapeadas. A API aceita manual nele (continua recusando menu com opções mapeadas).
+
 ## [0.5.0] - 2026-11-11
 
 ### Adicionado
