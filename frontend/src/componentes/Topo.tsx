@@ -54,10 +54,10 @@ function BotaoTema() {
   const tema = useTema();
   const escuro = tema === 'escuro';
   return (
-    <button type="button" className="topo-tema" aria-pressed={escuro}
+    <button type="button" className="topo-tema topo-tema-icone" aria-pressed={escuro}
       onClick={e => aplicarTema(escuro ? 'claro' : 'escuro', { x: e.clientX, y: e.clientY })}
       title={escuro ? 'Voltar ao tema claro' : 'Usar o tema escuro'} aria-label={escuro ? 'Tema claro' : 'Tema escuro'}>
-      <span className="topo-tema-ic" aria-hidden="true">{escuro ? SOL : LUA}</span><span className="topo-tema-txt">{escuro ? 'Tema claro' : 'Tema escuro'}</span>
+      <span className="topo-tema-ic" aria-hidden="true">{escuro ? SOL : LUA}</span>
     </button>
   );
 }

@@ -94,6 +94,10 @@ body {
 .topo-tema:hover, .topo-sair:hover { box-shadow: var(--anel); border-color: var(--accent); }
 .topo-tema .topo-tema-ic { display: grid; place-items: center; transition: transform var(--t-lento) var(--mola); }
 .topo-tema:hover .topo-tema-ic { transform: rotate(-18deg) scale(1.08); }
+/* botão do tema só com o ícone (lua no claro, sol no escuro): o nome fica no aria-label e na dica do mouse */
+.topo-tema.topo-tema-icone { width: 32px; padding: 0; justify-content: center; }
+.topo-tema.topo-tema-icone svg { width: 18px; height: 18px; }
+@media (max-width: 720px), (pointer: coarse) { .topo-tema.topo-tema-icone { width: 44px; height: 44px; } }
 .topo-quem-ini { background: linear-gradient(135deg, var(--marca), color-mix(in srgb, var(--marca) 60%, var(--marca-2))); color: #fff; box-shadow: var(--elev-1); }
 .topo-usuario input { border-radius: 999px; padding: 0 12px; }
 .faixa-ambiente { border-bottom: 0; background: linear-gradient(90deg, var(--faixa-fundo), color-mix(in srgb, var(--faixa-fundo) 70%, var(--laranja-claro))); }
