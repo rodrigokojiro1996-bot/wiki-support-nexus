@@ -67,7 +67,10 @@ def relacao(con: sqlite3.Connection, banco: str, rel_id: str) -> str:
 
 
 def tela_da_chave(con: sqlite3.Connection, modulo: str, chave: str) -> str:
-    """O diagrama é guardado pelas tabelas da tela; para quem lê, vale o caminho da tela ('Vendas › Devoluções')."""
+    """O diagrama é guardado pela tela (id do menu) ou, no formato antigo, pelas tabelas dela; para quem lê, vale o
+    caminho da tela ('Vendas › Devoluções')."""
+    if con.execute("SELECT 1 FROM menus WHERE id = ? AND modulo = ?", (chave, modulo)).fetchone():
+        return "diagrama da tela " + " › ".join(p["titulo"] for p in caminho_menu(con, chave))
     tabelas = set(filter(None, chave.split(",")))
     for r in con.execute("""SELECT mt.menu, group_concat(mt.tabela, ',') AS tabelas FROM menu_tabelas mt
                             JOIN menus m ON m.id = mt.menu WHERE m.modulo = ? GROUP BY mt.menu""", (modulo,)):
