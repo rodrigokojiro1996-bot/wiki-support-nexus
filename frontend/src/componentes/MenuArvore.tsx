@@ -28,12 +28,12 @@ function No({ no, nivel, selecionado, filtro, onEscolher, abertoControlado, onAl
         {temFilhos
           ? <button type="button" className="arv-seta" aria-expanded={expandido} aria-label={expandido ? 'Recolher' : 'Expandir'} onClick={() => alternar(!expandido)}>▸</button>
           : <span className="arv-seta-vazia" />}
-        {/* só a tela final (sem opções depois dela) abre a ficha com manuais e tabelas; menu só abre e fecha */}
+        {/* item sem opções mapeadas (tela final ou submenu "a detalhar") abre a ficha com manuais e tabelas; menu só abre e fecha */}
         <button type="button" className="arv-item" aria-current={selecionado === no.id ? 'true' : undefined}
-          aria-expanded={temFilhos ? expandido : undefined} aria-disabled={aDetalhar || undefined}
-          title={aDetalhar ? 'Submenu ainda não detalhado: as opções dele ainda não foram mapeadas' : undefined}
-          data-desabilitado={no.desabilitado || undefined} data-menu={temFilhos || aDetalhar || undefined}
-          onClick={() => { if (temFilhos) alternar(!expandido); else if (!aDetalhar) onEscolher(no.id); }}>
+          aria-expanded={temFilhos ? expandido : undefined}
+          title={aDetalhar ? 'Submenu ainda não detalhado: as opções dele ainda não foram mapeadas, mas já dá para criar o manual e vincular as tabelas' : undefined}
+          data-desabilitado={no.desabilitado || undefined} data-menu={temFilhos || undefined}
+          onClick={() => { if (temFilhos) alternar(!expandido); else onEscolher(no.id); }}>
           <span className="arv-titulo">{no.titulo}</span>
           {aDetalhar && <span className="arv-pendente">a detalhar</span>}
           {no.n_manuais > 0 && <span className="arv-badge manual" title={`${no.n_manuais} manual(is)`}>{no.n_manuais}</span>}

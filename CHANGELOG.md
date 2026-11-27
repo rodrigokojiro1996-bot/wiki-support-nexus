@@ -41,6 +41,9 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
   `POST /api/manuais/{codigo}/trechos` aceita `partes` (e continua aceitando o formato de um bloco só).
 - Botão de tema no topo só com o ícone (lua no tema claro, sol no escuro), para sobrar espaço; o nome continua
   na dica do mouse e para leitores de tela.
+- Submenu "a detalhar" (tem opções no sistema que ainda não foram mapeadas) passa a abrir a ficha como uma tela: dá
+  para criar o manual, importar documento, registrar chamado frequente e vincular tabelas. A ficha avisa que as
+  opções ainda não foram mapeadas. A API aceita manual nele (continua recusando menu com opções mapeadas).
 
 ## [0.5.0] - 2026-11-11
 

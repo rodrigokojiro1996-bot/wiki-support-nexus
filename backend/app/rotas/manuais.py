@@ -113,11 +113,12 @@ def _conferir_destino(con, corpo: ManualEntrada, codigo: str | None = None) -> N
         raise HTTPException(422, f"Módulo {corpo.modulo} não existe ou ainda não tem banco mapeado")
     if not corpo.menu:
         return
-    menu = con.execute("SELECT titulo, submenu FROM menus WHERE id = ? AND modulo = ?", (corpo.menu, corpo.modulo)).fetchone()
+    menu = con.execute("SELECT titulo FROM menus WHERE id = ? AND modulo = ?", (corpo.menu, corpo.modulo)).fetchone()
     if not menu:
         raise HTTPException(422, f"Tela {corpo.menu} não existe no módulo {corpo.modulo}")
-    # manual só em tela final: menu principal ou submenu (com opções depois dele) é só navegação
-    if menu["submenu"] or con.execute("SELECT 1 FROM menus WHERE pai = ?", (corpo.menu,)).fetchone():
+    # manual só em item sem opções mapeadas: menu principal e submenu com opções são só navegação. O submenu
+    # "a detalhar" (tem opções no sistema, ainda não transcritas) recebe manual como uma tela, até ser detalhado
+    if con.execute("SELECT 1 FROM menus WHERE pai = ?", (corpo.menu,)).fetchone():
         raise HTTPException(422, f"{menu['titulo']} é um menu, não uma tela: escolha uma das opções dentro dele")
     # um manual de processos por tela; chamados frequentes, quantos forem preciso
     anterior = con.execute("SELECT tipo FROM manuais WHERE codigo = ?", (codigo,)).fetchone() if codigo else None

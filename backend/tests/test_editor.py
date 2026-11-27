@@ -136,6 +136,13 @@ def test_manual_so_em_tela_final(cliente, con):
     # menu principal e submenu com opções são só navegação: o manual vai numa tela final
     r = criar(cliente, novo(menu="pdv.caixa"))
     assert r.status_code == 422 and "é um menu, não uma tela" in r.json()["detail"]
-    a_detalhar = con.execute("SELECT id FROM menus WHERE submenu = 1 AND modulo = 'pdv'").fetchone()["id"]
-    assert criar(cliente, novo(menu=a_detalhar)).status_code == 422  # tem opções no sistema, ainda não mapeadas
     assert criar(cliente, novo(menu=MENU)).status_code == 201
+
+
+def test_manual_em_submenu_a_detalhar(cliente, con):
+    # submenu com opções ainda não transcritas: recebe manual como uma tela, até ser detalhado
+    a_detalhar = con.execute("SELECT id FROM menus m WHERE submenu = 1 AND modulo = 'pdv' "
+                             "AND NOT EXISTS (SELECT 1 FROM menus f WHERE f.pai = m.id)").fetchone()["id"]
+    r = criar(cliente, novo(menu=a_detalhar))
+    assert r.status_code == 201, r.text
+    assert r.json()["codigo"] in {x["codigo"] for x in cliente.get(f"/api/menus/{a_detalhar}").json()["manuais"]}

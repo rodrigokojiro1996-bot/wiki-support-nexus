@@ -17,8 +17,10 @@ type FichaTabela = {
   manuais: { codigo: string; titulo: string }[];
 };
 
-/** tela = item final do menu (sem opções depois dele); só ela tem manuais e tabelas */
+/** tela = item final do menu (sem opções depois dele) */
 const ehTela = (n: MenuNo) => !n.itens.length && !n.submenu;
+/** abre a ficha (manuais e tabelas): a tela final e o submenu "a detalhar" (opções ainda não mapeadas) */
+const temFicha = (n: MenuNo) => !n.itens.length;
 
 const contar = (nos: MenuNo[]): { total: number; comTabela: number; aDetalhar: number } =>
   nos.reduce((a, n) => {
@@ -39,7 +41,7 @@ const achar = (nos: MenuNo[], id: string | null): MenuNo | null => {
 /** primeira tela (na ordem do menu) que já tem tabelas vinculadas: o "por onde começar" da tela inicial */
 const primeiraComTabelas = (nos: MenuNo[]): MenuNo | null => {
   for (const n of nos) {
-    if (n.n_tabelas && ehTela(n)) return n;
+    if (n.n_tabelas && temFicha(n)) return n;
     const f = primeiraComTabelas(n.itens);
     if (f) return f;
   }
@@ -162,7 +164,8 @@ export default function MapaSistema() {
   const resumo = useMemo(() => contar(menus), [menus]);
   const inicio = useMemo(() => primeiraComTabelas(menus), [menus]);
   // link direto para um menu (não uma tela): mostra as opções dele em vez da ficha
-  const menuSel = useMemo(() => { const n = achar(menus, selecionado); return n && !ehTela(n) ? n : null; }, [menus, selecionado]);
+  const menuSel = useMemo(() => { const n = achar(menus, selecionado); return n && !temFicha(n) ? n : null; }, [menus, selecionado]);
+  const aDetalhar = useMemo(() => !!achar(menus, selecionado)?.submenu, [menus, selecionado]);
   const nomesFicha = useMemo(() => new Set(ficha?.tabelas.map(t => t.tabela) ?? []), [ficha]);
   const internas = useMemo(() => ficha?.relacoes.filter(r => nomesFicha.has(r.origem) && nomesFicha.has(r.destino)) ?? [], [ficha, nomesFicha]);
   const externas = useMemo(() => {
@@ -196,14 +199,10 @@ export default function MapaSistema() {
           {menuSel ? (
             <div className="painel-corpo boas-vindas">
               <h1>{menuSel.titulo}</h1>
-              <p>{menuSel.itens.length
-                ? 'Este é um menu do sistema, não uma tela. Escolha uma das opções dele:'
-                : 'Este submenu ainda não foi detalhado: as opções dele ainda não foram mapeadas.'}</p>
-              {menuSel.itens.length > 0 && (
-                <div className="chips">{menuSel.itens.map(f => (
-                  <button key={f.id} type="button" className="chip" onClick={() => escolher(f.id)}>{f.titulo}{f.atalho && <kbd>{f.atalho}</kbd>}</button>
-                ))}</div>
-              )}
+              <p>Este é um menu do sistema, não uma tela. Escolha uma das opções dele:</p>
+              <div className="chips">{menuSel.itens.map(f => (
+                <button key={f.id} type="button" className="chip" onClick={() => escolher(f.id)}>{f.titulo}{f.atalho && <kbd>{f.atalho}</kbd>}</button>
+              ))}</div>
             </div>
           ) : !ficha ? (
             <div className="painel-corpo boas-vindas">
@@ -238,6 +237,8 @@ export default function MapaSistema() {
                 {ficha.tela_codigo && <span className="tela-cod" title="Código da janela no sistema">{ficha.tela_codigo}</span>}
               </h1>
               <p className="caminho-completo"><span>Caminho</span>{caminhoTexto(nomeModulo, ficha.caminho)}</p>
+              {aDetalhar && <p className="alerta">As opções deste submenu ainda não foram mapeadas. O manual e as tabelas ficam aqui
+                enquanto isso; quando as opções forem detalhadas, dá para levar o manual para a tela certa.</p>}
               {ficha.desabilitado && <p className="alerta">Este item aparece desabilitado no menu do {nomeModulo}.</p>}
               <div className="abas" role="tablist" aria-label="Seções da ficha">
                 <button type="button" role="tab" aria-selected={aba !== 'tabelas'} onClick={() => mudarAba('geral')}>Visão geral</button>
