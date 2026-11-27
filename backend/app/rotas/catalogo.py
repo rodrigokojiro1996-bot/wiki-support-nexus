@@ -30,17 +30,38 @@ def tabelas_do_modulo(modulo: str, con=Depends(db)):
             for t in con.execute("SELECT nome FROM tabelas WHERE banco = ? ORDER BY nome", (banco,))]
 
 
+def _migrar_chave(con, modulo: str, tabelas: str, chave: str | None) -> str:
+    """A organização era guardada pela lista de tabelas da tela; passa a ser pela tela. Na primeira vez que a tela
+    abre com a chave nova, o que estava guardado pela lista vai para ela (nada se perde)."""
+    if not chave or chave == tabelas:
+        return tabelas
+    tem = any(con.execute(f"SELECT 1 FROM {t} WHERE modulo = ? AND chave = ? LIMIT 1", (modulo, chave)).fetchone()
+              for t in ("posicoes_diagrama", "diagrama_tabelas"))
+    if not tem:
+        mexeu = 0
+        for t in ("posicoes_diagrama", "diagrama_tabelas"):
+            mexeu += con.execute(f"UPDATE {t} SET chave = ? WHERE modulo = ? AND chave = ?", (chave, modulo, tabelas)).rowcount
+        if mexeu:
+            con.commit()
+    return chave
+
+
 @router.get("/diagrama")
-def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con=Depends(db)):
-    """Diagrama ER em volta das tabelas de uma tela: as tabelas da tela, as vizinhas até `nivel` e as ligações entre todas."""
+def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, chave: str | None = None, con=Depends(db)):
+    """Diagrama ER em volta das tabelas de uma tela: as tabelas da tela, as vizinhas até `nivel` e as ligações entre todas.
+
+    `chave` (o id da tela): onde fica o que a equipe organizou (posições e tabelas adicionadas), para a organização
+    sobreviver a vincular ou desvincular tabelas. Sem ela, vale a lista de tabelas, como antes.
+    """
     banco = banco_do_modulo(con, modulo)
+    chave = _migrar_chave(con, modulo, tabelas, chave)
     existentes = {r["nome"] for r in con.execute("SELECT nome FROM tabelas WHERE banco = ?", (banco,))}
     foco = [t for t in dict.fromkeys(tabelas.split(",")) if t in existentes]
     rels = [x for x in relacoes.listar(con, banco) if x["estado"] != "descartada"]
     rec = recortar(foco, rels, nivel, apoio)
     # tabelas que a equipe adicionou à mão nesta tela: entram sempre, com as ligações delas com as que já estão
     extras = [r["tabela"] for r in con.execute(
-        "SELECT tabela FROM diagrama_tabelas WHERE modulo = ? AND chave = ? ORDER BY em, tabela", (modulo, tabelas))
+        "SELECT tabela FROM diagrama_tabelas WHERE modulo = ? AND chave = ? ORDER BY em, tabela", (modulo, chave))
         if r["tabela"] in existentes]
     if set(extras) - rec.incluidas:
         rec.incluidas |= set(extras)
@@ -68,7 +89,7 @@ def diagrama(modulo: str, tabelas: str, nivel: int = 1, apoio: bool = False, con
               "adicionada": n in extras and n not in foco, "descricao": desc_t.get(n, ""), "telas": telas[n], "colunas": colunas[n]} for n in nomes]
     # o que a equipe organizou: posições arrastadas desta tela e o informativo (post-it) de cada ligação
     posicoes = {r["tabela"]: {"x": r["x"], "y": r["y"]} for r in con.execute(
-        "SELECT tabela, x, y FROM posicoes_diagrama WHERE modulo = ? AND chave = ?", (modulo, tabelas))}
+        "SELECT tabela, x, y FROM posicoes_diagrama WHERE modulo = ? AND chave = ?", (modulo, chave))}
     notas = {r["id"]: dict(r) for r in con.execute("SELECT id, texto, posicao, por, em FROM relacao_notas WHERE banco = ?", (banco,))}
     for r in rec.arestas:
         if r["id"] in notas:
