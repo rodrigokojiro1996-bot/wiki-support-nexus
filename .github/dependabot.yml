@@ -25,6 +25,17 @@ updates:
     commit-message: { prefix: "chore(deps)" }
     groups:
       patches: { update-types: ["patch"] }
+    # versão principal nova destes pacotes vem numa PR feita à mão e testada (as PRs automáticas quebravam o build):
+    # vite, plugin-react e vitest só funcionam atualizados juntos; @xyflow/react é o diagrama (arrastar, ligações)
+    ignore:
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@vitejs/plugin-react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@xyflow/react"
+        update-types: ["version-update:semver-major"]
 
   # imagens base do Dockerfile (node e python, travadas por versão e digest)
   - package-ecosystem: docker
