@@ -6,6 +6,7 @@ import '@fontsource-variable/inter';
 import '@fontsource-variable/jetbrains-mono';
 import './estilo/app.css';
 import './estilo/documento.css';
+import './estilo/fluido.css';
 import Acesso from './componentes/Acesso';
 import MapaSistema from './paginas/MapaSistema';
 import { lerTema } from './tema';

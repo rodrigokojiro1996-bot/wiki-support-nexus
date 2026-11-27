@@ -4,6 +4,16 @@ Mudanças de cada versão do Support Nexus. Formato baseado em [Keep a Changelog
 
 ## [Não publicado]
 
+### Alterado
+- Visual novo, mais fluido (camada `estilo/fluido.css`): painéis que flutuam sobre uma tela levemente tingida,
+  cantos mais redondos e sombras em camadas; topo, barra do manual e janelinhas do diagrama em vidro fosco; abas
+  e módulos em pílula; item ativo da árvore com barra turquesa; cartões de manual que sobem ao passar o mouse.
+  Cores da marca e medidas do cartão de tabela do diagrama não mudam.
+- Movimento com propósito: o painel da tabela entra deslizando, menus e perguntas abrem com uma leve mola e o aviso
+  sobe do rodapé. A troca de tema se abre num círculo a partir do botão (onde o navegador suporta). Tudo desliga
+  com "reduzir movimento" do sistema.
+- Botão de tema com ícones em SVG no lugar dos caracteres ☀/☾.
+
 ## [0.5.0] - 2026-11-11
 
 ### Adicionado
