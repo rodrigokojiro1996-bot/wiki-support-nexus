@@ -38,14 +38,26 @@ function Quem() {
   );
 }
 
-/** Claro (padrão) ou escuro; a escolha fica guardada neste navegador */
+const SOL = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </svg>
+);
+const LUA = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" />
+  </svg>
+);
+
+/** Claro (padrão) ou escuro; a escolha fica guardada neste navegador. O novo tema se abre em círculo a partir do botão. */
 function BotaoTema() {
   const tema = useTema();
   const escuro = tema === 'escuro';
   return (
-    <button type="button" className="topo-tema" aria-pressed={escuro} onClick={() => aplicarTema(escuro ? 'claro' : 'escuro')}
+    <button type="button" className="topo-tema" aria-pressed={escuro}
+      onClick={e => aplicarTema(escuro ? 'claro' : 'escuro', { x: e.clientX, y: e.clientY })}
       title={escuro ? 'Voltar ao tema claro' : 'Usar o tema escuro'} aria-label={escuro ? 'Tema claro' : 'Tema escuro'}>
-      <span aria-hidden="true">{escuro ? '☀' : '☾'}</span><span className="topo-tema-txt">{escuro ? 'Tema claro' : 'Tema escuro'}</span>
+      <span className="topo-tema-ic" aria-hidden="true">{escuro ? SOL : LUA}</span><span className="topo-tema-txt">{escuro ? 'Tema claro' : 'Tema escuro'}</span>
     </button>
   );
 }

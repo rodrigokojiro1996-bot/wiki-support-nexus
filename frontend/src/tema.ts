@@ -14,10 +14,26 @@ export function lerTema(): Tema {
   try { return localStorage.getItem(CHAVE) === 'escuro' ? 'escuro' : 'claro'; } catch { return 'claro'; }
 }
 
-export function aplicarTema(tema: Tema) {
+function trocar(tema: Tema) {
   document.documentElement.dataset.tema = tema;
   try { localStorage.setItem(CHAVE, tema); } catch { /* navegador sem storage: vale só nesta aba */ }
   window.dispatchEvent(new CustomEvent<Tema>(EVENTO, { detail: tema }));
+}
+
+/**
+ * Troca o tema. Com `origem` (o ponto do clique) e um navegador com View Transitions, o novo tema se abre num círculo
+ * a partir dali (o desenho está em estilo/fluido.css). Sem suporte, ou com "reduzir movimento", troca na hora.
+ */
+export function aplicarTema(tema: Tema, origem?: { x: number; y: number }) {
+  const doc = document as Document & { startViewTransition?: (f: () => void) => unknown };
+  const calmo = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!origem || !doc.startViewTransition || calmo) { trocar(tema); return; }
+  const raiz = document.documentElement.style;
+  const raio = Math.hypot(Math.max(origem.x, innerWidth - origem.x), Math.max(origem.y, innerHeight - origem.y));
+  raiz.setProperty('--tema-x', `${origem.x}px`);
+  raiz.setProperty('--tema-y', `${origem.y}px`);
+  raiz.setProperty('--tema-r', `${raio}px`);
+  doc.startViewTransition(() => trocar(tema));
 }
 
 /** Tema atual, atualizado quando o botão do topo troca (o diagrama usa para as cores do React Flow) */
